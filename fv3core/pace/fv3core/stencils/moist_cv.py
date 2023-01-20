@@ -95,6 +95,7 @@ def moist_pt_last_step(
     r_vir: float,
 ):
     """
+    Converts virtual potential temperature to potential temperature
     Args:
         qvapor (in):
         qliquid (in):

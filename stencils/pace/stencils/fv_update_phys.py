@@ -74,6 +74,21 @@ def update_pressure_and_surface_winds(
         v_srf = va[0, 0, 0]
 
 
+def pt_to_virtual_pt(
+    pt: FloatField,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qsnow: FloatField,
+    qice: FloatField,
+    qgraupel: FloatField,
+    zvir: Float,
+):
+    with computation(FORWARD), interval(0, -1):
+        q_cond = qliquid + qrain + qice + qsnow + qgraupel
+        pt = pt * ((1.0 + zvir + qvapor) * (1.0 - q_cond))
+
+
 class ApplyPhysicsToDycore:
     """
     Fortran name is fv_update_phys
@@ -92,6 +107,7 @@ class ApplyPhysicsToDycore:
         state: fv3core.DycoreState,
         u_dt: pace.util.Quantity,
         v_dt: pace.util.Quantity,
+        inlined_physics: bool = False,
     ):
         orchestrate(
             obj=self,
@@ -145,6 +161,7 @@ class ApplyPhysicsToDycore:
         # TODO: check if we actually need surface winds
         self._u_srf = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m/s")
         self._v_srf = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m/s")
+        self._inlined_physics = inlined_physics
 
     def __call__(
         self,

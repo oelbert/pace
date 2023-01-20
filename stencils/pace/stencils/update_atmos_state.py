@@ -4,11 +4,14 @@ from gt4py.cartesian.gtscript import BACKWARD, FORWARD, PARALLEL, computation, i
 
 import pace.fv3core.stencils.fv_subgridz as fv_subgridz
 import pace.util
+import pace.util.constants as constants
 from pace import fv3core
 from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import StencilFactory
 from pace.dsl.typing import Float, FloatField
+from pace.fv3core.stencils.moist_cv import moist_pt_last_step
 from pace.stencils.fv_update_phys import ApplyPhysicsToDycore
+from pace.util import X_DIM, Y_DIM, Z_DIM
 from pace.util.grid import DriverGridData, GridData
 
 
@@ -145,6 +148,48 @@ def copy_dycore_to_physics(
         omga_out = omga_in
 
 
+def virtual_pt_to_pt(
+    pt: FloatField,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qsnow: FloatField,
+    qice: FloatField,
+    qgraupel: FloatField,
+    zvir: Float,
+):
+    """
+    Convert the virtual potential temperature used in the dycore to
+    potential temperature used in the physics.
+    """
+
+    # Convert virtual potential temp to potential temp
+    with computation(PARALLEL), interval(0, -1):
+        q_cond = qliquid + qrain + qice + qsnow + qgraupel
+        pt = pt / ((1.0 + zvir * qvapor) * (1.0 - q_cond))
+
+
+def pt_to_virtual_pt(
+    pt: FloatField,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qsnow: FloatField,
+    qice: FloatField,
+    qgraupel: FloatField,
+    zvir: Float,
+):
+    """
+    Convert the potential temperature used in the physics to
+    virtual potential temperature used in the dycore.
+    """
+
+    # Convert virtual potential temp to potential temp
+    with computation(PARALLEL), interval(0, -1):
+        q_cond = qliquid + qrain + qice + qsnow + qgraupel
+        pt = pt * ((1.0 + zvir * qvapor) * (1.0 - q_cond))
+
+
 class DycoreToPhysics:
     def __init__(
         self,
@@ -153,6 +198,7 @@ class DycoreToPhysics:
         dycore_config: fv3core.DynamicalCoreConfig,
         do_dry_convective_adjust: bool,
         dycore_only: bool,
+        inlined_physics: bool = False,
     ):
         orchestrate(
             obj=self,
@@ -160,6 +206,7 @@ class DycoreToPhysics:
             dace_compiletime_args=["dycore_state", "physics_state", "tendency_state"],
         )
 
+        grid_indexing = stencil_factory.grid_indexing
         self._copy_dycore_to_physics = stencil_factory.from_dims_halo(
             copy_dycore_to_physics,
             compute_dims=[
@@ -179,6 +226,18 @@ class DycoreToPhysics:
                 fv_sg_adj=dycore_config.fv_sg_adj,
                 n_sponge=dycore_config.n_sponge,
                 hydrostatic=dycore_config.hydrostatic,
+            )
+        self._inlined_physics = inlined_physics
+        if self._inlined_physics is True:
+            self._gz = quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="m^2 s^-2")
+            self._moist_pt_last_step = stencil_factory.from_origin_domain(
+                moist_pt_last_step,
+                origin=(grid_indexing.isc, grid_indexing.jsc, 0),
+                domain=(
+                    grid_indexing.domain[0],
+                    grid_indexing.domain[1],
+                    grid_indexing.domain[2] + 1,
+                ),
             )
 
     def __call__(
@@ -230,6 +289,21 @@ class DycoreToPhysics:
                 w_out=physics_state.w,
                 omga_out=physics_state.omga,
             )
+            if self._inlined_physics is True:
+                dtmp = 0
+                self._moist_pt_last_step(
+                    physics_state.qvapor,
+                    physics_state.qliquid,
+                    physics_state.qrain,
+                    physics_state.qsnow,
+                    physics_state.qice,
+                    physics_state.qgraupel,
+                    self._gz,
+                    physics_state.pt,
+                    dycore_state.pkz,
+                    dtmp,
+                    constants.ZVIR,
+                )
 
 
 class UpdateAtmosphereState:
@@ -249,6 +323,7 @@ class UpdateAtmosphereState:
         dycore_only: bool,
         apply_tendencies: bool,
         tendency_state,
+        inlined_physics: bool = False,
     ):
         orchestrate(
             obj=self,
@@ -262,6 +337,7 @@ class UpdateAtmosphereState:
         grid_indexing = stencil_factory.grid_indexing
         self.namelist = namelist
         self._rdt = 1.0 / Float(self.namelist.dt_atmos)
+        self._inlined_physics = inlined_physics
 
         self._prepare_tendencies_and_update_tracers = (
             stencil_factory.from_origin_domain(
@@ -287,12 +363,24 @@ class UpdateAtmosphereState:
             state,
             tendency_state.u_dt,
             tendency_state.v_dt,
+            self._inlined_physics,
         )
         self._dycore_only = dycore_only
         # apply_tendencies when we have run physics or fv_subgridz
         # if neither of those are true, we still need to run
         # fill_GFS_delp
         self._apply_tendencies = apply_tendencies
+
+        # Handle conversions fron physics to dycore if the physics is inlined
+        # May already be taken care of inside _apply_physics_to_dycore
+        # if self._inlined_physics is True:
+        #     self._pt_to_virtual_pt = (
+        #         stencil_factory.from_origin_domain(
+        #             pt_to_virtual_pt,
+        #             origin=grid_indexing.origin_compute(),
+        #             domain=grid_indexing.domain_compute(add=(0, 0, 1)),
+        #         )
+        #     )
 
     # [DaCe] Parsing limit: accessing a quantity withing a dataclass more than
     # one-level down in the call stack is forbidden for now due to the quantity
