@@ -7,6 +7,7 @@ from gt4py.cartesian.gtscript import PARALLEL, computation, interval
 
 import pace.dsl.gt4py_utils as utils
 import pace.fv3core.stencils.moist_cv as moist_cv
+import pace.physics
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.dace.orchestration import dace_inhibitor, orchestrate
@@ -106,6 +107,7 @@ class DynamicalCore:
         state: DycoreState,
         timestep: timedelta,
         checkpointer: Optional[pace.util.Checkpointer] = None,
+        inlined_physics: Optional[pace.physics.Physics] = None,
     ):
         """
         Args:
@@ -121,6 +123,8 @@ class DynamicalCore:
             checkpointer: if given, used to perform operations on model data
                 at specific points in model execution, such as testing against
                 reference data
+            inlined_physics: if given, a Physics object containing the config and
+                parameterizations to be run in the dycore at the end of remapping
         """
         orchestrate(
             obj=self,

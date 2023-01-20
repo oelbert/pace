@@ -174,6 +174,7 @@ class DynamicalCoreConfig:
     hord_tr: int = DEFAULT_INT
     hord_vt: int = DEFAULT_INT
     hydrostatic: bool = DEFAULT_BOOL
+    inline_physics: bool = DEFAULT_BOOL
     k_split: int = DEFAULT_INT
     ke_bg: float = DEFAULT_FLOAT
     kord_mt: int = DEFAULT_INT
