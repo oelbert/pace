@@ -298,6 +298,7 @@ class LagrangianToEulerian:
         pfull,
         tracers: Dict[str, Quantity],
         checkpointer: Optional[pace.util.Checkpointer] = None,
+        inlined_physics: bool = False,
     ):
         orchestrate(
             obj=self,
@@ -305,6 +306,7 @@ class LagrangianToEulerian:
             dace_compiletime_args=["tracers"],
         )
         self._checkpointer = checkpointer
+        self._inlined_physics = inlined_physics
         # this is only computed in init because Dace does not yet support
         # this operation
         self._call_checkpointer = checkpointer is not None
@@ -672,11 +674,12 @@ class LagrangianToEulerian:
                 self.kmp,
             )
 
-        if last_step:
+        if last_step and (not self._inlined_physics):
 
             # on the last step, we need the regular temperature to send
             # to the physics, but if we're staying in dynamics we need
-            # to keep it as the virtual potential temperature
+            # to keep it as the virtual potential temperature.
+            # If physics are inlined this is handled in the data transition.
             self._moist_cv_last_step_stencil(
                 tracers["qvapor"],
                 tracers["qliquid"],
