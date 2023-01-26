@@ -7,12 +7,13 @@ from pace.util import Namelist, NamelistDefaults
 
 
 DEFAULT_INT = 0
+DEFAULT_FLOAT = 0.0
 DEFAULT_BOOL = False
 
 
 @dataclasses.dataclass
 class PhysicsConfig:
-    dt_atmos: int = DEFAULT_INT
+    dt_atmos: float = DEFAULT_FLOAT
     hydrostatic: bool = DEFAULT_BOOL
     npx: int = DEFAULT_INT
     npy: int = DEFAULT_INT
