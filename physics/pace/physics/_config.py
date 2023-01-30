@@ -80,6 +80,7 @@ class PhysicsConfig:
     qc_crt: float = NamelistDefaults.qc_crt
     fix_negative: bool = NamelistDefaults.fix_negative
     consv_checker: bool = NamelistDefaults.consv_checker
+    do_warm_rain: bool = NamelistDefaults.do_warm_rain
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
@@ -167,6 +168,7 @@ class PhysicsConfig:
             qc_crt=namelist.qc_crt,
             fix_negative=namelist.fix_negative,
             consv_checker=namelist.consv_checker,
+            do_warm_rain=namelist.do_warm_rain,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,

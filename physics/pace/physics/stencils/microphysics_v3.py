@@ -22,6 +22,11 @@ from .._config import PhysicsConfig
 
 
 @gtscript.function
+def positive_diff(x, y):
+    return max(x - y, 0.0)
+
+
+@gtscript.function
 def moist_total_energy(
     qvapor,
     qliquid,
@@ -293,6 +298,113 @@ def subgrid_deviation_and_relative_humidity(
         rh_rain = max(0.35, rh_adj - rh_inr)
 
 
+@gtscript.function
+def heat_cap_and_latent_heat_coeff(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    c1_vapor,
+    c1_liq,
+    c1_ice,
+    lv00,
+    li00,
+    li20,
+    d1_vap,
+    d1_ice,
+    tice,
+    t_wfr,
+):
+    q_liq = qliquid + qrain
+    q_solid = qice + qsnow + qgraupel
+    cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liq + q_solid * c1_ice
+    te = cvm + temp + lv00 * qvapor - li00 * q_solid
+    lcpk = (lv00 + d1_vap * temp) / cvm
+    icpk = (li00 + d1_ice * temp) / cvm
+    tcpk = (li20 + (d1_vap + d1_ice) * temp) / cvm
+    tcp3 = lcpk + icpk * min(1.0, positive_diff(tice, temp) / (tice - t_wfr))
+
+    return q_liq, q_solid, cvm, te, lcpk, icpk, tcpk, tcp3
+
+
+@gtscript.function
+def update_hydrometeors(
+    q_sink,
+    q_source,
+    delta,
+):
+    q_sink += delta
+    q_source -= delta
+    return q_sink, q_source
+
+
+@gtscript.function
+def update_hydrometeors_and_temperatures(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    delta_vapor,
+    delta_liquid,
+    delta_rain,
+    delta_ice,
+    delta_snow,
+    delta_graupel,
+    te,
+    c1_vapor,
+    c1_liq,
+    c1_ice,
+    lv00,
+    li00,
+    li20,
+    d1_vap,
+    d1_ice,
+    tice,
+    t_wfr,
+):
+    qvapor += delta_vapor
+    qliquid += delta_liquid
+    qrain += delta_rain
+    qice += delta_ice
+    qsnow += delta_snow
+    qgraupel += delta_graupel
+
+    q_l = qrain + qliquid
+    q_solid = qice + qsnow + qgraupel
+    cvm = 1.0 + qvapor * c1_vapor + q_l * c1_liq + q_solid * c1_ice
+
+    tk = (te - lv00 + qvapor + li00 * (qice + qsnow + qgraupel)) / cvm
+    lcpk = (lv00 + d1_vap * tk) / cvm
+    icpk = (li00 + d1_ice * tk) / cvm
+    tcpk = (li20 + (d1_vap + d1_ice) * tk) / cvm
+    tcp3 = lcpk + icpk * min(1.0, positive_diff(tice, tk) / (tice - t_wfr))
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        te,
+        cvm,
+        tk,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+def adjust_negative_tracers():
+    pass
+
+
 class MicrophysicsState:
     def __init__(
         self,
@@ -336,6 +448,19 @@ class Microphysics:
         self._c1_vap = self._c_vap / self._c_air
         self._c1_liquid = constants.C_LIQ / self._c_air
         self._c1_ice = constants.C_ICE / self._c_air
+
+        self._n_min = 1600
+        self._delt = 0.1
+        self._tice = 273.15
+        self._tice_mlt = self.namelist.tice
+        self._esbasw = 1013246.0
+        self._tbasw = self._tice + 100.0
+        self._esbasi = 6107.1
+        self._tmin = self._tice - self._n_min * self._delt
+        if self.namelist.do_warm_rain:  # unsupported
+            self._t_wfr = self._tmin
+        else:
+            self._t_wfr = self._tice - 40.0
 
         # allocate memory, compile stencils, etc.
         self._cond = 0.0

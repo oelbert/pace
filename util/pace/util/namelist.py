@@ -86,14 +86,15 @@ class NamelistDefaults:
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
     consv_checker = False  # Turn on energy and water conservation check in microphysics
+    do_warm_rain = False  # Do only warm rain microphysics
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
     qi0_crt = 8e-05  # Cloud ice to snow autoconversion threshold
     qs0_crt = 0.003  # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)
-    rh_inc = 0.2  # RH increment for complete evaporation of cloud water and cloud ice
-    rh_inr = 0.3  # RH increment for minimum evaporation of rain
+    rh_inc = 0.25  # RH increment for complete evaporation of cloud water and cloud ice
+    rh_inr = 0.25  # RH increment for minimum evaporation of rain
     rthresh = 1e-05  # Critical cloud drop radius (micrometers)
     sedi_transport = True  # Transport of momentum in sedimentation
     use_ppm = False  # Use ppm fall scheme
@@ -269,6 +270,7 @@ class Namelist:
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
     consv_checker: bool = NamelistDefaults.consv_checker
+    do_warm_rain: bool = NamelistDefaults.do_warm_rain
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
