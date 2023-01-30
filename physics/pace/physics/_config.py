@@ -14,12 +14,14 @@ DEFAULT_BOOL = False
 @dataclasses.dataclass
 class PhysicsConfig:
     dt_atmos: float = DEFAULT_FLOAT
+    ntimes: int = NamelistDefaults.ntimes
     hydrostatic: bool = DEFAULT_BOOL
     npx: int = DEFAULT_INT
     npy: int = DEFAULT_INT
     npz: int = DEFAULT_INT
     nwat: int = DEFAULT_INT
     do_qa: bool = DEFAULT_BOOL
+    do_inline_mp: bool = NamelistDefaults.do_inline_mp
     c_cracw: float = NamelistDefaults.c_cracw
     c_paut: float = NamelistDefaults.c_paut
     c_pgacs: float = NamelistDefaults.c_pgacs
@@ -77,6 +79,7 @@ class PhysicsConfig:
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     qc_crt: float = NamelistDefaults.qc_crt
     fix_negative: bool = NamelistDefaults.fix_negative
+    consv_checker: bool = NamelistDefaults.consv_checker
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
@@ -98,6 +101,7 @@ class PhysicsConfig:
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
     clin: float = NamelistDefaults.clin
+
     namelist_override: Optional[str] = None
 
     def __post_init__(self):
@@ -162,6 +166,7 @@ class PhysicsConfig:
             fast_sat_adj=namelist.fast_sat_adj,
             qc_crt=namelist.qc_crt,
             fix_negative=namelist.fix_negative,
+            consv_checker=namelist.consv_checker,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
@@ -181,4 +186,6 @@ class PhysicsConfig:
             tice=namelist.tice,
             alin=namelist.alin,
             clin=namelist.clin,
+            ntimes=namelist.ntimes,
+            do_inline_mp=namelist.do_inline_mp,
         )

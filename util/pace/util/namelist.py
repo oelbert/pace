@@ -70,8 +70,8 @@ class NamelistDefaults:
     )
     c_pgacs = 0.01  # Snow to graupel "accretion" eff. (was 0.1 in zetac)
     c_psaci = 0.05  # Accretion: cloud ice to snow (was 0.1 in zetac)
-    ccn_l = 300.0  # CCN over land (cm^-3)
-    ccn_o = 100.0  # CCN over ocean (cm^-3)
+    ccn_l = 270.0  # CCN over land (cm^-3)
+    ccn_o = 90.0  # CCN over ocean (cm^-3)
     const_vg = False  # Fall velocity tuning constant of graupel
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
@@ -85,6 +85,7 @@ class NamelistDefaults:
     do_sedi_heat = False  # Transport of heat in sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
+    consv_checker = False  # Turn on energy and water conservation check in microphysics
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
@@ -105,6 +106,8 @@ class NamelistDefaults:
     tice = 273.16  # set tice = 165. to turn off ice - phase phys (kessler emulator)
     alin = 842.0  # "a" in lin1983
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
+    ntimes = 1  # Number of cloud microphysics sub cycles
+    do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
 
     @classmethod
     def as_dict(cls):
@@ -265,6 +268,7 @@ class Namelist:
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
+    consv_checker: bool = NamelistDefaults.consv_checker
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
@@ -287,6 +291,8 @@ class Namelist:
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
     clin: float = NamelistDefaults.clin
+    ntimes: int = NamelistDefaults.ntimes
+    do_inline_mp: bool = NamelistDefaults.do_inline_mp
     # c0s_shal: Any
     # c1_shal: Any
     # cal_pre: Any

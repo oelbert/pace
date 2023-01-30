@@ -1,11 +1,19 @@
 from gt4py.cartesian import gtscript
-from gt4py.cartesian.gtscript import __INLINED, FORWARD, PARALLEL, computation, interval
+from gt4py.cartesian.gtscript import (
+    __INLINED,
+    FORWARD,
+    PARALLEL,
+    computation,
+    interval,
+    sqrt,
+)
 
+import pace.fv3core.stencils.basic_operations as basic
 import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
-from pace.dsl.stencil import StencilFactory
+from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.util import X_DIM, Y_DIM, Z_DIM
 from pace.util.grid import GridData
@@ -84,7 +92,7 @@ def calc_total_energy(
             )
 
 
-def moist_total_energy_water(
+def moist_total_energy_and_water(
     qvapor: FloatField,
     qliquid: FloatField,
     qrain: FloatField,
@@ -128,8 +136,8 @@ def moist_total_energy_water(
         q_liq = qliquid + qrain
         q_solid = qice + qsnow + qgraupel
         q_cond = q_liq + q_solid
-        con = 1.0 - (qvapor + q_cond)
         if __INLINED(moist_q is True):
+            con = 1.0 - (qvapor + q_cond)
             cvm = con + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
         else:
             cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
@@ -161,8 +169,108 @@ def moist_total_energy_water(
 def calc_sedimentation_energy_loss(
     energy_loss: FloatFieldIJ, column_energy_change: FloatFieldIJ, gsize: FloatFieldIJ
 ):
+    """
+    Last calculation of mtetw, split into a separate stencil to cover the
+    if (present(te_loss)) conditional
+    """
     with computation(FORWARD), interval(-1, None):
         energy_loss = column_energy_change * gsize ** 2.0
+
+
+def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
+    qzvapor: FloatField,
+    qzliquid: FloatField,
+    qzrain: FloatField,
+    qzice: FloatField,
+    qzsnow: FloatField,
+    qzgraupel: FloatField,
+    qza: FloatField,
+    delp_specific: FloatField,
+    density: FloatField,
+    pz: FloatField,
+    bottom_density: FloatFieldIJ,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    qa: FloatField,
+    delp: FloatField,
+    delz: FloatField,
+    temp: FloatField,
+):
+    from __externals__ import inline_mp
+
+    with computation(PARALLEL):
+        with interval(...):
+            if __INLINED(inline_mp is True):
+                con_r8 = 1.0 - (qvapor + qliquid + qrain + qice + qsnow + qgraupel)
+            else:
+                con_r8 = 1.0 - qvapor
+            delp_specific = delp * con_r8
+            rcon_r8 = 1.0 / con_r8
+            qzvapor = qvapor * rcon_r8
+            qzliquid = qliquid * rcon_r8
+            qzrain = qrain * rcon_r8
+            qzice = qice * rcon_r8
+            qzsnow = qsnow * rcon_r8
+            qzgraupel = qgraupel * rcon_r8
+            qza = qa
+
+            # Dry air density and layer-mean pressure thickness
+            density = -delp_specific * (constants.GRAV * delz)
+            pz = density * constants.RDGAS * temp
+        with interval(-1, None):
+            bottom_density = density
+
+
+def calc_density_factor(
+    den_fac: FloatField,
+    density: FloatField,
+    bottom_density: FloatFieldIJ,
+):
+    with computation(PARALLEL), interval(...):
+        den_fac = sqrt(bottom_density / density)
+
+
+def cloud_nuclei(
+    geopotential_height: FloatFieldIJ,
+    qnl: FloatField,
+    qni: FloatField,
+    density: FloatField,
+    cloud_condensation_nuclei: FloatField,
+    cloud_ice_nuclei: FloatField,
+    ccn_l: Float,
+    ccn_o: Float,
+):
+    from __externals__ import prog_ccn
+
+    with computation(PARALLEL), interval(...):
+        if __INLINED(prog_ccn is True):
+            # boucher and lohmann (1995)
+            nl = min(1.0, abs(geopotential_height / (10.0 * constants.GRAV))) * (
+                10.0 ** 2.24 * (qnl * density * 1.0e9) ** 0.257
+            ) + (1.0 - min(1.0, abs(geopotential_height) / (10 * constants.GRAV))) * (
+                10.0 ** 2.06 * (qnl * density * 1.0e9) ** 0.48
+            )
+            ni = qni
+            cloud_condensation_nuclei = (max(10.0, nl) * 1.0e6) / density
+            cloud_ice_nuclei = (max(10.0, ni) * 1.0e6) / density
+        else:
+            cloud_condensation_nuclei = (
+                (
+                    ccn_l * min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+                    + ccn_o
+                    * (
+                        1.0
+                        - min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+                    )
+                )
+                * 1.0e6
+                / density
+            )
+            cloud_ice_nuclei = 0.0 / density
 
 
 class MicrophysicsState:
@@ -183,6 +291,7 @@ class Microphysics:
         namelist: PhysicsConfig,
     ):
         self.namelist = namelist
+        self._idx: GridIndexing = stencil_factory.grid_indexing
         self._max_timestep = self.namelist.mp_time
         self._ntimes = self.namelist.ntimes
 
@@ -226,6 +335,81 @@ class Microphysics:
         # when we inline microphysics
 
         self._convert_mm_day = 86400.0 * constants.RGRAV / self._split_timestep
+
+        self._copy_stencil = stencil_factory.from_origin_domain(
+            basic.copy_defn,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._calc_total_energy = stencil_factory.from_origin_domain(
+            func=calc_total_energy,
+            externals={
+                "hydrostatic": self.namelist.hydrostatic,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        if self.namelist.consv_checker is True:
+            self._moist_total_energy_and_water_mq = stencil_factory.from_origin_domain(
+                func=moist_total_energy_and_water,
+                externals={
+                    "hydrostatic": self.namelist.hydrostatic,
+                    "moist_q": True,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+            self._moist_total_energy_and_water = stencil_factory.from_origin_domain(
+                func=moist_total_energy_and_water,
+                externals={
+                    "hydrostatic": self.namelist.hydrostatic,
+                    "moist_q": False,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+            self._calc_sedimentation_energy_loss = stencil_factory.from_origin_domain(
+                func=calc_sedimentation_energy_loss,
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+        self._calc_total_energy = stencil_factory.from_origin_domain(
+            func=calc_total_energy,
+            externals={
+                "hydrostatic": self.namelist.hydrostatic,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._convert_specific_to_mass_mixing_ratios_and_calculate_densities = (
+            stencil_factory.from_origin_domain(
+                func=convert_specific_to_mass_mixing_ratios_and_calculate_densities,
+                externals={
+                    "inline_mp": self.namelist.do_inline_mp,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+        )
+
+        self._calc_density_factor = stencil_factory.from_origin_domain(
+            func=calc_density_factor,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._cloud_nuclei = stencil_factory.from_origin_domain(
+            func=cloud_nuclei,
+            externals={"prog_ccn": self.namelist.prog_ccn},
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
 
         pass
 
