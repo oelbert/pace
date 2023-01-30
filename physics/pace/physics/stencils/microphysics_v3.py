@@ -273,6 +273,26 @@ def cloud_nuclei(
             cloud_ice_nuclei = 0.0 / density
 
 
+def subgrid_deviation_and_relative_humidity(
+    gsize: FloatFieldIJ,
+    geopotential_height: FloatFieldIJ,
+    h_var: FloatFieldIJ,
+    rh_adj: FloatFieldIJ,
+    rh_rain: FloatFieldIJ,
+):
+    from __externals__ import dw_land, dw_ocean, rh_inc, rh_inr
+
+    with computation(PARALLEL), interval(-1, None):
+        t_lnd = dw_land * sqrt(gsize / 1.0e5)
+        t_ocn = dw_ocean * sqrt(gsize / 1.0e5)
+        tmp = min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+        hvar = t_lnd * tmp + t_ocn * (1.0 - tmp)
+        h_var = min(0.20, max(0.01, hvar))
+
+        rh_adj = 1.0 - h_var - rh_inc
+        rh_rain = max(0.35, rh_adj - rh_inr)
+
+
 class MicrophysicsState:
     def __init__(
         self,
@@ -409,6 +429,20 @@ class Microphysics:
             externals={"prog_ccn": self.namelist.prog_ccn},
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
+        )
+
+        self._subgrid_deviation_and_relative_humidity = (
+            stencil_factory.from_origin_domain(
+                func=subgrid_deviation_and_relative_humidity,
+                externals={
+                    "dw_land": self.namelist.dw_land,
+                    "dw_ocean": self.namelist.dw_ocean,
+                    "rh_inc": self.namelist.rh_inc,
+                    "rh_inr": self.namelist.rh_inr,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
         )
 
         pass
