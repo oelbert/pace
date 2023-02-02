@@ -1,6 +1,7 @@
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
+    BACKWARD,
     FORWARD,
     PARALLEL,
     computation,
@@ -331,17 +332,6 @@ def heat_cap_and_latent_heat_coeff(
 
 
 @gtscript.function
-def update_hydrometeors(
-    q_sink,
-    q_source,
-    delta,
-):
-    q_sink += delta
-    q_source -= delta
-    return q_sink, q_source
-
-
-@gtscript.function
 def update_hydrometeors_and_temperatures(
     qvapor,
     qliquid,
@@ -401,8 +391,161 @@ def update_hydrometeors_and_temperatures(
     )
 
 
-def adjust_negative_tracers():
-    pass
+def adjust_negative_tracers(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    temp: FloatField,
+    delp: FloatField,
+    cond: FloatFieldIJ,
+    c1_vapor: Float,
+    c1_liq: Float,
+    c1_ice: Float,
+    lv00: Float,
+    li00: Float,
+    li20: Float,
+    d1_vap: Float,
+    d1_ice: Float,
+    tice: Float,
+    t_wfr: Float,
+):
+    with computation(PARALLEL), interval(...):
+        upper_fix = 0.0  # type: FloatField
+        lower_fix = 0.0  # type: FloatField
+
+    with computation(FORWARD), interval(...):
+        q_liq, q_solid, cvm, te, lcpk, icpk, tcpk, tcp3 = heat_cap_and_latent_heat_coeff
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temp,
+            c1_vapor,
+            c1_liq,
+            c1_ice,
+            lv00,
+            li00,
+            li20,
+            d1_vap,
+            d1_ice,
+            tice,
+            t_wfr,
+        )
+
+        # if cloud ice < 0, borrow from snow
+        if qice < 0.0:
+            sink = min(-qice, max(0, qsnow))
+            qice += sink
+            qsnow -= sink
+
+        # if snow < 0, borrow from graupel
+        if qsnow < 0.0:
+            sink = min(-qsnow, max(0, qgraupel))
+            qsnow += sink
+            qgraupel -= sink
+
+        # if graupel < 0, borrow from rain
+        if qgraupel < 0.0:
+            sink = min(-qgraupel, max(0, qrain))
+            update_hydrometeors_and_temperatures(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                0.0,
+                0.0,
+                -sink,
+                0.0,
+                0.0,
+                sink,
+                te,
+                c1_vapor,
+                c1_liq,
+                c1_ice,
+                lv00,
+                li00,
+                li20,
+                d1_vap,
+                d1_ice,
+                tice,
+                t_wfr,
+            )
+
+        # if rain < 0, borrow from cloud water
+        if qrain < 0.0:
+            sink = min(-qrain, max(0, qliquid))
+            qrain += sink
+            qliquid -= sink
+
+        # if cloud water < 0, borrow from vapor
+        if qliquid < 0.0:
+            sink = min(-qliquid, max(0, qvapor))
+            cond += sink * delp
+            update_hydrometeors_and_temperatures(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                -sink,
+                sink,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                te,
+                c1_vapor,
+                c1_liq,
+                c1_ice,
+                lv00,
+                li00,
+                li20,
+                d1_vap,
+                d1_ice,
+                tice,
+                t_wfr,
+            )
+
+    with computation(BACKWARD):
+        with interval(1, 2):
+            if qvapor[0, 0, -1] < 0:  # top level is negative
+                # reduce level 1 by that amount to compensate:
+                qvapor = qvapor + qvapor[0, 0, -1] * delp[0, 0, -1] / delp
+        with interval(0, 1):
+            if qvapor < 0.0:
+                qvapor = 0.0  # top level is now 0
+
+    with computation(FORWARD):
+        with interval(1, -1):
+            # if we borrowed from this level to fix the upper level, account for that:
+            if lower_fix[0, 0, -1] != 0:
+                qvapor += lower_fix[0, 0, -1]
+            if qvapor < 0:  # If negative borrow from below
+                lower_fix = qvapor * delp / delp[0, 0, 1]
+                qvapor = 0
+        with interval(-1, None):
+            # if we borrowed from this level to fix the upper level, account for that:
+            if lower_fix[0, 0, -1] != 0:
+                qvapor += lower_fix[0, 0, -1]
+
+    with computation(BACKWARD):
+        with interval(-1, None):
+            if (qvapor < 0) and (qvapor[0, 0, -1] > 0):
+                # If we can, fix the bottom layer by borrowing from above
+                upper_fix = min(-qvapor * delp, qvapor[0, 0, -1] * delp[0, 0, -1])
+                qvapor += upper_fix / delp
+        with interval(-2, -1):
+            if upper_fix[0, 0, 1] != 0.0:
+                qvapor -= upper_fix / delp
 
 
 class MicrophysicsState:
