@@ -38,7 +38,6 @@ def moist_total_energy(
     temp,
     delp,
     moist_q,
-    rgrav,
     c_air,
     c1_vapor,
     c1_liquid,
@@ -52,7 +51,7 @@ def moist_total_energy(
         cvm = con + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
     else:
         cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
-    return rgrav * cvm * c_air * temp * delp
+    return constants.RGRAV * cvm * c_air * temp * delp
 
 
 def calc_total_energy(
@@ -65,13 +64,8 @@ def calc_total_energy(
     qice: FloatField,
     qsnow: FloatField,
     qgraupel: FloatField,
-    c_air: Float,
-    grav: Float,
-    c1_vapor: Float,
-    c1_liquid: Float,
-    c1_ice: Float,
 ):
-    from __externals__ import hydrostatic
+    from __externals__ import c1_ice, c1_liquid, c1_vapor, c_air, hydrostatic
 
     with computation(PARALLEL), interval(...):
         if __INLINED(hydrostatic is True):
@@ -88,13 +82,12 @@ def calc_total_energy(
                     temp,
                     delp,
                     True,
-                    1.0 / grav,
                     c_air,
                     c1_vapor,
                     c1_liquid,
                     c1_ice,
                 )
-                * grav
+                * constants.GRAV
             )
 
 
@@ -125,18 +118,20 @@ def moist_total_energy_and_water(
     tot_water: FloatField,
     total_energy_bot: FloatFieldIJ,
     total_water_bot: FloatFieldIJ,
-    c1_vapor: Float,
-    c1_liquid: Float,
-    c1_ice: Float,
-    rgrav: Float,
-    lv00: Float,
-    li00: Float,
-    c_air: Float,
 ):
     """
     mtetw in Fortran
     """
-    from __externals__ import hydrostatic, moist_q
+    from __externals__ import (
+        c1_ice,
+        c1_liquid,
+        c1_vapor,
+        c_air,
+        hydrostatic,
+        li00,
+        lv00,
+        moist_q,
+    )
 
     with computation(PARALLEL), interval(...):
         q_liq = qliquid + qrain
@@ -152,8 +147,8 @@ def moist_total_energy_and_water(
             tot_energy = tot_energy + 0.5 * (ua ** 2 + va ** 2)
         else:
             tot_energy = tot_energy + 0.5 * (ua ** 2 + va ** 2 + wa ** 2)
-        tot_energy = rgrav * tot_energy * delp * gsize ** 2.0
-        tot_water = rgrav * (qvapor + q_cond) * delp * gsize ** 2.0
+        tot_energy = constants.RGRAV * tot_energy * delp * gsize ** 2.0
+        tot_water = constants.RGRAV * (qvapor + q_cond) * delp * gsize ** 2.0
 
     with computation(FORWARD), interval(-1, None):
         total_energy_bot = (
@@ -247,10 +242,8 @@ def cloud_nuclei(
     density: FloatField,
     cloud_condensation_nuclei: FloatField,
     cloud_ice_nuclei: FloatField,
-    ccn_l: Float,
-    ccn_o: Float,
 ):
-    from __externals__ import prog_ccn
+    from __externals__ import ccn_l, ccn_o, prog_ccn
 
     with computation(PARALLEL), interval(...):
         if __INLINED(prog_ccn is True):
@@ -401,17 +394,20 @@ def adjust_negative_tracers(
     temp: FloatField,
     delp: FloatField,
     cond: FloatFieldIJ,
-    c1_vapor: Float,
-    c1_liq: Float,
-    c1_ice: Float,
-    lv00: Float,
-    li00: Float,
-    li20: Float,
-    d1_vap: Float,
-    d1_ice: Float,
-    tice: Float,
-    t_wfr: Float,
 ):
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vapor,
+        d1_ice,
+        d1_vap,
+        li00,
+        li20,
+        lv00,
+        t_wfr,
+        tice,
+    )
+
     with computation(PARALLEL), interval(...):
         upper_fix = 0.0  # type: FloatField
         lower_fix = 0.0  # type: FloatField
@@ -634,6 +630,10 @@ class Microphysics:
             func=calc_total_energy,
             externals={
                 "hydrostatic": self.namelist.hydrostatic,
+                "c_air": self._c_air,
+                "c1_vapor": self._c1_vap,
+                "c1_liquid": self._c1_liquid,
+                "c1_ice": self._c1_ice,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -645,6 +645,12 @@ class Microphysics:
                 externals={
                     "hydrostatic": self.namelist.hydrostatic,
                     "moist_q": True,
+                    "c1_vapor": self._c1_vap,
+                    "c1_liquid": self._c1_liquid,
+                    "c1_ice": self._c1_ice,
+                    "lv00": self._lv00,
+                    "li00": self._li00,
+                    "c_air": self._c_air,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -655,6 +661,12 @@ class Microphysics:
                 externals={
                     "hydrostatic": self.namelist.hydrostatic,
                     "moist_q": False,
+                    "c1_vapor": self._c1_vap,
+                    "c1_liquid": self._c1_liquid,
+                    "c1_ice": self._c1_ice,
+                    "lv00": self._lv00,
+                    "li00": self._li00,
+                    "c_air": self._c_air,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -694,7 +706,11 @@ class Microphysics:
 
         self._cloud_nuclei = stencil_factory.from_origin_domain(
             func=cloud_nuclei,
-            externals={"prog_ccn": self.namelist.prog_ccn},
+            externals={
+                "prog_ccn": self.namelist.prog_ccn,
+                "ccn_l": self.namelist.ccn_l,
+                "ccn_o": self.namelist.ccn_o,
+            },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
@@ -711,6 +727,24 @@ class Microphysics:
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
             )
+        )
+
+        self._adjust_negative_tracers = stencil_factory.from_origin_domain(
+            func=adjust_negative_tracers,
+            externals={
+                "c1_vapor": self._c1_vap,
+                "c1_liq": self._c1_liquid,
+                "c1_ice": self._c1_ice,
+                "lv00": self._lv00,
+                "li00": self._li00,
+                "li20": self._li20,
+                "d1_vap": self._d1_vap,
+                "d1_ice": self._d1_ice,
+                "tice": self._tice,
+                "t_wfr": self._t_wfr,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
         )
 
         pass
