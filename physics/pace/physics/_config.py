@@ -73,6 +73,7 @@ class PhysicsConfig:
     tau_l2v: float = (
         NamelistDefaults.tau_l2v
     )  # cloud water to water vapor (evaporation)
+    tau_wbf: float = NamelistDefaults.tau_wbf
     c2l_ord: int = NamelistDefaults.c2l_ord
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
@@ -82,6 +83,7 @@ class PhysicsConfig:
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
+    do_wbf: bool = NamelistDefaults.do_wbf
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
@@ -154,6 +156,7 @@ class PhysicsConfig:
             tau_i2s=namelist.tau_i2s,
             tau_g2v=namelist.tau_g2v,
             tau_v2g=namelist.tau_v2g,
+            tau_wbf=namelist.tau_wbf,
             ql_mlt=namelist.ql_mlt,
             qs_mlt=namelist.qs_mlt,
             t_sub=namelist.t_sub,
@@ -174,6 +177,7 @@ class PhysicsConfig:
             do_cond_timescale=namelist.do_cond_timescale,
             consv_checker=namelist.consv_checker,
             do_warm_rain=namelist.do_warm_rain,
+            do_wbf=namelist.do_wbf,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,

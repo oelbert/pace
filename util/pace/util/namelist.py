@@ -27,6 +27,7 @@ class NamelistDefaults:
     tau_l2r = 900.0  # cloud water to rain auto - conversion
     tau_g2v = 1200.0  # graupel sublimation
     tau_v2g = 21600.0  # graupel deposition -- make it a slow process
+    tau_wbf = 300.0  # wegener bergeron findeisen timescale
     sat_adj0 = 0.90  # adjustment factor (0: no, 1: full) during fast_sat_adj
     ql_gen = 1.0e-3  # max new cloud water during remapping step if fast_sat_adj = .t.
     ql_mlt = 2.0e-3  # max value of cloud water allowed from melted cloud ice
@@ -91,11 +92,12 @@ class NamelistDefaults:
     do_cond_timescale = False  # Whether to apply a timescale to condensation
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
+    do_wbf = False  # Do Wegener Bergeron Findeisen process
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
-    qi0_crt = 8e-05  # Cloud ice to snow autoconversion threshold
+    qi0_crt = 1.0e-04  # Cloud ice to snow autoconversion threshold
     qs0_crt = 0.003  # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)
     rh_inc = 0.25  # RH increment for complete evaporation of cloud water and cloud ice
     rh_inr = 0.25  # RH increment for minimum evaporation of rain
@@ -276,6 +278,7 @@ class Namelist:
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
+    do_wbf: bool = NamelistDefaults.do_wbf
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
@@ -405,6 +408,7 @@ class Namelist:
     tau_v2g: float = (
         NamelistDefaults.tau_v2g
     )  # graupel deposition -- make it a slow process
+    tau_wbf: float = NamelistDefaults.tau_wbf
     sat_adj0: float = (
         NamelistDefaults.sat_adj0
     )  # adjustment factor (0: no 1: full) during fast_sat_adj

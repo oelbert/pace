@@ -792,11 +792,173 @@ def cloud_condensation_evaporation(
 
 
 @gtscript.function
-def freeze_cloud_water():
+def freeze_cloud_water(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    density,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
     """
     Cloud water freezing to form cloud ice and snow, Lin et al. (1983)
     Fortran name is pifr
     """
+
+    from __externals__ import qi0_crt, t_wfr
+
+    tc = t_wfr - temp
+    if (tc > 0.0) and (qliquid > QCMIN):
+        sink = qliquid * tc / DT_FR
+        sink = min(qliquid, sink, tc / icpk)
+        qim = qi0_crt / density
+        tmp = min(sink, positive_diff(qim, qice))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            -sink,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def wegener_bergeron_findeisen(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    density,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Wegener Bergeron Findeisen process, Storelvmo and Tan (2015)
+    Fortran name is pwbf
+    """
+
+    from __externals__ import qi0_crt, tau_wbf, tice, timestep
+
+    tc = tice - temp
+    qsw, dqdt = tables.sat_spec_hum_water(temp, density)
+    qsi, dqdt = tables.sat_spec_hum_water_ice(temp, density)
+
+    if (
+        (tc > 0.0)
+        and (qliquid > QCMIN)
+        and (qice > QCMIN)
+        and (qvapor > qsi)
+        and (qvapor < qsw)
+    ):
+        fac_wbf = 1.0 - exp(-timestep / tau_wbf)
+        sink = min(fac_wbf * qliquid, tc / icpk)
+        qim = qi0_crt / density
+        tmp = min(sink, positive_diff(qim, qice))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            -sink,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def freeze_bigg():
+    """
+    Bigg freezing mechanism
+    Fortran name is pbigg
+    """
+
     pass
 
 
@@ -817,7 +979,7 @@ def fast_microphysics(
     evaporation: FloatFieldIJ,
     sublimation: FloatFieldIJ,
 ):
-    from __externals__ import convt, do_warm_rain_mp
+    from __externals__ import convt, do_warm_rain_mp, do_wbf
 
     with computation(PARALLEL), interval(...):
         (
@@ -926,6 +1088,65 @@ def fast_microphysics(
 
     with computation(PARALLEL), interval(...):
         if __INLINED(do_warm_rain_mp is False):
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = freeze_cloud_water(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                density,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
+            if __INLINED(do_wbf is True):
+                (
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    cvm,
+                    temp,
+                    lcpk,
+                    icpk,
+                    tcpk,
+                    tcp3,
+                ) = wegener_bergeron_findeisen(
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    temp,
+                    density,
+                    cvm,
+                    te,
+                    lcpk,
+                    icpk,
+                    tcpk,
+                    tcp3,
+                )
             pass
         pass
 
