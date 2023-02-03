@@ -79,6 +79,7 @@ class PhysicsConfig:
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     qc_crt: float = NamelistDefaults.qc_crt
     fix_negative: bool = NamelistDefaults.fix_negative
+    do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     irain_f: int = NamelistDefaults.irain_f
@@ -86,6 +87,8 @@ class PhysicsConfig:
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    rhc_cevap: float = NamelistDefaults.rhc_cevap
+    rh_fac: float = NamelistDefaults.rh_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
     # rh_ins: Any
@@ -93,6 +96,7 @@ class PhysicsConfig:
     sedi_transport: bool = NamelistDefaults.sedi_transport
     # use_ccn: Any
     use_ppm: bool = NamelistDefaults.use_ppm
+    use_rhc_cevap: bool = NamelistDefaults.use_rhc_cevap
     vg_max: float = NamelistDefaults.vg_max
     vi_max: float = NamelistDefaults.vi_max
     vr_max: float = NamelistDefaults.vr_max
@@ -167,6 +171,7 @@ class PhysicsConfig:
             fast_sat_adj=namelist.fast_sat_adj,
             qc_crt=namelist.qc_crt,
             fix_negative=namelist.fix_negative,
+            do_cond_timescale=namelist.do_cond_timescale,
             consv_checker=namelist.consv_checker,
             do_warm_rain=namelist.do_warm_rain,
             irain_f=namelist.irain_f,
@@ -174,11 +179,14 @@ class PhysicsConfig:
             prog_ccn=namelist.prog_ccn,
             qi0_crt=namelist.qi0_crt,
             qs0_crt=namelist.qs0_crt,
+            rhc_cevap=namelist.rhc_cevap,
+            rh_fac=namelist.rh_fac,
             rh_inc=namelist.rh_inc,
             rh_inr=namelist.rh_inr,
             rthresh=namelist.rthresh,
             sedi_transport=namelist.sedi_transport,
             use_ppm=namelist.use_ppm,
+            use_rhc_cevap=namelist.use_rhc_cevap,
             vg_max=namelist.vg_max,
             vi_max=namelist.vi_max,
             vr_max=namelist.vr_max,

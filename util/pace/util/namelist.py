@@ -48,7 +48,7 @@ class NamelistDefaults:
     icloud_f = 0
     cld_min = 0.05  # !< minimum cloud fraction
     tau_l2v = 300.0  # cloud water to water vapor (evaporation)
-    tau_v2l = 90.0  # water vapor to cloud water (condensation)
+    tau_v2l = 150.0  # water vapor to cloud water (condensation)
     c2l_ord = 4
     regional = False
     m_split = 0
@@ -72,10 +72,13 @@ class NamelistDefaults:
     c_psaci = 0.05  # Accretion: cloud ice to snow (was 0.1 in zetac)
     ccn_l = 270.0  # CCN over land (cm^-3)
     ccn_o = 90.0  # CCN over ocean (cm^-3)
+    use_rhc_cevap = False  # cap of rh for cloud water evaporation
     const_vg = False  # Fall velocity tuning constant of graupel
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
     const_vs = False  # Fall velocity tuning constant of snow
+    rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
+    rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
     vg_fac = 1.0  # if const_vg: 2.
@@ -85,6 +88,7 @@ class NamelistDefaults:
     do_sedi_heat = False  # Transport of heat in sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
+    do_cond_timescale = False  # Whether to apply a timescale to condensation
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
     irain_f = 0  # Cloud water to rain auto conversion scheme
@@ -269,6 +273,7 @@ class Namelist:
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
+    do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     irain_f: int = NamelistDefaults.irain_f
@@ -277,6 +282,8 @@ class Namelist:
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    rhc_cevap: float = NamelistDefaults.rhc_cevap
+    rh_fac: float = NamelistDefaults.rh_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
     # rh_ins: Any
@@ -295,6 +302,7 @@ class Namelist:
     clin: float = NamelistDefaults.clin
     ntimes: int = NamelistDefaults.ntimes
     do_inline_mp: bool = NamelistDefaults.do_inline_mp
+    use_rhc_cevap: bool = NamelistDefaults.use_rhc_cevap
     # c0s_shal: Any
     # c1_shal: Any
     # cal_pre: Any

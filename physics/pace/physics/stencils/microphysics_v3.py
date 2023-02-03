@@ -5,11 +5,13 @@ from gt4py.cartesian.gtscript import (
     FORWARD,
     PARALLEL,
     computation,
+    exp,
     interval,
     sqrt,
 )
 
 import pace.fv3core.stencils.basic_operations as basic
+import pace.physics.functions.table_functions as tables
 import pace.util
 import pace.util.constants as constants
 
@@ -22,13 +24,20 @@ from pace.util.grid import GridData
 from .._config import PhysicsConfig
 
 
+QCMIN = 1.0e-15
+DT_FR = 8.0
+
+
 @gtscript.function
 def positive_diff(x, y):
+    """
+    equivalent of Fortran dim
+    """
     return max(x - y, 0.0)
 
 
 @gtscript.function
-def moist_total_energy(
+def calc_moist_total_energy(
     qvapor,
     qliquid,
     qrain,
@@ -38,11 +47,9 @@ def moist_total_energy(
     temp,
     delp,
     moist_q,
-    c_air,
-    c1_vapor,
-    c1_liquid,
-    c1_ice,
 ):
+    from __externals__ import c1_ice, c1_liquid, c1_vapor, c_air
+
     q_liq = qrain + qliquid
     q_solid = qice + qsnow + qgraupel
     q_cond = q_liq + q_solid
@@ -65,14 +72,14 @@ def calc_total_energy(
     qsnow: FloatField,
     qgraupel: FloatField,
 ):
-    from __externals__ import c1_ice, c1_liquid, c1_vapor, c_air, hydrostatic
+    from __externals__ import c_air, hydrostatic
 
     with computation(PARALLEL), interval(...):
         if __INLINED(hydrostatic is True):
             total_energy = -c_air * temp * delp
         else:
             total_energy = (
-                -moist_total_energy(
+                -calc_moist_total_energy(
                     qvapor,
                     qliquid,
                     qrain,
@@ -82,10 +89,6 @@ def calc_total_energy(
                     temp,
                     delp,
                     True,
-                    c_air,
-                    c1_vapor,
-                    c1_liquid,
-                    c1_ice,
                 )
                 * constants.GRAV
             )
@@ -113,7 +116,6 @@ def moist_total_energy_and_water(
     graupel: FloatFieldIJ,
     sen: Float,
     stress: Float,
-    timestep: Float,
     tot_energy: FloatField,
     tot_water: FloatField,
     total_energy_bot: FloatFieldIJ,
@@ -131,6 +133,7 @@ def moist_total_energy_and_water(
         li00,
         lv00,
         moist_q,
+        timestep,
     )
 
     with computation(PARALLEL), interval(...):
@@ -293,7 +296,7 @@ def subgrid_deviation_and_relative_humidity(
 
 
 @gtscript.function
-def heat_cap_and_latent_heat_coeff(
+def calc_heat_cap_and_latent_heat_coeff(
     qvapor,
     qliquid,
     qrain,
@@ -301,17 +304,24 @@ def heat_cap_and_latent_heat_coeff(
     qsnow,
     qgraupel,
     temp,
-    c1_vapor,
-    c1_liq,
-    c1_ice,
-    lv00,
-    li00,
-    li20,
-    d1_vap,
-    d1_ice,
-    tice,
-    t_wfr,
 ):
+    """
+    Fortran name is cal_mhc_lhc
+    """
+
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vapor,
+        d1_ice,
+        d1_vap,
+        li00,
+        li20,
+        lv00,
+        t_wfr,
+        tice,
+    )
+
     q_liq = qliquid + qrain
     q_solid = qice + qsnow + qgraupel
     cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liq + q_solid * c1_ice
@@ -339,17 +349,24 @@ def update_hydrometeors_and_temperatures(
     delta_snow,
     delta_graupel,
     te,
-    c1_vapor,
-    c1_liq,
-    c1_ice,
-    lv00,
-    li00,
-    li20,
-    d1_vap,
-    d1_ice,
-    tice,
-    t_wfr,
 ):
+    """
+    Fortran name is update_qt
+    """
+
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vapor,
+        d1_ice,
+        d1_vap,
+        li00,
+        li20,
+        lv00,
+        t_wfr,
+        tice,
+    )
+
     qvapor += delta_vapor
     qliquid += delta_liquid
     qrain += delta_rain
@@ -374,7 +391,6 @@ def update_hydrometeors_and_temperatures(
         qice,
         qsnow,
         qgraupel,
-        te,
         cvm,
         tk,
         lcpk,
@@ -393,46 +409,29 @@ def adjust_negative_tracers(
     qgraupel: FloatField,
     temp: FloatField,
     delp: FloatField,
-    cond: FloatFieldIJ,
+    condensation: FloatFieldIJ,
 ):
-    from __externals__ import (
-        c1_ice,
-        c1_liq,
-        c1_vapor,
-        d1_ice,
-        d1_vap,
-        li00,
-        li20,
-        lv00,
-        t_wfr,
-        tice,
-    )
+    """
+    Fortran name is neg_adj
+    """
+    from __externals__ import convt, ntimes
 
     with computation(PARALLEL), interval(...):
         upper_fix = 0.0  # type: FloatField
         lower_fix = 0.0  # type: FloatField
 
     with computation(FORWARD), interval(...):
-        q_liq, q_solid, cvm, te, lcpk, icpk, tcpk, tcp3 = heat_cap_and_latent_heat_coeff
         (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temp,
-            c1_vapor,
-            c1_liq,
-            c1_ice,
-            lv00,
-            li00,
-            li20,
-            d1_vap,
-            d1_ice,
-            tice,
-            t_wfr,
-        )
+            q_liq,
+            q_solid,
+            cvm,
+            te,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = calc_heat_cap_and_latent_heat_coeff
+        (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temp)
 
         # if cloud ice < 0, borrow from snow
         if qice < 0.0:
@@ -449,7 +448,20 @@ def adjust_negative_tracers(
         # if graupel < 0, borrow from rain
         if qgraupel < 0.0:
             sink = min(-qgraupel, max(0, qrain))
-            update_hydrometeors_and_temperatures(
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = update_hydrometeors_and_temperatures(
                 qvapor,
                 qliquid,
                 qrain,
@@ -463,16 +475,6 @@ def adjust_negative_tracers(
                 0.0,
                 sink,
                 te,
-                c1_vapor,
-                c1_liq,
-                c1_ice,
-                lv00,
-                li00,
-                li20,
-                d1_vap,
-                d1_ice,
-                tice,
-                t_wfr,
             )
 
         # if rain < 0, borrow from cloud water
@@ -484,8 +486,21 @@ def adjust_negative_tracers(
         # if cloud water < 0, borrow from vapor
         if qliquid < 0.0:
             sink = min(-qliquid, max(0, qvapor))
-            cond += sink * delp
-            update_hydrometeors_and_temperatures(
+            condensation += (sink * delp) * convt * ntimes
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = update_hydrometeors_and_temperatures(
                 qvapor,
                 qliquid,
                 qrain,
@@ -499,16 +514,6 @@ def adjust_negative_tracers(
                 0.0,
                 0.0,
                 te,
-                c1_vapor,
-                c1_liq,
-                c1_ice,
-                lv00,
-                li00,
-                li20,
-                d1_vap,
-                d1_ice,
-                tice,
-                t_wfr,
             )
 
     with computation(BACKWARD):
@@ -542,6 +547,387 @@ def adjust_negative_tracers(
         with interval(-2, -1):
             if upper_fix[0, 0, 1] != 0.0:
                 qvapor -= upper_fix / delp
+
+
+@gtscript.function
+def melt_cloud_ice(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Cloud ice melting to form cloud water and rain
+    Fortran name is pimlt
+    """
+
+    from __externals__ import ql_mlt, tau_imlt, tice_mlt, timestep
+
+    fac_imlt = 1.0 - exp(-timestep / tau_imlt)
+    tc = temp - tice_mlt
+    if (tc > 0.0) and (qice > QCMIN):
+        sink = fac_imlt * tc / icpk
+        sink = min(qice, sink)
+        tmp = min(sink, positive_diff(ql_mlt, qliquid))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            tmp,
+            sink - tmp,
+            -sink,
+            0,
+            0,
+            te,
+        )
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temp,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def complete_freeze(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Enforces complete freezing below t_wfr
+    Fortran name is pcomp
+    """
+    from __externals__ import t_wfr
+
+    tc = t_wfr - temp
+    if (tc > 0.0) and (qliquid > QCMIN):
+        sink = qliquid * tc / DT_FR
+        sink = min(qliquid, sink, tc / icpk)
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            -sink,
+            0.0,
+            sink,
+            0,
+            0,
+            te,
+        )
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temp,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def cloud_condensation_evaporation(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    delp,
+    density,
+    te,
+    tcp3,
+):
+    """
+    cloud water condensation and evaporation, Hong and Lim (2006)
+    pcond_pevap in Fortran
+    """
+
+    from __externals__ import (
+        do_cond_timescale,
+        rh_fac,
+        rhc_cevap,
+        tau_l2v,
+        tau_v2l,
+        timestep,
+        use_rhc_cevap,
+    )
+
+    fac_l2v = 1.0 - exp(-timestep / tau_l2v)
+    fac_v2l = 1.0 - exp(-timestep / tau_v2l)
+
+    qsw, dqdt = tables.sat_spec_hum_water(temp, density)
+    qpz = qvapor + qliquid + qice
+    rh_tem = qpz / qsw
+    dq = qsw - qvapor
+
+    if dq > 0.0:
+        fac = min(1.0, fac_l2v * (rh_fac * dq / qsw))
+        sink = min(qliquid, fac * dq / (1 + tcp3 * dqdt))
+        if (use_rhc_cevap is True) and (rh_tem > rhc_cevap):
+            sink = 0.0
+        reevaporation = sink * delp
+    elif do_cond_timescale:
+        fac = min(1.0, fac_v2l * (rh_fac * (-dq) / qsw))
+        sink = -min(qvapor, fac * (-dq) / (1.0 + tcp3 * dqdt))
+        condensation = -sink * delp
+    else:
+        sink = -min(qvapor, -dq / (1.0 + tcp3 * dqdt))
+        condensation = -sink * delp
+
+    (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    ) = update_hydrometeors_and_temperatures(
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        sink,
+        -sink,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        te,
+    )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temp,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+        reevaporation,
+        condensation,
+    )
+
+
+@gtscript.function
+def freeze_cloud_water():
+    """
+    Cloud water freezing to form cloud ice and snow, Lin et al. (1983)
+    Fortran name is pifr
+    """
+    pass
+
+
+def fast_microphysics(
+    temp: FloatField,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    delp: FloatField,
+    density: FloatField,
+    cloud_condensation_nuclei: FloatField,
+    cloud_ice_nuclei: FloatField,
+    condensation: FloatFieldIJ,
+    deposition: FloatFieldIJ,
+    evaporation: FloatFieldIJ,
+    sublimation: FloatFieldIJ,
+):
+    from __externals__ import convt, do_warm_rain_mp
+
+    with computation(PARALLEL), interval(...):
+        (
+            q_liq,
+            q_solid,
+            cvm,
+            te,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = calc_heat_cap_and_latent_heat_coeff
+        (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temp)
+
+        if __INLINED(do_warm_rain_mp is False):
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = melt_cloud_ice(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
+
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = complete_freeze(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temp,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+            reevap,
+            cond,
+        ) = cloud_condensation_evaporation(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temp,
+            delp,
+            density,
+            te,
+            tcp3,
+        )
+
+    with computation(FORWARD), interval(...):
+        condensation += cond * convt
+        evaporation += reevap * convt
+
+    with computation(PARALLEL), interval(...):
+        if __INLINED(do_warm_rain_mp is False):
+            pass
+        pass
 
 
 class MicrophysicsState:
@@ -602,8 +988,6 @@ class Microphysics:
             self._t_wfr = self._tice - 40.0
 
         # allocate memory, compile stencils, etc.
-        self._cond = 0.0
-
         def make_quantity(**kwargs):
             return quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
@@ -651,6 +1035,7 @@ class Microphysics:
                     "lv00": self._lv00,
                     "li00": self._li00,
                     "c_air": self._c_air,
+                    "timestep": self._full_timestep,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -667,6 +1052,7 @@ class Microphysics:
                     "lv00": self._lv00,
                     "li00": self._li00,
                     "c_air": self._c_air,
+                    "timestep": self._full_timestep,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -729,23 +1115,26 @@ class Microphysics:
             )
         )
 
-        self._adjust_negative_tracers = stencil_factory.from_origin_domain(
-            func=adjust_negative_tracers,
-            externals={
-                "c1_vapor": self._c1_vap,
-                "c1_liq": self._c1_liquid,
-                "c1_ice": self._c1_ice,
-                "lv00": self._lv00,
-                "li00": self._li00,
-                "li20": self._li20,
-                "d1_vap": self._d1_vap,
-                "d1_ice": self._d1_ice,
-                "tice": self._tice,
-                "t_wfr": self._t_wfr,
-            },
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
-        )
+        if self.namelist.fix_negative:
+            self._adjust_negative_tracers = stencil_factory.from_origin_domain(
+                func=adjust_negative_tracers,
+                externals={
+                    "c1_vapor": self._c1_vap,
+                    "c1_liq": self._c1_liquid,
+                    "c1_ice": self._c1_ice,
+                    "lv00": self._lv00,
+                    "li00": self._li00,
+                    "li20": self._li20,
+                    "d1_vap": self._d1_vap,
+                    "d1_ice": self._d1_ice,
+                    "tice": self._tice,
+                    "t_wfr": self._t_wfr,
+                    "convt": self._convert_mm_day,
+                    "ntimes": self._ntimes,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
 
         pass
 
