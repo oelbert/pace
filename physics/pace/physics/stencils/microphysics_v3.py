@@ -7,6 +7,7 @@ from gt4py.cartesian.gtscript import (
     computation,
     exp,
     interval,
+    log,
     sqrt,
 )
 
@@ -34,6 +35,52 @@ def positive_diff(x, y):
     equivalent of Fortran dim
     """
     return max(x - y, 0.0)
+
+
+@gtscript.function
+def calc_particle_concentration(tracer, density, pca, pcb, mu):
+    """
+    pc Part of cal_pc_ed_oe_rr_tv in Fortran
+    """
+
+    return pca / pcb * exp(mu / (mu + 3) * log(6 * density * tracer))
+
+
+@gtscript.function
+def calc_effective_diameter(tracer, density, eda, edb, mu):
+    """
+    ed Part of cal_pc_ed_oe_rr_tv in Fortran
+    """
+
+    return eda / edb * exp(1.0 / (mu + 3) * log(6 * density * tracer))
+
+
+@gtscript.function
+def calc_optical_extinction(tracer, density, oea, oeb, mu):
+    """
+    oe Part of cal_pc_ed_oe_rr_tv in Fortran
+    """
+
+    return oea / oeb * exp((mu + 2) / (mu + 3) * log(6 * density * tracer))
+
+
+@gtscript.function
+def calc_radar_reflectivity(tracer, density, rra, rrb, mu):
+    """
+    rr Part of cal_pc_ed_oe_rr_tv in Fortran
+    """
+
+    return rra / rrb * exp((mu + 6) / (mu + 3) * log(6 * density * tracer))
+
+
+@gtscript.function
+def calc_terminal_velocity(tracer, density, tva, tvb, mu, blin):
+    """
+    mass-weighted terminal velocity
+    tv Part of cal_pc_ed_oe_rr_tv in Fortran
+    """
+
+    return tva / tvb * exp(blin / (mu + 3) * log(6 * density * tracer))
 
 
 @gtscript.function
@@ -953,13 +1000,90 @@ def wegener_bergeron_findeisen(
 
 
 @gtscript.function
-def freeze_bigg():
+def freeze_bigg(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    cloud_condensation_nuclei,
+    temp,
+    density,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
     """
-    Bigg freezing mechanism
+    Bigg freezing mechanism, Bigg (1953)
     Fortran name is pbigg
     """
+    from __externals__ import do_psd_water_num, muw, pcaw, pcbw, tice, timestep
 
-    pass
+    tc = tice - temp
+    if (tc > 0.0) and (qliquid > QCMIN):
+        if do_psd_water_num is True:
+            cloud_condensation_nuclei = calc_particle_concentration(
+                qliquid, density, pcaw, pcbw, muw
+            )
+            cloud_condensation_nuclei = cloud_condensation_nuclei / density
+
+        sink = (
+            100.0
+            / (constants.RHO_W * cloud_condensation_nuclei)
+            * timestep
+            * (exp(0.66 * tc) - 1.0)
+            * qliquid ** 2.0
+        )
+        sink = min(qliquid, sink, tc / icpk)
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            -sink,
+            0.0,
+            sink,
+            0.0,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cloud_condensation_nuclei,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
 
 
 def fast_microphysics(
@@ -1147,7 +1271,37 @@ def fast_microphysics(
                     tcpk,
                     tcp3,
                 )
-            pass
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cloud_condensation_nuclei,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = freeze_bigg(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cloud_condensation_nuclei,
+                temp,
+                density,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
         pass
 
 

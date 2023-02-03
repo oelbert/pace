@@ -93,6 +93,7 @@ class NamelistDefaults:
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
+    do_psd_water_num = False  # Calculate cloud water number concentration based on PSD
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
@@ -115,6 +116,9 @@ class NamelistDefaults:
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
     do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
+    muw = (
+        6.0  # shape parameter of cloud water in Gamma distribution (Martin et al. 1994)
+    )
 
     @classmethod
     def as_dict(cls):
@@ -279,6 +283,7 @@ class Namelist:
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
+    do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
@@ -457,6 +462,7 @@ class Namelist:
     tau_v2l: float = (
         NamelistDefaults.tau_v2l
     )  # water vapor to cloud water (condensation)
+    muw: float = NamelistDefaults.muw
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
     m_split: int = NamelistDefaults.m_split

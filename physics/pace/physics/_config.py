@@ -84,6 +84,7 @@ class PhysicsConfig:
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
+    do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
@@ -178,6 +179,7 @@ class PhysicsConfig:
             consv_checker=namelist.consv_checker,
             do_warm_rain=namelist.do_warm_rain,
             do_wbf=namelist.do_wbf,
+            do_psd_water_num=namelist.do_psd_water_num,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
