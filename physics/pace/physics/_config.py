@@ -109,6 +109,9 @@ class PhysicsConfig:
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
     clin: float = NamelistDefaults.clin
+    n0w_sig: float = NamelistDefaults.n0w_sig
+    n0w_exp: float = NamelistDefaults.n0w_exp
+    muw: float = NamelistDefaults.muw
 
     namelist_override: Optional[str] = None
 
@@ -202,6 +205,9 @@ class PhysicsConfig:
             tice=namelist.tice,
             alin=namelist.alin,
             clin=namelist.clin,
+            n0w_sig=namelist.n0w_sig,
+            n0w_exp=namelist.n0w_exp,
+            muw=namelist.muw,
             ntimes=namelist.ntimes,
             do_inline_mp=namelist.do_inline_mp,
         )

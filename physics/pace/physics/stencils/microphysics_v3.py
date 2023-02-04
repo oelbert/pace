@@ -1,3 +1,5 @@
+import math
+
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
@@ -1348,6 +1350,19 @@ class Microphysics:
         self._c1_vap = self._c_vap / self._c_air
         self._c1_liquid = constants.C_LIQ / self._c_air
         self._c1_ice = constants.C_ICE / self._c_air
+
+        self._pcaw = (
+            math.exp(3 / (self.namelist.muw + 3) * math.log(self.namelist.n0w_sig))
+            * math.gamma(self.namelist.muw)
+            * math.exp(
+                3 * self.namelist.n0w_exp / (self.namelist.muw + 3) * math.log(10.0)
+            )
+        )
+        self._pcbw = math.exp(
+            self.namelist.muw
+            / (self.namelist.muw + 3)
+            * math.log(math.pi * constants.RHO_W * math.gamma(self.namelist.muw + 3))
+        )
 
         self._n_min = 1600
         self._delt = 0.1

@@ -116,6 +116,8 @@ class NamelistDefaults:
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
     do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
+    n0w_sig = 1.1  # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    n0w_exp = 41  # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
     muw = (
         6.0  # shape parameter of cloud water in Gamma distribution (Martin et al. 1994)
     )
@@ -462,6 +464,8 @@ class Namelist:
     tau_v2l: float = (
         NamelistDefaults.tau_v2l
     )  # water vapor to cloud water (condensation)
+    n0w_sig: float = NamelistDefaults.n0w_sig
+    n0w_exp: float = NamelistDefaults.n0w_exp
     muw: float = NamelistDefaults.muw
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
