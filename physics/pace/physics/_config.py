@@ -85,12 +85,14 @@ class PhysicsConfig:
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
+    do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
+    is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
@@ -110,8 +112,13 @@ class PhysicsConfig:
     alin: float = NamelistDefaults.alin
     clin: float = NamelistDefaults.clin
     n0w_sig: float = NamelistDefaults.n0w_sig
+    n0i_sig: float = NamelistDefaults.n0i_sig
     n0w_exp: float = NamelistDefaults.n0w_exp
+    n0i_exp: float = NamelistDefaults.n0i_exp
     muw: float = NamelistDefaults.muw
+    mui: float = NamelistDefaults.mui
+    inflag: float = NamelistDefaults.inflag
+    igflag: float = NamelistDefaults.igflag
 
     namelist_override: Optional[str] = None
 
@@ -183,12 +190,14 @@ class PhysicsConfig:
             do_warm_rain=namelist.do_warm_rain,
             do_wbf=namelist.do_wbf,
             do_psd_water_num=namelist.do_psd_water_num,
+            do_psd_ice_num=namelist.do_psd_ice_num,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
             qi0_crt=namelist.qi0_crt,
             qs0_crt=namelist.qs0_crt,
             rhc_cevap=namelist.rhc_cevap,
+            is_fac=namelist.is_fac,
             rh_fac=namelist.rh_fac,
             rh_inc=namelist.rh_inc,
             rh_inr=namelist.rh_inr,
@@ -206,8 +215,13 @@ class PhysicsConfig:
             alin=namelist.alin,
             clin=namelist.clin,
             n0w_sig=namelist.n0w_sig,
+            n0i_sig=namelist.n0i_sig,
             n0w_exp=namelist.n0w_exp,
+            n0i_exp=namelist.n0i_exp,
             muw=namelist.muw,
+            mui=namelist.mui,
+            inflag=namelist.inflag,
+            igflag=namelist.igflag,
             ntimes=namelist.ntimes,
             do_inline_mp=namelist.do_inline_mp,
         )

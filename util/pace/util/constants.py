@@ -96,4 +96,10 @@ T_MIN = 178.0  # Minimum temperature to freeze-dry all water vapor
 T_SAT_MIN = TICE - 160.0
 LAT2 = (HLV + HLF) ** 2  # used in bigg mechanism
 
-RHO_W = 1.0e3  # density of cloud water
+RHO_W = 1.0e3  # density of cloud water (kg/m^3)
+RHO_I = 9.17e2  # density of cloud ice (kg/m^3)
+
+VDIFU = 2.25e-5 # diffusivity of water vapor in air at 0 deg C  and 1000 hPa 
+# (Mason, 1971) (m^2/s)
+TCOND = 2.40e-2 # thermal conductivity of air at 0 C and 1000 hPa 
+# (Mason, 1971) (J/m/s/K)

@@ -78,6 +78,7 @@ class NamelistDefaults:
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
     const_vs = False  # Fall velocity tuning constant of snow
+    is_fac = 0.2 # Cloud ice sublimation temperature factor
     rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     vi_fac = 1.0  # if const_vi: 1/3
@@ -94,6 +95,7 @@ class NamelistDefaults:
     do_warm_rain = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
     do_psd_water_num = False  # Calculate cloud water number concentration based on PSD
+    do_psd_ice_num: False # Calculate cloud ice number concentration based on PSD
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
@@ -115,12 +117,28 @@ class NamelistDefaults:
     alin = 842.0  # "a" in lin1983
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
-    do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
-    n0w_sig = 1.1  # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
-    n0w_exp = 41  # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    do_inline_mp = False # Whether the microphsyics is called inside of the dycore
+    n0w_sig = 1.1 # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    n0i_sig = 1.3 # cice significand (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
+    n0w_exp = 41 # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    n0i_exp = 18 # cice exponent (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
     muw = (
         6.0  # shape parameter of cloud water in Gamma distribution (Martin et al. 1994)
     )
+    mui = (
+        3.35  # Gamma shape parameter of cloud ice (McFarquhar et al. 2015)
+    )
+    inflag = 1 # Ice nucleation scheme: 
+    # 1: Hong et al. (2004)
+    # 2: Meyers et al. (1992)
+    # 3: Meyers et al. (1992)
+    # 4: Cooper (1986)
+    # 5: Fletcher (1962)
+    igflag = 3 # Ice generation scheme
+    # 1: WSM6
+    # 2: WSM6 with 0 at 0 C
+    # 3: WSM6 with 0 at 0 C and fixed value at - 10 C
+    # 4: combination of 1 and 3
 
     @classmethod
     def as_dict(cls):
@@ -286,6 +304,7 @@ class Namelist:
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
+    do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
@@ -293,6 +312,7 @@ class Namelist:
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
+    is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
@@ -465,8 +485,13 @@ class Namelist:
         NamelistDefaults.tau_v2l
     )  # water vapor to cloud water (condensation)
     n0w_sig: float = NamelistDefaults.n0w_sig
+    n0i_sig: float = NamelistDefaults.n0i_sig
     n0w_exp: float = NamelistDefaults.n0w_exp
+    n0i_exp: float = NamelistDefaults.n0i_exp
     muw: float = NamelistDefaults.muw
+    mui: float = NamelistDefaults.mui
+    inflag: int = NamelistDefaults.inflag
+    igflag: int = NamelistDefaults.igflag
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
     m_split: int = NamelistDefaults.m_split

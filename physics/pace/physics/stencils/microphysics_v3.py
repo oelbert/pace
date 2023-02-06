@@ -1,4 +1,5 @@
 import math
+from os import times
 
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
@@ -1087,6 +1088,313 @@ def freeze_bigg(
         tcp3,
     )
 
+@gtscript.function
+def freeze_rain_to_graupel_simple(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Fortran name is pgfr_simp
+    """
+
+    from __externals__ import timestep, tau_r2g, tice
+
+    fac_r2g = 1.-exp(-timestep / tau_r2g)
+    tc = temp - tice
+    if (tc < 0.) and (qrain > QCMIN):
+        sink = (-tc * 0.025) **2 * qrain
+        sink = min(qrain, sink, -fac_r2g * tc / icpk)
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            0.0,
+            -sink,
+            0.0,
+            0.0,
+            sink,
+            te,
+        )
+    
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+@gtscript.function
+def melt_snow_simple(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Fortran name is psmlt_simp
+    """
+    
+    from __externals__ import timestep, tau_smlt, tice, qs_mlt
+    
+    fac_smlt = 1.-exp(- timestep / tau_smlt)
+    
+    tc = temp - tice
+    if (tc > 0.) and (qsnow > QCMIN):
+        sink = (tc * 0.1)**2 * qsnow
+        sink  = min(qsnow, sink, fac_smlt * tc / icpk)
+        tmp = min(sink, positive_diff(qs_mlt, qliquid))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
+            sink,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+@gtscript.function
+def autoconvert_water_to_rain_simple(
+    qliquid,
+    qrain,
+    temp,
+):
+    """
+    Cloud water to rain autoconversion, simple version
+    Fortran name is praut_simp
+    """
+
+    from __externals__ import timestep, tau_l2r, t_wfr, ql0_max
+    fac_l2r = 1.-exp(-timestep/tau_l2r)
+
+    tc = temp - t_wfr
+    if (tc > 0) and (qliquid > ql0_max):
+        sink = fac_l2r * (qliquid - ql0_max)
+        qliquid -= sink
+        qrain += sink
+    
+    return qliquid, qrain
+
+@gtscript.function
+def deposit_and_sublimate_ice(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    cloud_ice_nuclei,
+    temp,
+    delp,
+    density,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Cloud ice deposition and sublimation, Hong et al. (2004)
+    Fortran name is pidep_pisub
+    """
+
+    from __externals__ import timestep, tice, prog_ccn, inflag, do_psd_ice_num, pcai, pcbi, mui, igflag, qi_lim, t_sub, is_fac
+
+    sub = 0.
+    dep = 0.
+
+    if temp < tice:
+        pidep = 0
+        qsi, dqdt = tables.sat_spec_hum_water_ice(temp, density)
+        dq = qvapor - qsi
+        tmp = dq / (1. + tcpk * dqdt)
+
+        if qice > QCMIN:
+            if prog_ccn is False:
+                if inflag == 1:
+                    cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice* density))
+                elif inflag == 2:
+                    cloud_ice_nuclei = exp(-2.80 + 0.262*(tice - temp)) * 1000.
+                elif inflag == 3:
+                    cloud_ice_nuclei = exp(-0.639 + 12.96 * (qvapor/qsi - 1.)) * 1000.
+                elif inflag == 4:
+                    cloud_ice_nuclei = 5.e-3 * exp(0.304 * (tice - temp)) * 1000.
+                elif inflag == 5:
+                    cloud_ice_nuclei = 1.e-5 * exp(0.5 * (tice - temp)) * 1000.
+                else:
+                    raise NotImplementedError("Ice Nucleation Flag must be an integer from 1 to 5")
+            if do_psd_ice_num:
+                cloud_ice_nuclei = calc_particle_concentration(qice, density, pcai, pcbi, mui)
+                cloud_ice_nuclei = cloud_ice_nuclei / density
+            
+            pidep = timestep * dq * 4.0 * 11.9 * exp(0.5*log(qice * density * cloud_ice_nuclei)) / (qsi * density * (tcpk * cvm)**2 / (constants.TCOND * constants.RVGAS * temp **2) + 1./ constants.VDIFU)
+        if dq > 0:
+            tc = tice - temp
+            qi_gen = 4.92e-11 * exp(1.33 * log(1.e3 * exp(0.1 * tc)))
+            if igflag == 1:
+                qi_crt = qi_gen / density
+            elif igflag == 2:
+                qi_crt = qi_gen * min(qi_lim, 0.1*tc)/density
+            elif igflag == 3:
+                qi_crt = 1.82e-6 * min(qi_lim, 0.1*tc)/density
+            elif igflag == 4:
+                qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1*tc)/density
+            else:
+                raise NotImplementedError("Ice Generation Flag must be an integer from 1 to 4")
+            sink = min(tmp, max(qi_crt - qice, pidep), tc/tcpk)
+            dep = sink * delp
+        else:
+            pidep = pidep * min(1, positive_diff(temp, t_sub)*is_fac)
+            sink = max(pidep, tmp - qice)
+            sub = -sink * delp
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temp,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            -sink,
+            0.0,
+            0.0,
+            sink,
+            0.0,
+            0.0,
+            te,
+        )
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temp,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+        dep,
+        sub,
+    )
+
+@gtscript.function
+def autoconvert_ice_to_snow_simple(qice, qsnow, temp, density):
+    """
+    Cloud ice to snow autoconversion, simple version
+    Fortran name is psaut_simp
+    """
+    from __externals__ import timestep, tau_i2s, tice, qi0_max
+
+    fac_i2s = 1.- exp(-timestep / tau_i2s)
+
+    tc = temp - tice
+    qim = qi0_max / density
+
+    if (tc < 0) and (qice > qim):
+        sink = fac_i2s * (qice - qim)
+        qice -= sink
+        qsnow += sink
+    return qice, qsnow
+
+
 
 def fast_microphysics(
     temp: FloatField,
@@ -1208,11 +1516,6 @@ def fast_microphysics(
             tcp3,
         )
 
-    with computation(FORWARD), interval(...):
-        condensation += cond * convt
-        evaporation += reevap * convt
-
-    with computation(PARALLEL), interval(...):
         if __INLINED(do_warm_rain_mp is False):
             (
                 qvapor,
@@ -1304,7 +1607,110 @@ def fast_microphysics(
                 tcpk,
                 tcp3,
             )
-        pass
+
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = freeze_rain_to_graupel_simple(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
+
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = melt_snow_simple(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temp,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            )
+        
+        qliquid, qrain = autoconvert_water_to_rain_simple(qliquid, qrain, temp)
+        
+        if __INLINED(do_warm_rain_mp is False):
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temp,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+                dep,
+                sub
+            ) = deposit_and_sublimate_ice(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cloud_ice_nuclei,
+                temp,
+                delp,
+                density,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3
+            )
+            
+            qice, qsnow = autoconvert_ice_to_snow_simple(qice, qsnow, temp, density)
+        
+    with computation(FORWARD), interval(...):
+        if __INLINED(do_warm_rain_mp is False):
+            condensation += cond * convt
+            evaporation += reevap * convt
+            deposition += dep * convt
+            sublimation += sub * convt
 
 
 class MicrophysicsState:
@@ -1362,6 +1768,18 @@ class Microphysics:
             self.namelist.muw
             / (self.namelist.muw + 3)
             * math.log(math.pi * constants.RHO_W * math.gamma(self.namelist.muw + 3))
+        )
+        self._pcai = (
+            math.exp(3 / (self.namelist.mui + 3) * math.log(self.namelist.n0i_sig))
+            * math.gamma(self.namelist.mui)
+            * math.exp(
+                3 * self.namelist.n0i_exp / (self.namelist.mui + 3) * math.log(10.0)
+            )
+        )
+        self._pcbi = math.exp(
+            self.namelist.mui
+            / (self.namelist.mui + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(self.namelist.mui + 3))
         )
 
         self._n_min = 1600
