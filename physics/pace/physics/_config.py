@@ -76,6 +76,7 @@ class PhysicsConfig:
     tau_wbf: float = NamelistDefaults.tau_wbf
     c2l_ord: int = NamelistDefaults.c2l_ord
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
+    do_sedi_melt: bool = NamelistDefaults.do_sedi_melt
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     qc_crt: float = NamelistDefaults.qc_crt
@@ -84,6 +85,8 @@ class PhysicsConfig:
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
+    do_psd_water_fall: bool = NamelistDefaults.do_psd_water_fall
+    do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     irain_f: int = NamelistDefaults.irain_f
@@ -110,6 +113,8 @@ class PhysicsConfig:
     z_slope_liq: bool = NamelistDefaults.z_slope_liq
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
+    alini: float = NamelistDefaults.alini
+    blini: float = NamelistDefaults.blini
     clin: float = NamelistDefaults.clin
     n0w_sig: float = NamelistDefaults.n0w_sig
     n0i_sig: float = NamelistDefaults.n0i_sig
@@ -117,8 +122,9 @@ class PhysicsConfig:
     n0i_exp: float = NamelistDefaults.n0i_exp
     muw: float = NamelistDefaults.muw
     mui: float = NamelistDefaults.mui
-    inflag: float = NamelistDefaults.inflag
-    igflag: float = NamelistDefaults.igflag
+    inflag: int = NamelistDefaults.inflag
+    igflag: int = NamelistDefaults.igflag
+    ifflag: int = NamelistDefaults.ifflag
 
     namelist_override: Optional[str] = None
 
@@ -181,6 +187,7 @@ class PhysicsConfig:
             tau_l2v=namelist.tau_l2v,
             c2l_ord=namelist.c2l_ord,
             do_sedi_heat=namelist.do_sedi_heat,
+            do_sedi_melt=namelist.do_sedi_melt,
             do_sedi_w=namelist.do_sedi_w,
             fast_sat_adj=namelist.fast_sat_adj,
             qc_crt=namelist.qc_crt,
@@ -189,6 +196,8 @@ class PhysicsConfig:
             consv_checker=namelist.consv_checker,
             do_warm_rain=namelist.do_warm_rain,
             do_wbf=namelist.do_wbf,
+            do_psd_water_fall=namelist.do_psd_water_fall,
+            do_psd_ice_fall=namelist.do_psd_ice_fall,
             do_psd_water_num=namelist.do_psd_water_num,
             do_psd_ice_num=namelist.do_psd_ice_num,
             irain_f=namelist.irain_f,
@@ -213,6 +222,8 @@ class PhysicsConfig:
             z_slope_liq=namelist.z_slope_liq,
             tice=namelist.tice,
             alin=namelist.alin,
+            alini=namelist.alini,
+            blini=namelist.blini,
             clin=namelist.clin,
             n0w_sig=namelist.n0w_sig,
             n0i_sig=namelist.n0i_sig,
@@ -222,6 +233,7 @@ class PhysicsConfig:
             mui=namelist.mui,
             inflag=namelist.inflag,
             igflag=namelist.igflag,
+            ifflag=namelist.ifflag,
             ntimes=namelist.ntimes,
             do_inline_mp=namelist.do_inline_mp,
         )

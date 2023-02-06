@@ -88,12 +88,15 @@ class NamelistDefaults:
     de_ice = False  # To prevent excessive build-up of cloud ice from external sources
     do_qa = True  # Do inline cloud fraction
     do_sedi_heat = False  # Transport of heat in sedimentation
+    do_sedi_melt = True # Melt cloud ice, snow, and graupel during sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
     do_cond_timescale = False  # Whether to apply a timescale to condensation
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
+    do_psd_water_fall = False # Calculate cloud water terminal velocity based on PSD
+    do_psd_ice_fall: False # Calculate cloud ice terminal velocity based on PSD
     do_psd_water_num = False  # Calculate cloud water number concentration based on PSD
     do_psd_ice_num: False # Calculate cloud ice number concentration based on PSD
     irain_f = 0  # Cloud water to rain auto conversion scheme
@@ -115,6 +118,8 @@ class NamelistDefaults:
     z_slope_liq = True  # Use linear mono slope for autoconversions
     tice = 273.16  # set tice = 165. to turn off ice - phase phys (kessler emulator)
     alin = 842.0  # "a" in lin1983
+    alini = 7.e2 # "a" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
+    blini = 1.0 # "b" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
     do_inline_mp = False # Whether the microphsyics is called inside of the dycore
@@ -139,6 +144,9 @@ class NamelistDefaults:
     # 2: WSM6 with 0 at 0 C
     # 3: WSM6 with 0 at 0 C and fixed value at - 10 C
     # 4: combination of 1 and 3
+    ifflag = 1 # Ice fall scheme
+    # 1: Deng and Mace (2008)
+    # 2: Heymsfield and Donner (1990)
 
     @classmethod
     def as_dict(cls):
@@ -296,6 +304,7 @@ class Namelist:
     de_ice: bool = NamelistDefaults.de_ice
     do_qa: bool = NamelistDefaults.do_qa
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
+    do_sedi_melt: bool = NamelistDefaults.do_sedi_melt
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
@@ -303,6 +312,8 @@ class Namelist:
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
+    do_psd_water_fall: bool = NamelistDefaults.do_psd_water_fall
+    do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     irain_f: int = NamelistDefaults.irain_f
@@ -329,6 +340,8 @@ class Namelist:
     z_slope_liq: bool = NamelistDefaults.z_slope_liq
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
+    alini: float = NamelistDefaults.alini
+    blini: float = NamelistDefaults.blini
     clin: float = NamelistDefaults.clin
     ntimes: int = NamelistDefaults.ntimes
     do_inline_mp: bool = NamelistDefaults.do_inline_mp
@@ -492,6 +505,7 @@ class Namelist:
     mui: float = NamelistDefaults.mui
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
+    ifflag: int = NamelistDefaults.ifflag
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
     m_split: int = NamelistDefaults.m_split
