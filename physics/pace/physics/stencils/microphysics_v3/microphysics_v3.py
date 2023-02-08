@@ -1,6 +1,6 @@
 import math
-from os import times
 
+import table_functions as tables
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
@@ -13,9 +13,9 @@ from gt4py.cartesian.gtscript import (
     log,
     sqrt,
 )
+from moist_total_energy import calc_total_energy
 
 import pace.fv3core.stencils.basic_operations as basic
-import pace.physics.functions.table_functions as tables
 import pace.util
 import pace.util.constants as constants
 
@@ -25,15 +25,16 @@ from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.util import X_DIM, Y_DIM, Z_DIM
 from pace.util.grid import GridData
 
-from .._config import PhysicsConfig
+from ..._config import PhysicsConfig
 
 
-QCMIN = 1.0e-15 # min value for cloud condensates (kg/kg)
-QFMIN = 1.e-8  # min value for sedimentation (kg/kg)
-DT_FR = 8.0 # t_wfr - dt_fr: minimum temperature water can exist 
+QCMIN = 1.0e-15  # min value for cloud condensates (kg/kg)
+QFMIN = 1.0e-8  # min value for sedimentation (kg/kg)
+DT_FR = 8.0  # t_wfr - dt_fr: minimum temperature water can exist
 # (Moore and Molinero 2011)
 
-DZ_MIN_FLIP = 1.e-2 # used for correcting flipped height (m)
+DZ_MIN_FLIP = 1.0e-2  # used for correcting flipped height (m)
+
 
 @gtscript.function
 def positive_diff(x, y):
@@ -89,62 +90,15 @@ def calc_terminal_velocity(tracer, density, tva, tvb, mu, blin):
     return tva / tvb * exp(blin / (mu + 3) * log(6 * density * tracer))
 
 
-@gtscript.function
-def calc_moist_total_energy(
-    qvapor,
-    qliquid,
-    qrain,
-    qice,
-    qsnow,
-    qgraupel,
-    temp,
-    delp,
-    moist_q,
+def calc_sedimentation_energy_loss(
+    energy_loss: FloatFieldIJ, column_energy_change: FloatFieldIJ, gsize: FloatFieldIJ
 ):
-    from __externals__ import c1_ice, c1_liquid, c1_vapor, c_air
-
-    q_liq = qrain + qliquid
-    q_solid = qice + qsnow + qgraupel
-    q_cond = q_liq + q_solid
-    con = 1.0 - (qvapor + q_cond)
-    if moist_q is True:
-        cvm = con + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
-    else:
-        cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
-    return constants.RGRAV * cvm * c_air * temp * delp
-
-
-def calc_total_energy(
-    total_energy: FloatField,
-    temp: FloatField,
-    delp: FloatField,
-    qvapor: FloatField,
-    qliquid: FloatField,
-    qrain: FloatField,
-    qice: FloatField,
-    qsnow: FloatField,
-    qgraupel: FloatField,
-):
-    from __externals__ import c_air, hydrostatic
-
-    with computation(PARALLEL), interval(...):
-        if __INLINED(hydrostatic is True):
-            total_energy = -c_air * temp * delp
-        else:
-            total_energy = (
-                -calc_moist_total_energy(
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temp,
-                    delp,
-                    True,
-                )
-                * constants.GRAV
-            )
+    """
+    Last calculation of mtetw, split into a separate stencil to cover the
+    if (present(te_loss)) conditional
+    """
+    with computation(FORWARD), interval(-1, None):
+        energy_loss = column_energy_change * gsize ** 2.0
 
 
 def moist_total_energy_and_water(
@@ -174,9 +128,6 @@ def moist_total_energy_and_water(
     total_energy_bot: FloatFieldIJ,
     total_water_bot: FloatFieldIJ,
 ):
-    """
-    mtetw in Fortran
-    """
     from __externals__ import (
         c1_ice,
         c1_liquid,
@@ -221,17 +172,6 @@ def moist_total_energy_and_water(
             / 86400
             * gsize ** 2.0
         )
-
-
-def calc_sedimentation_energy_loss(
-    energy_loss: FloatFieldIJ, column_energy_change: FloatFieldIJ, gsize: FloatFieldIJ
-):
-    """
-    Last calculation of mtetw, split into a separate stencil to cover the
-    if (present(te_loss)) conditional
-    """
-    with computation(FORWARD), interval(-1, None):
-        energy_loss = column_energy_change * gsize ** 2.0
 
 
 def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
@@ -1091,6 +1031,7 @@ def freeze_bigg(
         tcp3,
     )
 
+
 @gtscript.function
 def freeze_rain_to_graupel_simple(
     qvapor,
@@ -1111,12 +1052,12 @@ def freeze_rain_to_graupel_simple(
     Fortran name is pgfr_simp
     """
 
-    from __externals__ import timestep, tau_r2g, tice
+    from __externals__ import tau_r2g, tice, timestep
 
-    fac_r2g = 1.-exp(-timestep / tau_r2g)
+    fac_r2g = 1.0 - exp(-timestep / tau_r2g)
     tc = temp - tice
-    if (tc < 0.) and (qrain > QCMIN):
-        sink = (-tc * 0.025) **2 * qrain
+    if (tc < 0.0) and (qrain > QCMIN):
+        sink = (-tc * 0.025) ** 2 * qrain
         sink = min(qrain, sink, -fac_r2g * tc / icpk)
 
         (
@@ -1147,7 +1088,7 @@ def freeze_rain_to_graupel_simple(
             sink,
             te,
         )
-    
+
     return (
         qvapor,
         qliquid,
@@ -1162,6 +1103,7 @@ def freeze_rain_to_graupel_simple(
         tcpk,
         tcp3,
     )
+
 
 @gtscript.function
 def melt_snow_simple(
@@ -1182,15 +1124,15 @@ def melt_snow_simple(
     """
     Fortran name is psmlt_simp
     """
-    
-    from __externals__ import timestep, tau_smlt, tice, qs_mlt
-    
-    fac_smlt = 1.-exp(- timestep / tau_smlt)
-    
+
+    from __externals__ import qs_mlt, tau_smlt, tice, timestep
+
+    fac_smlt = 1.0 - exp(-timestep / tau_smlt)
+
     tc = temp - tice
-    if (tc > 0.) and (qsnow > QCMIN):
-        sink = (tc * 0.1)**2 * qsnow
-        sink  = min(qsnow, sink, fac_smlt * tc / icpk)
+    if (tc > 0.0) and (qsnow > QCMIN):
+        sink = (tc * 0.1) ** 2 * qsnow
+        sink = min(qsnow, sink, fac_smlt * tc / icpk)
         tmp = min(sink, positive_diff(qs_mlt, qliquid))
 
         (
@@ -1237,6 +1179,7 @@ def melt_snow_simple(
         tcp3,
     )
 
+
 @gtscript.function
 def autoconvert_water_to_rain_simple(
     qliquid,
@@ -1248,16 +1191,18 @@ def autoconvert_water_to_rain_simple(
     Fortran name is praut_simp
     """
 
-    from __externals__ import timestep, tau_l2r, t_wfr, ql0_max
-    fac_l2r = 1.-exp(-timestep/tau_l2r)
+    from __externals__ import ql0_max, t_wfr, tau_l2r, timestep
+
+    fac_l2r = 1.0 - exp(-timestep / tau_l2r)
 
     tc = temp - t_wfr
     if (tc > 0) and (qliquid > ql0_max):
         sink = fac_l2r * (qliquid - ql0_max)
         qliquid -= sink
         qrain += sink
-    
+
     return qliquid, qrain
+
 
 @gtscript.function
 def deposit_and_sublimate_ice(
@@ -1283,53 +1228,88 @@ def deposit_and_sublimate_ice(
     Fortran name is pidep_pisub
     """
 
-    from __externals__ import timestep, tice, prog_ccn, inflag, do_psd_ice_num, pcai, pcbi, mui, igflag, qi_lim, t_sub, is_fac
+    from __externals__ import (
+        do_psd_ice_num,
+        igflag,
+        inflag,
+        is_fac,
+        mui,
+        pcai,
+        pcbi,
+        prog_ccn,
+        qi_lim,
+        t_sub,
+        tice,
+        timestep,
+    )
 
-    sub = 0.
-    dep = 0.
+    sub = 0.0
+    dep = 0.0
 
     if temp < tice:
         pidep = 0
         qsi, dqdt = tables.sat_spec_hum_water_ice(temp, density)
         dq = qvapor - qsi
-        tmp = dq / (1. + tcpk * dqdt)
+        tmp = dq / (1.0 + tcpk * dqdt)
 
         if qice > QCMIN:
             if prog_ccn is False:
                 if inflag == 1:
-                    cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice* density))
+                    cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
                 elif inflag == 2:
-                    cloud_ice_nuclei = exp(-2.80 + 0.262*(tice - temp)) * 1000.
+                    cloud_ice_nuclei = exp(-2.80 + 0.262 * (tice - temp)) * 1000.0
                 elif inflag == 3:
-                    cloud_ice_nuclei = exp(-0.639 + 12.96 * (qvapor/qsi - 1.)) * 1000.
+                    cloud_ice_nuclei = (
+                        exp(-0.639 + 12.96 * (qvapor / qsi - 1.0)) * 1000.0
+                    )
                 elif inflag == 4:
-                    cloud_ice_nuclei = 5.e-3 * exp(0.304 * (tice - temp)) * 1000.
+                    cloud_ice_nuclei = 5.0e-3 * exp(0.304 * (tice - temp)) * 1000.0
                 elif inflag == 5:
-                    cloud_ice_nuclei = 1.e-5 * exp(0.5 * (tice - temp)) * 1000.
+                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temp)) * 1000.0
                 else:
-                    raise NotImplementedError("Ice Nucleation Flag must be an integer from 1 to 5")
+                    raise ValueError(
+                        f"Ice Nucleation Flag must be an integer from 1 to 5"
+                        f"not {inflag}"
+                    )
             if do_psd_ice_num:
-                cloud_ice_nuclei = calc_particle_concentration(qice, density, pcai, pcbi, mui)
+                cloud_ice_nuclei = calc_particle_concentration(
+                    qice, density, pcai, pcbi, mui
+                )
                 cloud_ice_nuclei = cloud_ice_nuclei / density
-            
-            pidep = timestep * dq * 4.0 * 11.9 * exp(0.5*log(qice * density * cloud_ice_nuclei)) / (qsi * density * (tcpk * cvm)**2 / (constants.TCOND * constants.RVGAS * temp **2) + 1./ constants.VDIFU)
+
+            pidep = (
+                timestep
+                * dq
+                * 4.0
+                * 11.9
+                * exp(0.5 * log(qice * density * cloud_ice_nuclei))
+                / (
+                    qsi
+                    * density
+                    * (tcpk * cvm) ** 2
+                    / (constants.TCOND * constants.RVGAS * temp ** 2)
+                    + 1.0 / constants.VDIFU
+                )
+            )
         if dq > 0:
             tc = tice - temp
-            qi_gen = 4.92e-11 * exp(1.33 * log(1.e3 * exp(0.1 * tc)))
+            qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
             if igflag == 1:
                 qi_crt = qi_gen / density
             elif igflag == 2:
-                qi_crt = qi_gen * min(qi_lim, 0.1*tc)/density
+                qi_crt = qi_gen * min(qi_lim, 0.1 * tc) / density
             elif igflag == 3:
-                qi_crt = 1.82e-6 * min(qi_lim, 0.1*tc)/density
+                qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
             elif igflag == 4:
-                qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1*tc)/density
+                qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
             else:
-                raise NotImplementedError("Ice Generation Flag must be an integer from 1 to 4")
-            sink = min(tmp, max(qi_crt - qice, pidep), tc/tcpk)
+                raise ValueError(
+                    f"Ice Generation Flag must be an integer from 1 to 4 not {igflag}"
+                )
+            sink = min(tmp, max(qi_crt - qice, pidep), tc / tcpk)
             dep = sink * delp
         else:
-            pidep = pidep * min(1, positive_diff(temp, t_sub)*is_fac)
+            pidep = pidep * min(1, positive_diff(temp, t_sub) * is_fac)
             sink = max(pidep, tmp - qice)
             sub = -sink * delp
 
@@ -1378,15 +1358,16 @@ def deposit_and_sublimate_ice(
         sub,
     )
 
+
 @gtscript.function
 def autoconvert_ice_to_snow_simple(qice, qsnow, temp, density):
     """
     Cloud ice to snow autoconversion, simple version
     Fortran name is psaut_simp
     """
-    from __externals__ import timestep, tau_i2s, tice, qi0_max
+    from __externals__ import qi0_max, tau_i2s, tice, timestep
 
-    fac_i2s = 1.- exp(-timestep / tau_i2s)
+    fac_i2s = 1.0 - exp(-timestep / tau_i2s)
 
     tc = temp - tice
     qim = qi0_max / density
@@ -1667,9 +1648,9 @@ def fast_microphysics(
                 tcpk,
                 tcp3,
             )
-        
+
         qliquid, qrain = autoconvert_water_to_rain_simple(qliquid, qrain, temp)
-        
+
         if __INLINED(do_warm_rain_mp is False):
             (
                 qvapor,
@@ -1685,7 +1666,7 @@ def fast_microphysics(
                 tcpk,
                 tcp3,
                 dep,
-                sub
+                sub,
             ) = deposit_and_sublimate_ice(
                 qvapor,
                 qliquid,
@@ -1702,11 +1683,11 @@ def fast_microphysics(
                 lcpk,
                 icpk,
                 tcpk,
-                tcp3
+                tcp3,
             )
-            
+
             qice, qsnow = autoconvert_ice_to_snow_simple(qice, qsnow, temp, density)
-        
+
     with computation(FORWARD), interval(...):
         if __INLINED(do_warm_rain_mp is False):
             condensation += cond * convt
@@ -1716,7 +1697,9 @@ def fast_microphysics(
 
 
 @gtscript.function
-def calc_terminal_velocity_rsg(q, density, density_factor, const_v, v_fac, tva, tvb, mu, blin, v_max):
+def calc_terminal_velocity_rsg(
+    q, density, density_factor, const_v, v_fac, tva, tvb, mu, blin, v_max
+):
     """
     Calculate terminal velocity for rain, snow, and graupel, Lin et al. (1983)
     Fortran name is term_rsg
@@ -1725,13 +1708,14 @@ def calc_terminal_velocity_rsg(q, density, density_factor, const_v, v_fac, tva, 
         v_terminal = v_fac
     else:
         if q < QFMIN:
-            v_terminal = 0.
+            v_terminal = 0.0
         else:
             v_terminal = calc_terminal_velocity(q, density, tva, tvb, mu, blin)
             v_terminal = v_fac * v_terminal * density_factor
             v_terminal = min(v_max, max(0.0, v_terminal))
-    
+
     return v_terminal
+
 
 @gtscript.function
 def calc_terminal_velocity_ice(qice, temp, density, constant_v, v_fac, v_max):
@@ -1739,11 +1723,11 @@ def calc_terminal_velocity_ice(qice, temp, density, constant_v, v_fac, v_max):
     Fortran name is term_ice
     """
 
-    from __externals__ import tice, ifflag
+    from __externals__ import ifflag, tice
 
-    aa = - 4.14122e-5
-    bb = - 0.00538922
-    cc = - 0.0516344
+    aa = -4.14122e-5
+    bb = -0.00538922
+    cc = -0.0516344
     dd = 0.00216078
     ee = 1.9714
 
@@ -1751,17 +1735,22 @@ def calc_terminal_velocity_ice(qice, temp, density, constant_v, v_fac, v_max):
         v_terminal = v_fac
     else:
         if qice < QFMIN:
-            v_terminal = 0.
+            v_terminal = 0.0
         else:
             tc = temp - tice
             if ifflag == 1:
-                v_terminal = (3.+(log(qice * density)/log(10))) * (tc * (aa * tc + bb) + cc) + dd * tc + ee
-                v_terminal + 0.01 * v_fac * exp(v_terminal * log(10.))
+                v_terminal = (
+                    (3.0 + (log(qice * density) / log(10))) * (tc * (aa * tc + bb) + cc)
+                    + dd * tc
+                    + ee
+                )
+                v_terminal + 0.01 * v_fac * exp(v_terminal * log(10.0))
             elif ifflag == 2:
                 v_terminal = v_fac * 3.29 * exp(0.16 * log(qice * density))
-            else: raise NotImplementedError("Ice Formation Flag must be 1 or 2")
-            v_terminal = min(v_max, max(0., v_terminal))
-    
+            else:
+                raise ValueError(f"Ice Formation Flag must be 1 or 2 not {ifflag}")
+            v_terminal = min(v_max, max(0.0, v_terminal))
+
     return v_terminal
 
 
@@ -1780,33 +1769,45 @@ def sedimentation(
     delz: FloatField,
     density: FloatField,
     density_factor: FloatField,
-    column_energy_change: FloatFieldIJ
+    column_energy_change: FloatFieldIJ,
 ):
     """
     Sedimentation of cloud ice, snow, graupel or hail, and rain
     """
 
-    from __externals__ import timestep, do_psd_ice_fall, do_psd_water_fall, do_sedi_melt, vi_fac, vi_max, mui, blini, const_vi, tvai, tvbi
+    from __externals__ import do_psd_water_fall  # noqa
+    from __externals__ import timestep  # noqa
+    from __externals__ import (
+        blini,
+        const_vi,
+        do_psd_ice_fall,
+        do_sedi_melt,
+        mui,
+        tvai,
+        tvbi,
+        vi_fac,
+        vi_max,
+    )
 
     with computation(PARALLEL), interval(...):
-        w1 = 0.
-        r1 = 0.
-        i1 = 0.
-        s1 = 0.
-        g1 = 0.
-        
-        vtw = 0.
-        vtr = 0.
-        vti = 0.
-        vts = 0.
-        vtg = 0.
-        
-        pfw = 0.
-        pfr = 0.
-        pfi = 0.
-        pfs = 0.
-        pfg = 0.
-    
+        w1 = 0.0
+        r1 = 0.0
+        i1 = 0.0
+        s1 = 0.0
+        g1 = 0.0
+
+        vtw = 0.0
+        vtr = 0.0
+        vti = 0.0
+        vts = 0.0
+        vtg = 0.0
+
+        pfw = 0.0
+        pfr = 0.0
+        pfi = 0.0
+        pfs = 0.0
+        pfg = 0.0
+
         (
             q_liq,
             q_solid,
@@ -1815,7 +1816,7 @@ def sedimentation(
             lcpk,
             icpk,
             tcpk,
-            tcp3
+            tcp3,
         ) = calc_heat_cap_and_latent_heat_coeff(
             qvapor,
             qliquid,
@@ -1828,19 +1829,33 @@ def sedimentation(
 
         # terminal fall and melting of falling cloud ice into rain
         if __INLINED(do_psd_ice_fall is True):
-            v_terminal_ice = calc_terminal_velocity_rsg(q, density, density_factor, const_vi, vi_fac, tvai, tvbi, mui, blini, vi_max)
+            v_terminal_ice = calc_terminal_velocity_rsg(
+                qice,
+                density,
+                density_factor,
+                const_vi,
+                vi_fac,
+                tvai,
+                tvbi,
+                mui,
+                blini,
+                vi_max,
+            )
         else:
-            v_terminal_ice = calc_terminal_velocity_ice(qice, temp, density, const_vi, vi_fac, vi_max)
-        
+            v_terminal_ice = calc_terminal_velocity_ice(
+                qice, temp, density, const_vi, vi_fac, vi_max
+            )
+
         if __INLINED(do_sedi_melt is True):
             pass
+
 
 def ze_zt(
     zs: FloatFieldIJ,
     ze: FloatField,
     zt: FloatField,
     delz: FloatField,
-    v_terminal: FloatField
+    v_terminal: FloatField,
 ):
     """
     Calculate ze zt for sedimentation
@@ -1849,40 +1864,24 @@ def ze_zt(
     from __externals__ import timestep
 
     with computation(FORWARD), interval(-1, None):
-        zs = 0.
+        zs = 0.0
         ze = zs
     with computation(BACKWARD), interval(0, -1):
-        ze = ze[0,0,-1] - delz
-    with computation(FORWARD): 
-        with interval(0,1):
-            zt = ze
-        with interval(1,-1):
-            zt = ze - (0.5 * timestep * (v_terminal[0,0,-1] - v_terminal))
-        with interval(-1, None):
-            zt = zs - timestep * v_terminal[0,0,-1]
-        with interval(1,None):
-            if zt > zt[0,0,-1]: 
-                zt = zt[0,0,-1] - DZ_MIN_FLIP
-
-
-def sedi_melt(
-    qice: FloatField
-):
+        ze = ze[0, 0, -1] - delz
     with computation(FORWARD):
         with interval(0, 1):
-            if qice > QCMIN:
-                no_fall = 0
-            else:
-                no_fall = 1
-
+            zt = ze
+        with interval(1, -1):
+            zt = ze - (0.5 * timestep * (v_terminal[0, 0, -1] - v_terminal))
+        with interval(-1, None):
+            zt = zs - timestep * v_terminal[0, 0, -1]
         with interval(1, None):
-            if no_fall[0, 0, -1] == 1:
-                if qice > QCMIN:
-                    no_fall = 0
-                else:
-                    no_fall = 1
-            else:
-                no_fall = 0
+            if zt > zt[0, 0, -1]:
+                zt = zt[0, 0, -1] - DZ_MIN_FLIP
+
+
+def sedi_melt(qice: FloatField):
+    pass
 
 
 class MicrophysicsState:
@@ -1901,13 +1900,16 @@ class Microphysics:
         quantity_factory: pace.util.QuantityFactory,
         grid_data: GridData,
         namelist: PhysicsConfig,
+        do_mp_fast: bool = False,
     ):
         self.namelist = namelist
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._max_timestep = self.namelist.mp_time
         self._ntimes = self.namelist.ntimes
+        self._do_mp_fast = do_mp_fast
 
         # atmospheric physics constants
+        # TODO these should live in a separate object that can be passed
         if self.namelist.hydrostatic:
             self._c_air = constants.CP_AIR
             self._c_vap = constants.CP_VAP
@@ -1959,7 +1961,7 @@ class Microphysics:
         self._set_timestepping(self.namelist.dt_atmos)  # will change from dt_atmos
         # when we inline microphysics
 
-        self._convert_mm_day = 86400.0 * constants.RGRAV / self._split_timestep
+        self._convert_mm_day = 86400.0 * constants.RGRAV / self.split_timestep
 
         self._copy_stencil = stencil_factory.from_origin_domain(
             basic.copy_defn,
@@ -1992,7 +1994,7 @@ class Microphysics:
                     "lv00": self._lv00,
                     "li00": self._li00,
                     "c_air": self._c_air,
-                    "timestep": self._full_timestep,
+                    "timestep": self.full_timestep,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -2009,7 +2011,7 @@ class Microphysics:
                     "lv00": self._lv00,
                     "li00": self._li00,
                     "c_air": self._c_air,
-                    "timestep": self._full_timestep,
+                    "timestep": self.full_timestep,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -2020,15 +2022,6 @@ class Microphysics:
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
             )
-
-        self._calc_total_energy = stencil_factory.from_origin_domain(
-            func=calc_total_energy,
-            externals={
-                "hydrostatic": self.namelist.hydrostatic,
-            },
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
-        )
 
         self._convert_specific_to_mass_mixing_ratios_and_calculate_densities = (
             stencil_factory.from_origin_domain(
@@ -2093,27 +2086,83 @@ class Microphysics:
                 domain=self._idx.domain_compute(),
             )
 
+        if self._do_mp_fast:
+            self._fast_microphysics = stencil_factory.from_origin_domain(
+                func=fast_microphysics,
+                externals={
+                    "do_warm_rain_mp": self.namelist.do_warm_rain,
+                    "do_wbf": self.namelist.do_wbf,
+                    "c1_vapor": self._c1_vap,
+                    "c1_liq": self._c1_liquid,
+                    "c1_ice": self._c1_ice,
+                    "lv00": self._lv00,
+                    "li00": self._li00,
+                    "li20": self._li20,
+                    "d1_vap": self._d1_vap,
+                    "d1_ice": self._d1_ice,
+                    "tice": self._tice,
+                    "t_wfr": self._t_wfr,
+                    "convt": self._convert_mm_day,
+                    "ntimes": self._ntimes,
+                    "ql_mlt": self.namelist.ql_mlt,
+                    "qs_mlt": self.namelist.qs_mlt,
+                    "tau_imlt": self.namelist.tau_imlt,
+                    "tice_mlt": self._tice_mlt,
+                    "timestep": self.full_timestep,
+                    "do_cond_timescale": self.namelist.do_cond_timescale,
+                    "rh_fac": self.namelist.rh_fac,
+                    "rhc_cevap": self.namelist.rhc_cevap,
+                    "tau_l2v": self.namelist.tau_l2v,
+                    "tau_v2l": self.namelist.tau_v2l,
+                    "tau_r2g": self.namelist.tau_r2g,
+                    "tau_smlt": self.namelist.tau_smlt,
+                    "tau_l2r": self.namelist.tau_l2r,
+                    "use_rhc_cevap": self.namelist.use_rhc_cevap,
+                    "qi0_crt": self.namelist.qi0_crt,
+                    "qi0_max": self.namelist.qi0_max,
+                    "ql0_max": self.namelist.ql0_max,
+                    "tau_wbf": self.namelist.tau_wbf,
+                    "do_psd_water_num": self.namelist.do_psd_water_num,
+                    "do_psd_ice_num": self.namelist.do_psd_ice_num,
+                    "muw": self.namelist.muw,
+                    "mui": self.namelist.mui,
+                    "pcaw": self._pcaw,
+                    "pcbw": self._pcbw,
+                    "pcai": self._pcai,
+                    "pcbi": self._pcbi,
+                    "prog_ccn": self.namelist.prog_ccn,
+                    "inflag": self.namelist.inflag,
+                    "igflag": self.namelist.igflag,
+                    "qi_lim": self.namelist.qi_lim,
+                    "t_sub": self.namelist.t_sub,
+                    "is_fac": self.namelist.is_fac,
+                    "tau_i2s": self.namelist.tau_i2s,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
         pass
 
     def gfdl_cloud_microphys_init(self, dt_atmos: float):
         pass
 
     def _update_timestep_if_needed(self, timestep: float):
-        if timestep != self._full_timestep:
+        if timestep != self.full_timestep:
             self._set_timestepping(timestep)
 
     def _set_timestepping(self, full_timestep: float):
         self._ntimes = int(
             max(self._ntimes, full_timestep / min(full_timestep, self._max_timestep))
         )
-        self._split_timestep = full_timestep / self._ntimes
-        self._full_timestep = full_timestep
+        self.split_timestep = full_timestep / self._ntimes
+        self.full_timestep = full_timestep
         pass
 
     def _calculate_particle_parameters(self):
         """
-        Calculate parameters for particle concentration, effective diameter, 
-        optical extinction, radar reflectivity, and terminal velocity 
+        Calculate parameters for particle concentration, effective diameter,
+        optical extinction, radar reflectivity, and terminal velocity
         for each tracer species
         """
         muw = self.namelist.muw
@@ -2125,10 +2174,22 @@ class Microphysics:
         alini = self.namelist.alini
         blini = self.namelist.blini
         # Particle Concentration:
-        self._pcaw = math.exp(3 / (muw + 3) * math.log(n0w_sig)) * math.gamma(muw) * math.exp(3 * n0w_exp / (muw + 3) * math.log(10.0))
-        self._pcbw = math.exp(muw / (muw + 3) * math.log(math.pi * constants.RHO_W * math.gamma(muw + 3)))
-        self._pcai = math.exp(3 / (mui + 3) * math.log(n0i_sig)) * math.gamma(mui) * math.exp(3 * n0i_exp / (mui + 3) * math.log(10.0))
-        self._pcbi = math.exp(mui/ (mui + 3)* math.log(math.pi * constants.RHO_I * math.gamma(mui + 3)))
+        self._pcaw = (
+            math.exp(3 / (muw + 3) * math.log(n0w_sig))
+            * math.gamma(muw)
+            * math.exp(3 * n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self._pcbw = math.exp(
+            muw / (muw + 3) * math.log(math.pi * constants.RHO_W * math.gamma(muw + 3))
+        )
+        self._pcai = (
+            math.exp(3 / (mui + 3) * math.log(n0i_sig))
+            * math.gamma(mui)
+            * math.exp(3 * n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self._pcbi = math.exp(
+            mui / (mui + 3) * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+        )
 
         # Effective Diameter
 
@@ -2137,9 +2198,17 @@ class Microphysics:
         # Radar Reflectivity
 
         # Terminal Velocity
-        self._tvai = math.exp(blini / (mui + 3) * math.log(n0i_sig)) * alini * math.gamma(mui + blini + 3) * math.exp(-blini * n0i_exp / (mui + 3) * math.log(10.))
-        self._tvbi = math.exp(blini / (mui + 3) * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))) * math.gamma(mui + 3)
-
+        self._tvai = (
+            math.exp(blini / (mui + 3) * math.log(n0i_sig))
+            * alini
+            * math.gamma(mui + blini + 3)
+            * math.exp(-blini * n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self._tvbi = math.exp(
+            blini
+            / (mui + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+        ) * math.gamma(mui + 3)
 
     def __call__(self, state: MicrophysicsState, timestep: float):
         pass

@@ -39,8 +39,12 @@ class PhysicsConfig:
     de_ice: bool = NamelistDefaults.de_ice
     layout: Tuple[int, int] = NamelistDefaults.layout
     # gfdl_cloud_microphys.F90
+    tau_r2g: float = NamelistDefaults.tau_r2g  # rain freezing during fast_sat
+    tau_smlt: float = NamelistDefaults.tau_smlt  # snow melting
+    tau_g2r: float = NamelistDefaults.tau_g2r  # graupel melting to rain
     tau_imlt: float = NamelistDefaults.tau_imlt  # cloud ice melting
     tau_i2s: float = NamelistDefaults.tau_i2s  # cloud ice to snow auto - conversion
+    tau_l2r: float = NamelistDefaults.tau_l2r  # cloud water to rain auto - conversion
     tau_g2v: float = NamelistDefaults.tau_g2v  # graupel sublimation
     tau_v2g: float = (
         NamelistDefaults.tau_v2g
@@ -48,6 +52,9 @@ class PhysicsConfig:
     ql_mlt: float = (
         NamelistDefaults.ql_mlt
     )  # max value of cloud water allowed from melted cloud ice
+    ql0_max: float = (
+        NamelistDefaults.ql0_max
+    )  # max cloud water value (auto converted to rain)
     qs_mlt: float = NamelistDefaults.qs_mlt  # max cloud water due to snow melt
     t_sub: float = NamelistDefaults.t_sub  # min temp for sublimation of cloud ice
     qi_gen: float = (
@@ -73,6 +80,9 @@ class PhysicsConfig:
     tau_l2v: float = (
         NamelistDefaults.tau_l2v
     )  # cloud water to water vapor (evaporation)
+    tau_v2l: float = (
+        NamelistDefaults.tau_v2l
+    )  # water vapor to cloud water (condensation)
     tau_wbf: float = NamelistDefaults.tau_wbf
     c2l_ord: int = NamelistDefaults.c2l_ord
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
@@ -169,12 +179,17 @@ class PhysicsConfig:
             vr_fac=namelist.vr_fac,
             de_ice=namelist.de_ice,
             layout=namelist.layout,
+            tau_r2g=namelist.tau_r2g,
+            tau_smlt=namelist.tau_smlt,
+            tau_g2r=namelist.tau_g2r,
             tau_imlt=namelist.tau_imlt,
             tau_i2s=namelist.tau_i2s,
+            tau_l2r=namelist.tau_l2r,
             tau_g2v=namelist.tau_g2v,
             tau_v2g=namelist.tau_v2g,
             tau_wbf=namelist.tau_wbf,
             ql_mlt=namelist.ql_mlt,
+            ql0_max=namelist.ql0_max,
             qs_mlt=namelist.qs_mlt,
             t_sub=namelist.t_sub,
             qi_gen=namelist.qi_gen,
@@ -185,6 +200,7 @@ class PhysicsConfig:
             dw_ocean=namelist.dw_ocean,
             dw_land=namelist.dw_land,
             tau_l2v=namelist.tau_l2v,
+            tau_v2l=namelist.tau_v2l,
             c2l_ord=namelist.c2l_ord,
             do_sedi_heat=namelist.do_sedi_heat,
             do_sedi_melt=namelist.do_sedi_melt,

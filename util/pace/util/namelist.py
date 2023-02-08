@@ -78,7 +78,7 @@ class NamelistDefaults:
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
     const_vs = False  # Fall velocity tuning constant of snow
-    is_fac = 0.2 # Cloud ice sublimation temperature factor
+    is_fac = 0.2  # Cloud ice sublimation temperature factor
     rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     vi_fac = 1.0  # if const_vi: 1/3
@@ -88,17 +88,17 @@ class NamelistDefaults:
     de_ice = False  # To prevent excessive build-up of cloud ice from external sources
     do_qa = True  # Do inline cloud fraction
     do_sedi_heat = False  # Transport of heat in sedimentation
-    do_sedi_melt = True # Melt cloud ice, snow, and graupel during sedimentation
+    do_sedi_melt = True  # Melt cloud ice, snow, and graupel during sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
     do_cond_timescale = False  # Whether to apply a timescale to condensation
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
-    do_psd_water_fall = False # Calculate cloud water terminal velocity based on PSD
-    do_psd_ice_fall: False # Calculate cloud ice terminal velocity based on PSD
+    do_psd_water_fall = False  # Calculate cloud water terminal velocity based on PSD
+    do_psd_ice_fall = False  # Calculate cloud ice terminal velocity based on PSD
     do_psd_water_num = False  # Calculate cloud water number concentration based on PSD
-    do_psd_ice_num: False # Calculate cloud ice number concentration based on PSD
+    do_psd_ice_num = False  # Calculate cloud ice number concentration based on PSD
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
@@ -118,33 +118,31 @@ class NamelistDefaults:
     z_slope_liq = True  # Use linear mono slope for autoconversions
     tice = 273.16  # set tice = 165. to turn off ice - phase phys (kessler emulator)
     alin = 842.0  # "a" in lin1983
-    alini = 7.e2 # "a" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
-    blini = 1.0 # "b" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
+    alini = 7.0e2  # "a" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
+    blini = 1.0  # "b" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
-    do_inline_mp = False # Whether the microphsyics is called inside of the dycore
-    n0w_sig = 1.1 # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
-    n0i_sig = 1.3 # cice significand (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
-    n0w_exp = 41 # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
-    n0i_exp = 18 # cice exponent (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
+    do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
+    n0w_sig = 1.1  # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    n0i_sig = 1.3  # cice significand (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
+    n0w_exp = 41  # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
+    n0i_exp = 18  # cice exponent (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
     muw = (
         6.0  # shape parameter of cloud water in Gamma distribution (Martin et al. 1994)
     )
-    mui = (
-        3.35  # Gamma shape parameter of cloud ice (McFarquhar et al. 2015)
-    )
-    inflag = 1 # Ice nucleation scheme: 
+    mui = 3.35  # Gamma shape parameter of cloud ice (McFarquhar et al. 2015)
+    inflag = 1  # Ice nucleation scheme:
     # 1: Hong et al. (2004)
     # 2: Meyers et al. (1992)
     # 3: Meyers et al. (1992)
     # 4: Cooper (1986)
     # 5: Fletcher (1962)
-    igflag = 3 # Ice generation scheme
+    igflag = 3  # Ice generation scheme
     # 1: WSM6
     # 2: WSM6 with 0 at 0 C
     # 3: WSM6 with 0 at 0 C and fixed value at - 10 C
     # 4: combination of 1 and 3
-    ifflag = 1 # Ice fall scheme
+    ifflag = 1  # Ice fall scheme
     # 1: Deng and Mace (2008)
     # 2: Heymsfield and Donner (1990)
 
