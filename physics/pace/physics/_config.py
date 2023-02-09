@@ -1,14 +1,357 @@
 import dataclasses
+import math
 from typing import Optional, Tuple
 
 import f90nml
 
+import pace.util.constants as constants
 from pace.util import Namelist, NamelistDefaults
 
 
 DEFAULT_INT = 0
 DEFAULT_FLOAT = 0.0
 DEFAULT_BOOL = False
+
+
+@dataclasses.dataclass
+class AdjustNegativeTracerConfig:
+    c1_ice: float
+    c1_liq: float
+    c1_vap: float
+    d1_ice: float
+    d1_vap: float
+    li00: float
+    li20: float
+    lv00: float
+    t_wfr: float
+    tice: float
+
+
+@dataclasses.dataclass
+class FastMPConfig:
+    do_warm_rain: bool
+    do_wbf: bool
+    c1_vap: float
+    c1_liq: float
+    c1_ice: float
+    lv00: float
+    li00: float
+    li20: float
+    d1_vap: float
+    d1_ice: float
+    tice: float
+    t_wfr: float
+    ql_mlt: float
+    qs_mlt: float
+    tau_imlt: float
+    tice_mlt: float
+    do_cond_timescale: bool
+    rh_fac: float
+    rhc_cevap: float
+    tau_l2v: float
+    tau_v2l: float
+    tau_r2g: float
+    tau_smlt: float
+    tau_l2r: float
+    use_rhc_cevap: bool
+    qi0_crt: float
+    qi0_max: float
+    ql0_max: float
+    tau_wbf: float
+    do_psd_water_num: bool
+    do_psd_ice_num: bool
+    muw: float
+    mui: float
+    pcaw: float
+    pcbw: float
+    pcai: float
+    pcbi: float
+    prog_ccn: float
+    inflag: int
+    igflag: int
+    qi_lim: float
+    t_sub: float
+    is_fac: float
+    tau_i2s: float
+
+
+@dataclasses.dataclass
+class MicroPhysicsConfig:
+    dt_atmos: float
+    ntimes: int
+    hydrostatic: bool
+    npx: int
+    npy: int
+    npz: int
+    nwat: int
+    do_qa: bool
+    do_inline_mp: bool
+    c_cracw: float
+    c_paut: float
+    c_pgacs: float
+    c_psaci: float
+    ccn_l: float
+    ccn_o: float
+    const_vg: bool
+    const_vi: bool
+    const_vr: bool
+    const_vs: bool
+    vs_fac: float
+    vg_fac: float
+    vi_fac: float
+    vr_fac: float
+    de_ice: bool
+    layout: Tuple[int, int]
+    # gfdl_cloud_microphys.F90
+    tau_r2g: float
+    tau_smlt: float
+    tau_g2r: float
+    tau_imlt: float
+    tau_i2s: float
+    tau_l2r: float
+    tau_g2v: float
+    tau_v2g: float
+    ql_mlt: float
+    ql0_max: float
+    qs_mlt: float
+    t_sub: float
+    qi_gen: float
+    qi_lim: float
+    qi0_max: float
+    rad_snow: bool
+    rad_rain: bool
+    dw_ocean: float
+    dw_land: float
+    tau_l2v: float
+    tau_v2l: float
+    tau_wbf: float
+    c2l_ord: int
+    do_sedi_heat: bool
+    do_sedi_melt: bool
+    do_sedi_w: bool
+    fast_sat_adj: bool
+    qc_crt: float
+    fix_negative: bool
+    do_cond_timescale: bool
+    consv_checker: bool
+    do_warm_rain: bool
+    do_wbf: bool
+    do_psd_water_fall: bool
+    do_psd_ice_fall: bool
+    do_psd_water_num: bool
+    do_psd_ice_num: bool
+    irain_f: int
+    mp_time: float
+    prog_ccn: bool
+    qi0_crt: float
+    qs0_crt: float
+    rhc_cevap: float
+    is_fac: float
+    rh_fac: float
+    rh_inc: float
+    rh_inr: float
+    # rh_ins: Any
+    rthresh: float
+    sedi_transport: bool
+    # use_ccn: Any
+    use_ppm: bool
+    use_rhc_cevap: bool
+    vg_max: float
+    vi_max: float
+    vr_max: float
+    vs_max: float
+    z_slope_ice: bool
+    z_slope_liq: bool
+    tice: float
+    alin: float
+    alini: float
+    blini: float
+    clin: float
+    n0w_sig: float
+    n0i_sig: float
+    n0w_exp: float
+    n0i_exp: float
+    muw: float
+    mui: float
+    inflag: int
+    igflag: int
+    ifflag: int
+    c_air: float = dataclasses.field(init=False)
+    c_vap: float = dataclasses.field(init=False)
+    d0_vap: float = dataclasses.field(init=False)
+    lv00: float = dataclasses.field(init=False)
+    li00: float = dataclasses.field(init=False)
+    li20: float = dataclasses.field(init=False)
+    d1_vap: float = dataclasses.field(init=False)
+    d1_ice: float = dataclasses.field(init=False)
+    c1_vap: float = dataclasses.field(init=False)
+    c1_liq: float = dataclasses.field(init=False)
+    c1_ice: float = dataclasses.field(init=False)
+    n_min: int = dataclasses.field(init=False)
+    delt: float = dataclasses.field(init=False)
+    tice_mlt: float = dataclasses.field(init=False)
+    esbasw: float = dataclasses.field(init=False)
+    tbasw: float = dataclasses.field(init=False)
+    esbasi: float = dataclasses.field(init=False)
+    tmin: float = dataclasses.field(init=False)
+    t_wfr: float = dataclasses.field(init=False)
+    pcaw: float = dataclasses.field(init=False)
+    pcbw: float = dataclasses.field(init=False)
+    pcai: float = dataclasses.field(init=False)
+    pcbi: float = dataclasses.field(init=False)
+    tvai: float = dataclasses.field(init=False)
+    tvbi: float = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        if self.hydrostatic:
+            self.c_air = constants.CP_AIR
+            self.c_vap = constants.CP_VAP
+        else:
+            self.c_air = constants.CV_AIR
+            self.c_vap = constants.CV_VAP
+        self.d0_vap = self.c_vap - constants.C_LIQ
+
+        # scaled constants to reduce 32 bit floating errors
+        self.lv00 = (constants.HLV - self.d0_vap * constants.TICE) / self.c_air
+        self.li00 = constants.LI00 / self.c_air
+        self.li20 = self.lv00 + self.li00
+
+        self.d1_vap = self.d0_vap / self.c_air
+        self.d1_ice = constants.DC_ICE / self.c_air
+
+        self.c1_vap = self.c_vap / self.c_air
+        self.c1_liq = constants.C_LIQ / self.c_air
+        self.c1_ice = constants.C_ICE / self.c_air
+
+        self._calculate_particle_parameters()
+
+        self.n_min = 1600
+        self.delt = 0.1
+        self.tice_mlt = self.tice
+        self.tice = 273.15
+        self.esbasw = 1013246.0
+        self.tbasw = self.tice + 100.0
+        self.esbasi = 6107.1
+        self.tmin = self.tice - self.n_min * self.delt
+        if self.do_warm_rain:  # unsupported
+            self.t_wfr = self.tmin
+        else:
+            self.t_wfr = self.tice - 40.0
+
+    @property
+    def adjustnegative(self) -> AdjustNegativeTracerConfig:
+        return AdjustNegativeTracerConfig(
+            c1_ice=self.c1_ice,
+            c1_liq=self.c1_liq,
+            c1_vap=self.c1_vap,
+            d1_ice=self.d1_ice,
+            d1_vap=self.d1_vap,
+            li00=self.li00,
+            li20=self.li20,
+            lv00=self.lv00,
+            t_wfr=self.t_wfr,
+            tice=self.tice,
+        )
+
+    @property
+    def fastmp(self) -> FastMPConfig:
+        return FastMPConfig(
+            do_warm_rain=self.do_warm_rain,
+            do_wbf=self.do_wbf,
+            c1_vap=self.c1_vap,
+            c1_liq=self.c1_liq,
+            c1_ice=self.c1_ice,
+            lv00=self.lv00,
+            li00=self.li00,
+            li20=self.li20,
+            d1_vap=self.d1_vap,
+            d1_ice=self.d1_ice,
+            tice=self.tice,
+            t_wfr=self.t_wfr,
+            ql_mlt=self.ql_mlt,
+            qs_mlt=self.qs_mlt,
+            tau_imlt=self.tau_imlt,
+            tice_mlt=self.tice_mlt,
+            do_cond_timescale=self.do_cond_timescale,
+            rh_fac=self.rh_fac,
+            rhc_cevap=self.rhc_cevap,
+            tau_l2v=self.tau_l2v,
+            tau_v2l=self.tau_v2l,
+            tau_r2g=self.tau_r2g,
+            tau_smlt=self.tau_smlt,
+            tau_l2r=self.tau_l2r,
+            use_rhc_cevap=self.use_rhc_cevap,
+            qi0_crt=self.qi0_crt,
+            qi0_max=self.qi0_max,
+            ql0_max=self.ql0_max,
+            tau_wbf=self.tau_wbf,
+            do_psd_water_num=self.do_psd_water_num,
+            do_psd_ice_num=self.do_psd_ice_num,
+            muw=self.muw,
+            mui=self.mui,
+            pcaw=self.pcaw,
+            pcbw=self.pcbw,
+            pcai=self.pcai,
+            pcbi=self.pcbi,
+            prog_ccn=self.prog_ccn,
+            inflag=self.inflag,
+            igflag=self.igflag,
+            qi_lim=self.qi_lim,
+            t_sub=self.t_sub,
+            is_fac=self.is_fac,
+            tau_i2s=self.tau_i2s,
+        )
+
+    def _calculate_particle_parameters(self):
+        """
+        Calculate parameters for particle concentration, effective diameter,
+        optical extinction, radar reflectivity, and terminal velocity
+        for each tracer species
+        """
+        muw = self.muw
+        mui = self.mui
+        n0w_exp = self.n0w_exp
+        n0i_exp = self.n0i_exp
+        n0w_sig = self.n0w_sig
+        n0i_sig = self.n0i_sig
+        alini = self.alini
+        blini = self.blini
+        # Particle Concentration:
+        self.pcaw = (
+            math.exp(3 / (muw + 3) * math.log(n0w_sig))
+            * math.gamma(muw)
+            * math.exp(3 * n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self.pcbw = math.exp(
+            muw / (muw + 3) * math.log(math.pi * constants.RHO_W * math.gamma(muw + 3))
+        )
+        self.pcai = (
+            math.exp(3 / (mui + 3) * math.log(n0i_sig))
+            * math.gamma(mui)
+            * math.exp(3 * n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self.pcbi = math.exp(
+            mui / (mui + 3) * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+        )
+
+        # Effective Diameter
+
+        # Optical Extinction
+
+        # Radar Reflectivity
+
+        # Terminal Velocity
+        self.tvai = (
+            math.exp(blini / (mui + 3) * math.log(n0i_sig))
+            * alini
+            * math.gamma(mui + blini + 3)
+            * math.exp(-blini * n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self.tvbi = math.exp(
+            blini
+            / (mui + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+        ) * math.gamma(mui + 3)
 
 
 @dataclasses.dataclass

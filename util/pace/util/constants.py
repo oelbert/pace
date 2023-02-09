@@ -99,7 +99,14 @@ LAT2 = (HLV + HLF) ** 2  # used in bigg mechanism
 RHO_W = 1.0e3  # density of cloud water (kg/m^3)
 RHO_I = 9.17e2  # density of cloud ice (kg/m^3)
 
-VDIFU = 2.25e-5 # diffusivity of water vapor in air at 0 deg C  and 1000 hPa 
+VDIFU = 2.25e-5  # diffusivity of water vapor in air at 0 deg C  and 1000 hPa
 # (Mason, 1971) (m^2/s)
-TCOND = 2.40e-2 # thermal conductivity of air at 0 C and 1000 hPa 
+TCOND = 2.40e-2  # thermal conductivity of air at 0 C and 1000 hPa
 # (Mason, 1971) (J/m/s/K)
+
+QCMIN = 1.0e-15  # min value for cloud condensates (kg/kg)
+QFMIN = 1.0e-8  # min value for sedimentation (kg/kg)
+DT_FR = 8.0  # t_wfr - dt_fr: minimum temperature water can exist
+# (Moore and Molinero 2011)
+
+DZ_MIN_FLIP = 1.0e-2  # used for correcting flipped height (m)
