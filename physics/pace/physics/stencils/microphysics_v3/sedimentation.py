@@ -142,9 +142,9 @@ def sedi_melt(
     cvm,
     temperature,
     delp,
-    ze,
-    zt,
-    zs,
+    z_edge,
+    z_terminal,
+    z_surface,
     timestep,
     v_terminal,
     r1,
@@ -174,9 +174,9 @@ def sedi_melt(
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
                     for m in range(k + 1, ke + 1):
-                        if zt[i, j, k + 1] >= ze[i, j, m]:
+                        if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
                             break
-                        if (zt[i, j, k] < ze[i, j, m + 1]) and (
+                        if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE
                         ):
                             cvm[i, j, k] = physfun.moist_heat_capacity(
@@ -197,7 +197,8 @@ def sedi_melt(
                             )
                             dtime = min(
                                 timestep,
-                                (ze[i, j, m] - ze[i, j, m + 1]) / v_terminal[i, j, k],
+                                (z_edge[i, j, m] - z_edge[i, j, m + 1])
+                                / v_terminal[i, j, k],
                             )
                             dtime = min(1.0, dtime / tau_mlt)
                             sink = min(
@@ -207,7 +208,7 @@ def sedi_melt(
                                 / icpk[i, j, m],
                             )
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
-                            if zt[i, j, k] < zs[i, j]:
+                            if z_terminal[i, j, k] < z_surface[i, j]:
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
@@ -244,34 +245,34 @@ def sedi_melt(
     return q_melt, qrain, r1, temperature, cvm
 
 
-def ze_zt(
-    zs: FloatFieldIJ,
-    ze: FloatField,
-    zt: FloatField,
+def calc_edge_and_terminal_height(
+    z_surface: FloatFieldIJ,
+    z_edge: FloatField,
+    z_terminal: FloatField,
     delz: FloatField,
     v_terminal: FloatField,
 ):
     """
-    Calculate ze zt for sedimentation
+    Calculate grid cell edge heights and terminal fall heights for sedimentation
     Forttan name is zezt
     """
     from __externals__ import timestep
 
     with computation(FORWARD), interval(-1, None):
-        zs = 0.0
-        ze = zs
+        z_surface = 0.0
+        z_edge = z_surface
     with computation(BACKWARD), interval(0, -1):
-        ze = ze[0, 0, -1] - delz
+        z_edge = z_edge[0, 0, -1] - delz
     with computation(FORWARD):
         with interval(0, 1):
-            zt = ze
+            z_terminal = z_edge
         with interval(1, -1):
-            zt = ze - (0.5 * timestep * (v_terminal[0, 0, -1] - v_terminal))
+            z_terminal = z_edge - (0.5 * timestep * (v_terminal[0, 0, -1] - v_terminal))
         with interval(-1, None):
-            zt = zs - timestep * v_terminal[0, 0, -1]
+            z_terminal = z_surface - timestep * v_terminal[0, 0, -1]
         with interval(1, None):
-            if zt > zt[0, 0, -1]:
-                zt = zt[0, 0, -1] - constants.DZ_MIN_FLIP
+            if z_terminal > z_terminal[0, 0, -1]:
+                z_terminal = z_terminal[0, 0, -1] - constants.DZ_MIN_FLIP
 
 
 class Sedimentation:
@@ -293,9 +294,9 @@ class Sedimentation:
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
-        self._zs = make_quantity()
-        self._ze = make_quantity()
-        self._zt = make_quantity()
+        self._z_surface = make_quantity()
+        self._z_edge = make_quantity()
+        self._z_terminal = make_quantity()
 
         # compile stencils
         self._init_heat_cap_latent_heat = stencil_factory.from_origin_domain(
@@ -356,8 +357,8 @@ class Sedimentation:
                 domain=self._idx.domain_compute(),
             )
 
-        self._zezt = stencil_factory.from_origin_domain(
-            func=ze_zt,
+        self._calc_edge_and_terminal_height = stencil_factory.from_origin_domain(
+            func=calc_edge_and_terminal_height,
             externals={"timestep": self._timestep},
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -425,10 +426,10 @@ class Sedimentation:
                     self.config.vi_max,
                 )
 
-        self._zezt(
-            self._zs,
-            self._ze,
-            self._zt,
+        self._calc_edge_and_terminal_height(
+            self._z_surface,
+            self._z_edge,
+            self._z_terminal,
             delz,
             vterminal_ice,
         )

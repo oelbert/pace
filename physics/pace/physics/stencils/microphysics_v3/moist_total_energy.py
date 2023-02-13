@@ -20,16 +20,16 @@ def calc_moist_total_energy(
     """
     Fortran name is mte
     """
-    from __externals__ import c1_ice, c1_liquid, c1_vapor, c_air
+    from __externals__ import c1_ice, c1_liq, c1_vap, c_air
 
     q_liq = qrain + qliquid
     q_solid = qice + qsnow + qgraupel
     q_cond = q_liq + q_solid
     con = 1.0 - (qvapor + q_cond)
     if moist_q is True:
-        cvm = con + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
+        cvm = con + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
     else:
-        cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liquid + q_solid * c1_ice
+        cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
     return constants.RGRAV * cvm * c_air * temp * delp
 
 

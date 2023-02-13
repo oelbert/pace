@@ -145,6 +145,11 @@ class NamelistDefaults:
     ifflag = 1  # Ice fall scheme
     # 1: Deng and Mace (2008)
     # 2: Heymsfield and Donner (1990)
+    sedflag = 1  # sedimentation scheme
+    # 1: implicit scheme
+    # 2: explicit scheme
+    # 3: lagrangian scheme
+    # 4: combined implicit and lagrangian scheme
 
     @classmethod
     def as_dict(cls):
@@ -504,6 +509,7 @@ class Namelist:
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
     ifflag: int = NamelistDefaults.ifflag
+    sedflag: int = NamelistDefaults.sedflag
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
     m_split: int = NamelistDefaults.m_split
