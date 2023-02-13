@@ -1263,6 +1263,25 @@ class FastMicrophysics:
         evaporation: FloatFieldIJ,
         sublimation: FloatFieldIJ,
     ):
+        """
+        Fast microphysics loop
+        Args:
+            qvapor (inout):
+            qliquid (inout):
+            qrain (inout):
+            qice (inout):
+            qsnow (inout):
+            qgraupel (inout):
+            temp (inout):
+            delp (in):
+            density (in):
+            cloud_condensation_nuclei (inout):
+            cloud_ice_nuclei (inout):
+            condensation (inout):
+            deposition (inout):
+            evaporation (inout):
+            sublimation (inout):
+        """
 
         self._fast_microphysics(
             qvapor,

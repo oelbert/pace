@@ -1,4 +1,3 @@
-import physical_functions as physfun
 from gt4py.cartesian import gtscript  # noqa
 from gt4py.cartesian.gtscript import (
     __INLINED,
@@ -11,13 +10,15 @@ from gt4py.cartesian.gtscript import (
     log,
 )
 
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.util import X_DIM, Y_DIM, Z_DIM
+from pace.physics.stencils.microphysics_v3.terminal_fall import TerminalFall
+from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
 
 from ..._config import MicroPhysicsConfig
 
@@ -30,14 +31,7 @@ def init_heat_cap_latent_heat(
     qsnow: FloatField,
     qgraupel: FloatField,
     temperature: FloatField,
-    q_liq: FloatField,
-    q_solid: FloatField,
-    cvm: FloatField,
-    te: FloatField,
-    lcpk: FloatField,
     icpk: FloatField,
-    tcpk: FloatField,
-    tcp3: FloatField,
 ):
 
     with computation(PARALLEL), interval(...):
@@ -124,10 +118,8 @@ def calc_terminal_velocity_ice(
                         + ee
                     )
                     v_terminal + 0.01 * v_fac * exp(v_terminal * log(10.0))
-                elif ifflag == 2:
+                else:  # ifflag == 2:
                     v_terminal = v_fac * 3.29 * exp(0.16 * log(qice * density))
-                else:
-                    raise ValueError(f"Ice Formation Flag must be 1 or 2 not {ifflag}")
                 v_terminal = min(v_max, max(0.0, v_terminal))
 
 
@@ -275,6 +267,14 @@ def calc_edge_and_terminal_height(
                 z_terminal = z_terminal[0, 0, -1] - constants.DZ_MIN_FLIP
 
 
+def adjust_fluxes(flux: FloatField):
+    with computation(BACKWARD):
+        with interval(0, 1):
+            flux = max(0.0, flux)
+        with interval(1, None):
+            flux = max(0.0, flux - flux[0, 0, -1])
+
+
 class Sedimentation:
     def __init__(
         self,
@@ -285,6 +285,17 @@ class Sedimentation:
         convert_mm_day: float,
     ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
+        self._is_ = self._idx.isc
+        self._ie = self._idx.iec
+        self._js = self._idx.jsc
+        self._je = self._idx.jec
+        self._ks = 0
+        self._ke = config.npz
+
+        assert config.ifflag in [
+            1,
+            2,
+        ], f"Ice Formation Flag must be 1 or 2 not {config.ifflag}"
 
         self._timestep = timestep
         self._convert_mm_day = convert_mm_day
@@ -294,9 +305,11 @@ class Sedimentation:
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
-        self._z_surface = make_quantity()
+        self._z_surface = quantity_factory.zeros([X_DIM, Y_DIM], units="unknown")
         self._z_edge = make_quantity()
         self._z_terminal = make_quantity()
+        self._icpk = make_quantity()
+        self._cvm = make_quantity()
 
         # compile stencils
         self._init_heat_cap_latent_heat = stencil_factory.from_origin_domain(
@@ -357,11 +370,14 @@ class Sedimentation:
                 domain=self._idx.domain_compute(),
             )
 
-        self._calc_edge_and_terminal_height = stencil_factory.from_origin_domain(
+        self._calc_edge_and_terminal_height = stencil_factory.from_dims_halo(
             func=calc_edge_and_terminal_height,
             externals={"timestep": self._timestep},
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
+            compute_dims=[X_DIM, Y_DIM, Z_INTERFACE_DIM],
+        )
+
+        self._terminal_fall = TerminalFall(
+            stencil_factory, quantity_factory, config, timestep
         )
 
     def __call__(
@@ -397,7 +413,53 @@ class Sedimentation:
         column_snow: FloatFieldIJ,
         column_graupel: FloatFieldIJ,
     ):
+        """
+        Sedimentation of cloud ice, snow, graupel or hail, and rain
+        Args:
+            qvapor (inout):
+            qliquid (inout):
+            qrain (inout):
+            qice (inout):
+            qsnow (inout):
+            qgraupel (inout):
+            ua (inout):
+            va (inout):
+            wa (inout):
+            temperature (inout):
+            delp (in):
+            delz (in):
+            density (in):
+            density_factor (in):
+            preflux_water (inout):
+            preflux_rain (inout):
+            preflux_ice (inout):
+            preflux_snow (inout):
+            preflux_graupel (inout):
+            vterminal_water (inout):
+            vterminal_rain (inout):
+            vterminal_ice (inout):
+            vterminal_snow (inout):
+            vterminal_graupel (inout):
+            column_energy_change (inout):
+            column_water (inout):
+            column_rain (inout):
+            column_ice (inout):
+            column_snow (inout):
+            column_graupel (inout):
+        """
 
+        self._init_heat_cap_latent_heat(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            self._icpk,
+        )
+
+        # Terminal fall and melting of falling cloud ice into rain:
         if self.config.do_psd_ice_fall:
             self._calc_terminal_ice_velocity(qice, temperature, density, vterminal_ice)
         else:
@@ -434,7 +496,35 @@ class Sedimentation:
             vterminal_ice,
         )
 
-        return (
+        if self.config.do_sedi_melt:
+            qice, qrain, column_rain, temperature, self._cvm = sedi_melt(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                self._cvm,
+                temperature,
+                delp,
+                self._z_edge,
+                self._z_terminal,
+                self._z_surface,
+                self._timestep,
+                vterminal_ice,
+                column_rain,
+                self.config.tau_imlt,
+                self._icpk,
+                self._ks,
+                self._ke,
+                self._is_,
+                self._ie,
+                self._js,
+                self._je,
+                "ice",
+            )
+
+        self._terminal_fall(
             qvapor,
             qliquid,
             qrain,
@@ -445,20 +535,17 @@ class Sedimentation:
             va,
             wa,
             temperature,
-            preflux_water,
-            preflux_rain,
-            preflux_ice,
-            preflux_snow,
-            preflux_graupel,
-            vterminal_water,
-            vterminal_rain,
+            delp,
+            delz,
             vterminal_ice,
-            vterminal_snow,
-            vterminal_graupel,
-            column_energy_change,
-            column_water,
-            column_rain,
+            self._z_edge,
+            self._z_terminal,
+            preflux_ice,
             column_ice,
-            column_snow,
-            column_graupel,
+            column_energy_change,
+            "ice",
         )
+
+        adjust_fluxes(preflux_ice)
+
+        # do same for other tracers

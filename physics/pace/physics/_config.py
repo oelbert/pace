@@ -128,6 +128,7 @@ class MicroPhysicsConfig:
     c2l_ord: int
     do_sedi_heat: bool
     do_sedi_melt: bool
+    do_sedi_uv: bool
     do_sedi_w: bool
     fast_sat_adj: bool
     qc_crt: float
@@ -148,6 +149,7 @@ class MicroPhysicsConfig:
     rhc_cevap: float
     is_fac: float
     rh_fac: float
+    sed_fac: float
     rh_inc: float
     rh_inr: float
     # rh_ins: Any
@@ -431,6 +433,7 @@ class PhysicsConfig:
     c2l_ord: int = NamelistDefaults.c2l_ord
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
     do_sedi_melt: bool = NamelistDefaults.do_sedi_melt
+    do_sedi_uv: bool = NamelistDefaults.do_sedi_uv
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     qc_crt: float = NamelistDefaults.qc_crt
@@ -451,6 +454,7 @@ class PhysicsConfig:
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
+    sed_fac: float = NamelistDefaults.sed_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
     # rh_ins: Any
@@ -549,6 +553,7 @@ class PhysicsConfig:
             c2l_ord=namelist.c2l_ord,
             do_sedi_heat=namelist.do_sedi_heat,
             do_sedi_melt=namelist.do_sedi_melt,
+            do_sedi_uv=namelist.do_sedi_uv,
             do_sedi_w=namelist.do_sedi_w,
             fast_sat_adj=namelist.fast_sat_adj,
             qc_crt=namelist.qc_crt,
@@ -569,6 +574,7 @@ class PhysicsConfig:
             rhc_cevap=namelist.rhc_cevap,
             is_fac=namelist.is_fac,
             rh_fac=namelist.rh_fac,
+            sed_fac=namelist.sed_fac,
             rh_inc=namelist.rh_inc,
             rh_inr=namelist.rh_inr,
             rthresh=namelist.rthresh,
@@ -653,6 +659,7 @@ class PhysicsConfig:
             c2l_ord=self.c2l_ord,
             do_sedi_heat=self.do_sedi_heat,
             do_sedi_melt=self.do_sedi_melt,
+            do_sedi_uv=self.do_sedi_uv,
             do_sedi_w=self.do_sedi_w,
             fast_sat_adj=self.fast_sat_adj,
             qc_crt=self.qc_crt,
@@ -673,6 +680,7 @@ class PhysicsConfig:
             rhc_cevap=self.rhc_cevap,
             is_fac=self.is_fac,
             rh_fac=self.rh_fac,
+            sed_fac=self.sed_fac,
             rh_inc=self.rh_inc,
             rh_inr=self.rh_inr,
             rthresh=self.rthresh,

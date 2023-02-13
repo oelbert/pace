@@ -228,14 +228,3 @@ class AdjustNegativeTracers:
             delp,
             condensation,
         )
-
-        return (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            condensation,
-        )

@@ -80,6 +80,8 @@ class NamelistDefaults:
     const_vs = False  # Fall velocity tuning constant of snow
     is_fac = 0.2  # Cloud ice sublimation temperature factor
     rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
+    sed_fac = 1.0  # coefficient for sedimentation fall,
+    # Scale from 1.0 (implicit) to 0.0 (lagrangian)
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
@@ -89,6 +91,7 @@ class NamelistDefaults:
     do_qa = True  # Do inline cloud fraction
     do_sedi_heat = False  # Transport of heat in sedimentation
     do_sedi_melt = True  # Melt cloud ice, snow, and graupel during sedimentation
+    do_sedi_uv = True  # Transport of horizontal momentum in sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
     do_cond_timescale = False  # Whether to apply a timescale to condensation
@@ -308,6 +311,7 @@ class Namelist:
     do_qa: bool = NamelistDefaults.do_qa
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
     do_sedi_melt: bool = NamelistDefaults.do_sedi_melt
+    do_sedi_uv: bool = NamelistDefaults.do_sedi_uv
     do_sedi_w: bool = NamelistDefaults.do_sedi_w
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
@@ -328,6 +332,7 @@ class Namelist:
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
+    sed_fac: float = NamelistDefaults.sed_fac
     rh_inc: float = NamelistDefaults.rh_inc
     rh_inr: float = NamelistDefaults.rh_inr
     # rh_ins: Any
