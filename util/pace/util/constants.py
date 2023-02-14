@@ -96,8 +96,13 @@ T_MIN = 178.0  # Minimum temperature to freeze-dry all water vapor
 T_SAT_MIN = TICE - 160.0
 LAT2 = (HLV + HLF) ** 2  # used in bigg mechanism
 
+RHO_0 = 1.0  # reference air density (kg/m^3), ref: IFS
 RHO_W = 1.0e3  # density of cloud water (kg/m^3)
 RHO_I = 9.17e2  # density of cloud ice (kg/m^3)
+RHO_R = 1.0e3  # density of rain (Lin et al. 1983) (kg/m^3)
+RHO_S = 1.0e2  # density of snow (Lin et al. 1983) (kg/m^3)
+RHO_G = 4.0e2  # density of graupel (Rutledge and Hobbs 1984) (kg/m^3)
+RHO_H = 9.17e2  # density of hail (Lin et al. 1983) (kg/m^3)
 
 VDIFU = 2.25e-5  # diffusivity of water vapor in air at 0 deg C  and 1000 hPa
 # (Mason, 1971) (m^2/s)
@@ -108,5 +113,7 @@ QCMIN = 1.0e-15  # min value for cloud condensates (kg/kg)
 QFMIN = 1.0e-8  # min value for sedimentation (kg/kg)
 DT_FR = 8.0  # t_wfr - dt_fr: minimum temperature water can exist
 # (Moore and Molinero 2011)
+CDG = 3.15121  # drag coefficient of graupel (Locatelli and Hobbs, 1974)
+CDH = 0.5  # drag coefficient of hail (Heymsfield and Wright, 2014)
 
 DZ_MIN_FLIP = 1.0e-2  # used for correcting flipped height (m)

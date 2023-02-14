@@ -1,4 +1,3 @@
-from gt4py.cartesian import gtscript  # noqa
 from gt4py.cartesian.gtscript import (
     __INLINED,
     BACKWARD,
@@ -59,6 +58,7 @@ def calc_terminal_velocity_rsg(
     q: FloatField,
     density: FloatField,
     density_factor: FloatField,
+    v_terminal: FloatField,
     v_fac: float,
     tva: float,
     tvb: float,
@@ -85,8 +85,6 @@ def calc_terminal_velocity_rsg(
                 )
                 v_terminal = v_fac * v_terminal * density_factor
                 v_terminal = min(v_max, max(0.0, v_terminal))
-
-        return v_terminal
 
 
 def calc_terminal_velocity_ice(
@@ -468,6 +466,7 @@ class Sedimentation:
                     qice,
                     density,
                     density_factor,
+                    vterminal_ice,
                     self.config.vi_fac,
                     self.config.tvai,
                     self.config.tvbi,
@@ -480,6 +479,7 @@ class Sedimentation:
                     qice,
                     density,
                     density_factor,
+                    vterminal_ice,
                     self.config.vi_fac,
                     self.config.tvai,
                     self.config.tvbi,
@@ -548,4 +548,328 @@ class Sedimentation:
 
         adjust_fluxes(preflux_ice)
 
-        # do same for other tracers
+        # Terminal fall and melting of falling snow into rain
+        if self.config.const_vs is False:
+            self._calc_terminal_rsg_velocity(
+                qsnow,
+                density,
+                density_factor,
+                vterminal_snow,
+                self.config.vs_fac,
+                self.config.tvas,
+                self.config.tvbs,
+                self.config.mus,
+                self.config.blins,
+                self.config.vs_max,
+            )
+        else:
+            self._calc_terminal_rsg_velocity_const(
+                qsnow,
+                density,
+                density_factor,
+                vterminal_snow,
+                self.config.vs_fac,
+                self.config.tvas,
+                self.config.tvbs,
+                self.config.mus,
+                self.config.blins,
+                self.config.vs_max,
+            )
+
+        self._calc_edge_and_terminal_height(
+            self._z_surface,
+            self._z_edge,
+            self._z_terminal,
+            delz,
+            vterminal_snow,
+        )
+
+        if self.config.do_sedi_melt:
+            qsnow, qrain, column_rain, temperature, self._cvm = sedi_melt(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                self._cvm,
+                temperature,
+                delp,
+                self._z_edge,
+                self._z_terminal,
+                self._z_surface,
+                self._timestep,
+                vterminal_snow,
+                column_rain,
+                self.config.tau_smlt,
+                self._icpk,
+                self._ks,
+                self._ke,
+                self._is_,
+                self._ie,
+                self._js,
+                self._je,
+                "snow",
+            )
+
+        self._terminal_fall(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            ua,
+            va,
+            wa,
+            temperature,
+            delp,
+            delz,
+            vterminal_snow,
+            self._z_edge,
+            self._z_terminal,
+            preflux_snow,
+            column_snow,
+            column_energy_change,
+            "snow",
+        )
+
+        adjust_fluxes(preflux_snow)
+
+        # Terminal fall and melting of falling graupel into rain
+        if self.config.do_hail:
+            if self.config.const_vg is False:
+                self._calc_terminal_rsg_velocity(
+                    qsnow,
+                    density,
+                    density_factor,
+                    vterminal_graupel,
+                    self.config.vg_fac,
+                    self.config.tvah,
+                    self.config.tvbh,
+                    self.config.muh,
+                    self.config.blinh,
+                    self.config.vg_max,
+                )
+            else:
+                self._calc_terminal_rsg_velocity_const(
+                    qsnow,
+                    density,
+                    density_factor,
+                    vterminal_graupel,
+                    self.config.vg_fac,
+                    self.config.tvah,
+                    self.config.tvbh,
+                    self.config.muh,
+                    self.config.blinh,
+                    self.config.vg_max,
+                )
+
+        else:
+            if self.config.const_vg is False:
+                self._calc_terminal_rsg_velocity(
+                    qsnow,
+                    density,
+                    density_factor,
+                    vterminal_graupel,
+                    self.config.vg_fac,
+                    self.config.tvag,
+                    self.config.tvbg,
+                    self.config.mug,
+                    self.config.bling,
+                    self.config.vg_max,
+                )
+            else:
+                self._calc_terminal_rsg_velocity_const(
+                    qsnow,
+                    density,
+                    density_factor,
+                    vterminal_graupel,
+                    self.config.vg_fac,
+                    self.config.tvag,
+                    self.config.tvbg,
+                    self.config.mug,
+                    self.config.bling,
+                    self.config.vg_max,
+                )
+
+        self._calc_edge_and_terminal_height(
+            self._z_surface,
+            self._z_edge,
+            self._z_terminal,
+            delz,
+            vterminal_graupel,
+        )
+
+        if self.config.do_sedi_melt:
+            qgraupel, qrain, column_rain, temperature, self._cvm = sedi_melt(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                self._cvm,
+                temperature,
+                delp,
+                self._z_edge,
+                self._z_terminal,
+                self._z_surface,
+                self._timestep,
+                vterminal_graupel,
+                column_rain,
+                self.config.tau_gmlt,
+                self._icpk,
+                self._ks,
+                self._ke,
+                self._is_,
+                self._ie,
+                self._js,
+                self._je,
+                "graupel",
+            )
+
+        self._terminal_fall(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            ua,
+            va,
+            wa,
+            temperature,
+            delp,
+            delz,
+            vterminal_graupel,
+            self._z_edge,
+            self._z_terminal,
+            preflux_graupel,
+            column_graupel,
+            column_energy_change,
+            "graupel",
+        )
+
+        adjust_fluxes(preflux_graupel)
+
+        # Terminal fall of cloud water
+        if self.config.do_psd_water_fall:
+            if self.config.const_vs is False:
+                self._calc_terminal_rsg_velocity(
+                    qliquid,
+                    density,
+                    density_factor,
+                    vterminal_water,
+                    self.config.vw_fac,
+                    self.config.tvaw,
+                    self.config.tvbw,
+                    self.config.muw,
+                    self.config.blinw,
+                    self.config.vw_max,
+                )
+            else:
+                self._calc_terminal_rsg_velocity_const(
+                    qliquid,
+                    density,
+                    density_factor,
+                    vterminal_water,
+                    self.config.vw_fac,
+                    self.config.tvaw,
+                    self.config.tvbw,
+                    self.config.muw,
+                    self.config.blinw,
+                    self.config.vw_max,
+                )
+
+            self._calc_edge_and_terminal_height(
+                self._z_surface,
+                self._z_edge,
+                self._z_terminal,
+                delz,
+                vterminal_water,
+            )
+
+            self._terminal_fall(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                ua,
+                va,
+                wa,
+                temperature,
+                delp,
+                delz,
+                vterminal_water,
+                self._z_edge,
+                self._z_terminal,
+                preflux_water,
+                column_water,
+                column_energy_change,
+                "liquid",
+            )
+
+            adjust_fluxes(preflux_water)
+
+        # terminal fall of rain
+        if self.config.const_vs is False:
+            self._calc_terminal_rsg_velocity(
+                qrain,
+                density,
+                density_factor,
+                vterminal_rain,
+                self.config.vr_fac,
+                self.config.tvar,
+                self.config.tvbr,
+                self.config.mur,
+                self.config.blinr,
+                self.config.vr_max,
+            )
+        else:
+            self._calc_terminal_rsg_velocity_const(
+                qrain,
+                density,
+                density_factor,
+                vterminal_rain,
+                self.config.vr_fac,
+                self.config.tvar,
+                self.config.tvbr,
+                self.config.mur,
+                self.config.blinr,
+                self.config.vr_max,
+            )
+
+        self._calc_edge_and_terminal_height(
+            self._z_surface,
+            self._z_edge,
+            self._z_terminal,
+            delz,
+            vterminal_rain,
+        )
+
+        self._terminal_fall(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            ua,
+            va,
+            wa,
+            temperature,
+            delp,
+            delz,
+            vterminal_rain,
+            self._z_edge,
+            self._z_terminal,
+            preflux_rain,
+            column_rain,
+            column_energy_change,
+            "rain",
+        )
+
+        adjust_fluxes(preflux_rain)

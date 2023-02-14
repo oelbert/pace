@@ -20,7 +20,8 @@ class NamelistDefaults:
     check_negative = False
     # gfdl_cloud_mucrophys.F90
     tau_r2g = 900.0  # rain freezing during fast_sat
-    tau_smlt = 900.0  # snow melting
+    tau_smlt = 900.0  # snow melting timescale
+    tau_gmlt = 600.0  # snow melting timescale
     tau_g2r = 600.0  # graupel melting to rain
     tau_imlt = 600.0  # cloud ice melting
     tau_i2s = 1000.0  # cloud ice to snow auto - conversion
@@ -83,6 +84,7 @@ class NamelistDefaults:
     sed_fac = 1.0  # coefficient for sedimentation fall,
     # Scale from 1.0 (implicit) to 0.0 (lagrangian)
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
+    vw_fac = 1.0
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
     vg_fac = 1.0  # if const_vg: 2.
@@ -95,6 +97,7 @@ class NamelistDefaults:
     do_sedi_w = True  # Transport of vertical motion in sedimentation
     fix_negative = True  # Fix negative water species
     do_cond_timescale = False  # Whether to apply a timescale to condensation
+    do_hail = False  # Use hail parameters instead of graupel
     consv_checker = False  # Turn on energy and water conservation check in microphysics
     do_warm_rain = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
@@ -113,6 +116,7 @@ class NamelistDefaults:
     rthresh = 1e-05  # Critical cloud drop radius (micrometers)
     sedi_transport = True  # Transport of momentum in sedimentation
     use_ppm = False  # Use ppm fall scheme
+    vw_max = 0.01  # Maximum fall speed for cloud water
     vg_max = 16.0  # Maximum fall speed for graupel
     vi_max = 1.0  # Maximum fall speed for ice
     vr_max = 16.0  # Maximum fall speed for rain
@@ -121,19 +125,47 @@ class NamelistDefaults:
     z_slope_liq = True  # Use linear mono slope for autoconversions
     tice = 273.16  # set tice = 165. to turn off ice - phase phys (kessler emulator)
     alin = 842.0  # "a" in lin1983
+    alinw = 3.0e7  # "a" in Lin et al. (1983) for cloud water (Ikawa and Saito 1990)
     alini = 7.0e2  # "a" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
+    alinr = 842.0  # "a" in Lin et al. (1983) for rain (Liu and Orville 1969)
+    alins = 4.8  # "a" in Lin et al. (1983) for snow (straka 2009)
+    aling = 1.0  # "a" in Lin et al. (1983) for graupel (Pruppacher and Klett 2010)
+    alinh = 1.0  # "a" in Lin et al. (1983) for hail (Pruppacher and Klett 2010)
+    blinw = 2.0  # "b" in Lin et al. (1983) for cloud water (Ikawa and Saito 1990)
     blini = 1.0  # "b" in Lin et al. (1983) for cloud ice (Ikawa and Saita 1990)
+    blinr = 0.8  # "b" in Lin et al. (1983) for rain (Liu and Orville 1969)
+    blins = 0.25  # "b" in Lin et al. (1983) for snow (straka 2009)
+    bling = 0.5  # "b" in Lin et al. (1983) for graupel (Pruppacher and Klett 2010)
+    blinh = 0.5  # "b" in Lin et al. (1983) for hail (Pruppacher and Klett 2010)
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
     do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
     n0w_sig = 1.1  # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
     n0i_sig = 1.3  # cice significand (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
+    n0r_sig = 8.0
+    # rain significand (Lin et al. 1983) (m^-4) (Marshall and Palmer 1948)
+    n0s_sig = 3.0  # snow significand (Lin et al. 1983) (m^-4) (Gunn and Marshall 1958)
+    n0g_sig = 4.0
+    # graupel significand (Rutledge and Hobbs 1984) (m^-4) (Houze et al. 1979)
+    n0h_sig = 4.0
+    # hail significand (Lin et al. 1983) (m^-4) (Federer and Waldvogel 1975)
     n0w_exp = 41  # cwater exponent (Lin et al. 1983) (m^-4) (Martin et al. 1994)
     n0i_exp = 18  # cice exponent (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)
+    n0r_exp = 6  # rain exponent (Lin et al. 1983) (m^-4) (Marshall and Palmer 1948)
+    n0s_exp = 6  # snow exponent (Lin et al. 1983) (m^-4) (Gunn and Marshall 1958)
+    n0g_exp = 6
+    # graupel exponent (Rutledge and Hobbs 1984) (m^-4) (Houze et al. 1979)
+    n0h_exp = 4  # hail exponent (Lin et al. 1983) (m^-4) (Federer and Waldvogel 1975)
     muw = (
         6.0  # shape parameter of cloud water in Gamma distribution (Martin et al. 1994)
     )
     mui = 3.35  # Gamma shape parameter of cloud ice (McFarquhar et al. 2015)
+    mur = 1.0
+    # shape parameter of rain in Gamma distribution (Marshall and Palmer 1948)
+    mus = 1.0  # shape parameter of snow in Gamma distribution (Gunn and Marshall 1958)
+    mug = 1.0  # shape parameter of graupel in Gamma distribution (Houze et al. 1979)
+    muh = 1.0
+    # shape parameter of hail in Gamma distribution (Federer and Waldvogel 1975)
     inflag = 1  # Ice nucleation scheme:
     # 1: Hong et al. (2004)
     # 2: Meyers et al. (1992)
@@ -303,6 +335,7 @@ class Namelist:
     const_vr: bool = NamelistDefaults.const_vr
     const_vs: bool = NamelistDefaults.const_vs
     qc_crt: float = NamelistDefaults.qc_crt
+    vw_fac: float = NamelistDefaults.vw_fac
     vs_fac: float = NamelistDefaults.vs_fac
     vg_fac: float = NamelistDefaults.vg_fac
     vi_fac: float = NamelistDefaults.vi_fac
@@ -316,6 +349,7 @@ class Namelist:
     fast_sat_adj: bool = NamelistDefaults.fast_sat_adj
     fix_negative: bool = NamelistDefaults.fix_negative
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
+    do_hail: bool = NamelistDefaults.do_hail
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
@@ -340,6 +374,7 @@ class Namelist:
     sedi_transport: bool = NamelistDefaults.sedi_transport
     # use_ccn: Any
     use_ppm: bool = NamelistDefaults.use_ppm
+    vw_max: float = NamelistDefaults.vw_max
     vg_max: float = NamelistDefaults.vg_max
     vi_max: float = NamelistDefaults.vi_max
     vr_max: float = NamelistDefaults.vr_max
@@ -348,8 +383,18 @@ class Namelist:
     z_slope_liq: bool = NamelistDefaults.z_slope_liq
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
+    alinw: float = NamelistDefaults.alinw
     alini: float = NamelistDefaults.alini
+    alinr: float = NamelistDefaults.alinr
+    alins: float = NamelistDefaults.alins
+    aling: float = NamelistDefaults.aling
+    alinh: float = NamelistDefaults.alinh
+    blinw: float = NamelistDefaults.blinw
     blini: float = NamelistDefaults.blini
+    blinr: float = NamelistDefaults.blinr
+    blins: float = NamelistDefaults.blins
+    bling: float = NamelistDefaults.bling
+    blinh: float = NamelistDefaults.blinh
     clin: float = NamelistDefaults.clin
     ntimes: int = NamelistDefaults.ntimes
     do_inline_mp: bool = NamelistDefaults.do_inline_mp
@@ -448,6 +493,7 @@ class Namelist:
     # gfdl_cloud_microphys.F90
     tau_r2g: float = NamelistDefaults.tau_r2g  # rain freezing during fast_sat
     tau_smlt: float = NamelistDefaults.tau_smlt  # snow melting
+    tau_gmlt: float = NamelistDefaults.tau_gmlt  # snow melting
     tau_g2r: float = NamelistDefaults.tau_g2r  # graupel melting to rain
     tau_imlt: float = NamelistDefaults.tau_imlt  # cloud ice melting
     tau_i2s: float = NamelistDefaults.tau_i2s  # cloud ice to snow auto - conversion
@@ -507,10 +553,22 @@ class Namelist:
     )  # water vapor to cloud water (condensation)
     n0w_sig: float = NamelistDefaults.n0w_sig
     n0i_sig: float = NamelistDefaults.n0i_sig
+    n0r_sig: float = NamelistDefaults.n0r_sig
+    n0s_sig: float = NamelistDefaults.n0s_sig
+    n0g_sig: float = NamelistDefaults.n0g_sig
+    n0h_sig: float = NamelistDefaults.n0h_sig
     n0w_exp: float = NamelistDefaults.n0w_exp
     n0i_exp: float = NamelistDefaults.n0i_exp
+    n0r_exp: float = NamelistDefaults.n0r_exp
+    n0s_exp: float = NamelistDefaults.n0s_exp
+    n0g_exp: float = NamelistDefaults.n0g_exp
+    n0h_exp: float = NamelistDefaults.n0h_exp
     muw: float = NamelistDefaults.muw
     mui: float = NamelistDefaults.mui
+    mur: float = NamelistDefaults.mur
+    mus: float = NamelistDefaults.mus
+    muh: float = NamelistDefaults.muh
+    mug: float = NamelistDefaults.mug
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
     ifflag: int = NamelistDefaults.ifflag

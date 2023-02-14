@@ -46,12 +46,14 @@ class FastMPConfig:
     tau_imlt: float
     tice_mlt: float
     do_cond_timescale: bool
+    do_hail: bool
     rh_fac: float
     rhc_cevap: float
     tau_l2v: float
     tau_v2l: float
     tau_r2g: float
     tau_smlt: float
+    tau_gmlt: float
     tau_l2r: float
     use_rhc_cevap: bool
     qi0_crt: float
@@ -62,6 +64,10 @@ class FastMPConfig:
     do_psd_ice_num: bool
     muw: float
     mui: float
+    mur: float
+    mus: float
+    mug: float
+    muh: float
     pcaw: float
     pcbw: float
     pcai: float
@@ -96,6 +102,7 @@ class MicroPhysicsConfig:
     const_vi: bool
     const_vr: bool
     const_vs: bool
+    vw_fac: float
     vs_fac: float
     vg_fac: float
     vi_fac: float
@@ -105,6 +112,7 @@ class MicroPhysicsConfig:
     # gfdl_cloud_microphys.F90
     tau_r2g: float
     tau_smlt: float
+    tau_gmlt: float
     tau_g2r: float
     tau_imlt: float
     tau_i2s: float
@@ -134,6 +142,7 @@ class MicroPhysicsConfig:
     qc_crt: float
     fix_negative: bool
     do_cond_timescale: bool
+    do_hail: bool
     consv_checker: bool
     do_warm_rain: bool
     do_wbf: bool
@@ -158,6 +167,7 @@ class MicroPhysicsConfig:
     # use_ccn: Any
     use_ppm: bool
     use_rhc_cevap: bool
+    vw_max: float
     vg_max: float
     vi_max: float
     vr_max: float
@@ -166,15 +176,37 @@ class MicroPhysicsConfig:
     z_slope_liq: bool
     tice: float
     alin: float
+    alinw: float
     alini: float
+    alinr: float
+    alins: float
+    aling: float
+    alinh: float
+    blinw: float
     blini: float
+    blinr: float
+    blins: float
+    bling: float
+    blinh: float
     clin: float
     n0w_sig: float
     n0i_sig: float
+    n0r_sig: float
+    n0s_sig: float
+    n0g_sig: float
+    n0h_sig: float
     n0w_exp: float
     n0i_exp: float
+    n0r_exp: float
+    n0s_exp: float
+    n0g_exp: float
+    n0h_exp: float
     muw: float
     mui: float
+    mur: float
+    mus: float
+    mug: float
+    muh: float
     inflag: int
     igflag: int
     ifflag: int
@@ -204,6 +236,14 @@ class MicroPhysicsConfig:
     pcbi: float = dataclasses.field(init=False)
     tvai: float = dataclasses.field(init=False)
     tvbi: float = dataclasses.field(init=False)
+    tvar: float = dataclasses.field(init=False)
+    tvbr: float = dataclasses.field(init=False)
+    tvas: float = dataclasses.field(init=False)
+    tvbs: float = dataclasses.field(init=False)
+    tvag: float = dataclasses.field(init=False)
+    tvbg: float = dataclasses.field(init=False)
+    tvah: float = dataclasses.field(init=False)
+    tvbh: float = dataclasses.field(init=False)
 
     def __post_init__(self):
         if self.hydrostatic:
@@ -276,12 +316,14 @@ class MicroPhysicsConfig:
             tau_imlt=self.tau_imlt,
             tice_mlt=self.tice_mlt,
             do_cond_timescale=self.do_cond_timescale,
+            do_hail=self.do_hail,
             rh_fac=self.rh_fac,
             rhc_cevap=self.rhc_cevap,
             tau_l2v=self.tau_l2v,
             tau_v2l=self.tau_v2l,
             tau_r2g=self.tau_r2g,
             tau_smlt=self.tau_smlt,
+            tau_gmlt=self.tau_gmlt,
             tau_l2r=self.tau_l2r,
             use_rhc_cevap=self.use_rhc_cevap,
             qi0_crt=self.qi0_crt,
@@ -292,6 +334,10 @@ class MicroPhysicsConfig:
             do_psd_ice_num=self.do_psd_ice_num,
             muw=self.muw,
             mui=self.mui,
+            mur=self.mur,
+            mus=self.mus,
+            mug=self.mug,
+            muh=self.muh,
             pcaw=self.pcaw,
             pcbw=self.pcbw,
             pcai=self.pcai,
@@ -313,12 +359,34 @@ class MicroPhysicsConfig:
         """
         muw = self.muw
         mui = self.mui
+        mur = self.mur
+        mus = self.mus
+        mug = self.mug
+        muh = self.muh
         n0w_exp = self.n0w_exp
         n0i_exp = self.n0i_exp
+        n0r_exp = self.n0r_exp
+        n0s_exp = self.n0s_exp
+        n0g_exp = self.n0g_exp
+        n0h_exp = self.n0h_exp
         n0w_sig = self.n0w_sig
         n0i_sig = self.n0i_sig
+        n0r_sig = self.n0r_sig
+        n0s_sig = self.n0s_sig
+        n0g_sig = self.n0g_sig
+        n0h_sig = self.n0h_sig
+        alinw = self.alinw
         alini = self.alini
+        alinr = self.alinr
+        alins = self.alins
+        aling = self.aling
+        alinh = self.alinh
+        blinw = self.blinw
         blini = self.blini
+        blinr = self.blinr
+        blins = self.blins
+        bling = self.bling
+        blinh = self.blinh
         # Particle Concentration:
         self.pcaw = (
             math.exp(3 / (muw + 3) * math.log(n0w_sig))
@@ -344,8 +412,20 @@ class MicroPhysicsConfig:
         # Radar Reflectivity
 
         # Terminal Velocity
+        self.tvaw = (
+            math.exp(-blinw / (muw + 3) * math.log(n0w_sig))
+            * alinw
+            * math.gamma(muw + blinw + 3)
+            * math.exp(-blinw * n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self.tvbw = math.exp(
+            blinw
+            / (muw + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(muw + 3))
+        ) * math.gamma(muw + 3)
+
         self.tvai = (
-            math.exp(blini / (mui + 3) * math.log(n0i_sig))
+            math.exp(-blini / (mui + 3) * math.log(n0i_sig))
             * alini
             * math.gamma(mui + blini + 3)
             * math.exp(-blini * n0i_exp / (mui + 3) * math.log(10.0))
@@ -355,6 +435,66 @@ class MicroPhysicsConfig:
             / (mui + 3)
             * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
         ) * math.gamma(mui + 3)
+
+        self.tvar = (
+            math.exp(-blinr / (mur + 3) * math.log(n0r_sig))
+            * alinr
+            * math.gamma(mur + blinr + 3)
+            * math.exp(-blinr * n0r_exp / (mur + 3) * math.log(10.0))
+        )
+        self.tvbr = math.exp(
+            blinr
+            / (mur + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(mur + 3))
+        ) * math.gamma(mur + 3)
+
+        self.tvas = (
+            math.exp(-blins / (mus + 3) * math.log(n0s_sig))
+            * alins
+            * math.gamma(mus + blins + 3)
+            * math.exp(-blins * n0s_exp / (mus + 3) * math.log(10.0))
+        )
+        self.tvbs = math.exp(
+            blins
+            / (mus + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(mus + 3))
+        ) * math.gamma(mus + 3)
+
+        gcon = (
+            4.0
+            * constants.GRAV
+            * constants.RHO_G
+            / (3.0 * constants.CDG * constants.RHO_0)
+        ) ** 0.5
+        self.tvag = (
+            math.exp(-bling / (mug + 3) * math.log(n0g_sig))
+            * aling
+            * math.gamma(mug + bling + 3)
+            * math.exp(-bling * n0g_exp / (mug + 3) * math.log(10.0))
+        ) * gcon
+        self.tvbg = math.exp(
+            bling
+            / (mug + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(mug + 3))
+        ) * math.gamma(mug + 3)
+
+        hcon = (
+            4.0
+            * constants.GRAV
+            * constants.RHO_H
+            / (3.0 * constants.CDH * constants.RHO_0)
+        ) ** 0.5
+        self.tvah = (
+            math.exp(-blinh / (muh + 3) * math.log(n0h_sig))
+            * alinh
+            * math.gamma(muh + blinh + 3)
+            * math.exp(-blinh * n0h_exp / (muh + 3) * math.log(10.0))
+        ) * hcon
+        self.tvbh = math.exp(
+            blinh
+            / (muh + 3)
+            * math.log(math.pi * constants.RHO_I * math.gamma(muh + 3))
+        ) * math.gamma(muh + 3)
 
 
 @dataclasses.dataclass
@@ -378,6 +518,7 @@ class PhysicsConfig:
     const_vi: bool = NamelistDefaults.const_vi
     const_vr: bool = NamelistDefaults.const_vr
     const_vs: bool = NamelistDefaults.const_vs
+    vw_fac: float = NamelistDefaults.vw_fac
     vs_fac: float = NamelistDefaults.vs_fac
     vg_fac: float = NamelistDefaults.vg_fac
     vi_fac: float = NamelistDefaults.vi_fac
@@ -386,7 +527,8 @@ class PhysicsConfig:
     layout: Tuple[int, int] = NamelistDefaults.layout
     # gfdl_cloud_microphys.F90
     tau_r2g: float = NamelistDefaults.tau_r2g  # rain freezing during fast_sat
-    tau_smlt: float = NamelistDefaults.tau_smlt  # snow melting
+    tau_smlt: float = NamelistDefaults.tau_smlt  # snow melting timescale
+    tau_gmlt: float = NamelistDefaults.tau_gmlt  # graupel melting timescale
     tau_g2r: float = NamelistDefaults.tau_g2r  # graupel melting to rain
     tau_imlt: float = NamelistDefaults.tau_imlt  # cloud ice melting
     tau_i2s: float = NamelistDefaults.tau_i2s  # cloud ice to snow auto - conversion
@@ -439,6 +581,7 @@ class PhysicsConfig:
     qc_crt: float = NamelistDefaults.qc_crt
     fix_negative: bool = NamelistDefaults.fix_negative
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
+    do_hail: bool = NamelistDefaults.do_hail
     consv_checker: bool = NamelistDefaults.consv_checker
     do_warm_rain: bool = NamelistDefaults.do_warm_rain
     do_wbf: bool = NamelistDefaults.do_wbf
@@ -463,6 +606,7 @@ class PhysicsConfig:
     # use_ccn: Any
     use_ppm: bool = NamelistDefaults.use_ppm
     use_rhc_cevap: bool = NamelistDefaults.use_rhc_cevap
+    vw_max: float = NamelistDefaults.vw_max
     vg_max: float = NamelistDefaults.vg_max
     vi_max: float = NamelistDefaults.vi_max
     vr_max: float = NamelistDefaults.vr_max
@@ -471,15 +615,37 @@ class PhysicsConfig:
     z_slope_liq: bool = NamelistDefaults.z_slope_liq
     tice: float = NamelistDefaults.tice
     alin: float = NamelistDefaults.alin
+    alinw: float = NamelistDefaults.alinw
     alini: float = NamelistDefaults.alini
+    alinr: float = NamelistDefaults.alinr
+    alins: float = NamelistDefaults.alins
+    aling: float = NamelistDefaults.aling
+    alinh: float = NamelistDefaults.alinh
+    blinw: float = NamelistDefaults.blinw
     blini: float = NamelistDefaults.blini
+    blinr: float = NamelistDefaults.blinr
+    blins: float = NamelistDefaults.blins
+    bling: float = NamelistDefaults.bling
+    blinh: float = NamelistDefaults.blinh
     clin: float = NamelistDefaults.clin
     n0w_sig: float = NamelistDefaults.n0w_sig
     n0i_sig: float = NamelistDefaults.n0i_sig
+    n0r_sig: float = NamelistDefaults.n0r_sig
+    n0s_sig: float = NamelistDefaults.n0s_sig
+    n0g_sig: float = NamelistDefaults.n0g_sig
+    n0h_sig: float = NamelistDefaults.n0h_sig
     n0w_exp: float = NamelistDefaults.n0w_exp
     n0i_exp: float = NamelistDefaults.n0i_exp
+    n0r_exp: float = NamelistDefaults.n0r_exp
+    n0s_exp: float = NamelistDefaults.n0s_exp
+    n0g_exp: float = NamelistDefaults.n0g_exp
+    n0h_exp: float = NamelistDefaults.n0h_exp
     muw: float = NamelistDefaults.muw
     mui: float = NamelistDefaults.mui
+    mur: float = NamelistDefaults.mur
+    mus: float = NamelistDefaults.mus
+    mug: float = NamelistDefaults.mug
+    muh: float = NamelistDefaults.muh
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
     ifflag: int = NamelistDefaults.ifflag
@@ -522,6 +688,7 @@ class PhysicsConfig:
             const_vi=namelist.const_vi,
             const_vr=namelist.const_vr,
             const_vs=namelist.const_vs,
+            vw_fac=namelist.vw_fac,
             vs_fac=namelist.vs_fac,
             vg_fac=namelist.vg_fac,
             vi_fac=namelist.vi_fac,
@@ -530,6 +697,7 @@ class PhysicsConfig:
             layout=namelist.layout,
             tau_r2g=namelist.tau_r2g,
             tau_smlt=namelist.tau_smlt,
+            tau_gmlt=namelist.tau_gmlt,
             tau_g2r=namelist.tau_g2r,
             tau_imlt=namelist.tau_imlt,
             tau_i2s=namelist.tau_i2s,
@@ -559,6 +727,7 @@ class PhysicsConfig:
             qc_crt=namelist.qc_crt,
             fix_negative=namelist.fix_negative,
             do_cond_timescale=namelist.do_cond_timescale,
+            do_hail=namelist.do_hail,
             consv_checker=namelist.consv_checker,
             do_warm_rain=namelist.do_warm_rain,
             do_wbf=namelist.do_wbf,
@@ -581,6 +750,7 @@ class PhysicsConfig:
             sedi_transport=namelist.sedi_transport,
             use_ppm=namelist.use_ppm,
             use_rhc_cevap=namelist.use_rhc_cevap,
+            vw_max=namelist.vw_max,
             vg_max=namelist.vg_max,
             vi_max=namelist.vi_max,
             vr_max=namelist.vr_max,
@@ -589,15 +759,37 @@ class PhysicsConfig:
             z_slope_liq=namelist.z_slope_liq,
             tice=namelist.tice,
             alin=namelist.alin,
+            alinw=namelist.alinw,
             alini=namelist.alini,
+            alinr=namelist.alinr,
+            alins=namelist.alins,
+            aling=namelist.aling,
+            alinh=namelist.alinh,
+            blinw=namelist.blinw,
             blini=namelist.blini,
+            blinr=namelist.blinr,
+            blins=namelist.blins,
+            bling=namelist.bling,
+            blinh=namelist.blinh,
             clin=namelist.clin,
             n0w_sig=namelist.n0w_sig,
             n0i_sig=namelist.n0i_sig,
+            n0r_sig=namelist.n0r_sig,
+            n0s_sig=namelist.n0s_sig,
+            n0g_sig=namelist.n0g_sig,
+            n0h_sig=namelist.n0h_sig,
             n0w_exp=namelist.n0w_exp,
             n0i_exp=namelist.n0i_exp,
+            n0r_exp=namelist.n0r_exp,
+            n0s_exp=namelist.n0s_exp,
+            n0g_exp=namelist.n0g_exp,
+            n0h_exp=namelist.n0h_exp,
             muw=namelist.muw,
             mui=namelist.mui,
+            mur=namelist.mur,
+            mus=namelist.mus,
+            mug=namelist.mug,
+            muh=namelist.muh,
             inflag=namelist.inflag,
             igflag=namelist.igflag,
             ifflag=namelist.ifflag,
@@ -628,6 +820,7 @@ class PhysicsConfig:
             const_vi=self.const_vi,
             const_vr=self.const_vr,
             const_vs=self.const_vs,
+            vw_fac=self.vw_fac,
             vs_fac=self.vs_fac,
             vg_fac=self.vg_fac,
             vi_fac=self.vi_fac,
@@ -636,6 +829,7 @@ class PhysicsConfig:
             layout=self.layout,
             tau_r2g=self.tau_r2g,
             tau_smlt=self.tau_smlt,
+            tau_gmlt=self.tau_gmlt,
             tau_g2r=self.tau_g2r,
             tau_imlt=self.tau_imlt,
             tau_i2s=self.tau_i2s,
@@ -665,6 +859,7 @@ class PhysicsConfig:
             qc_crt=self.qc_crt,
             fix_negative=self.fix_negative,
             do_cond_timescale=self.do_cond_timescale,
+            do_hail=self.do_hail,
             consv_checker=self.consv_checker,
             do_warm_rain=self.do_warm_rain,
             do_wbf=self.do_wbf,
@@ -687,6 +882,7 @@ class PhysicsConfig:
             sedi_transport=self.sedi_transport,
             use_ppm=self.use_ppm,
             use_rhc_cevap=self.use_rhc_cevap,
+            vw_max=self.vw_max,
             vg_max=self.vg_max,
             vi_max=self.vi_max,
             vr_max=self.vr_max,
@@ -695,15 +891,37 @@ class PhysicsConfig:
             z_slope_liq=self.z_slope_liq,
             tice=self.tice,
             alin=self.alin,
+            alinw=self.alinw,
             alini=self.alini,
+            alinr=self.alinr,
+            alins=self.alins,
+            aling=self.aling,
+            alinh=self.alinh,
+            blinw=self.blinw,
             blini=self.blini,
+            blinr=self.blinr,
+            blins=self.blins,
+            bling=self.bling,
+            blinh=self.blinh,
             clin=self.clin,
             n0w_sig=self.n0w_sig,
             n0i_sig=self.n0i_sig,
+            n0r_sig=self.n0r_sig,
+            n0s_sig=self.n0s_sig,
+            n0g_sig=self.n0g_sig,
+            n0h_sig=self.n0h_sig,
             n0w_exp=self.n0w_exp,
             n0i_exp=self.n0i_exp,
+            n0r_exp=self.n0r_exp,
+            n0s_exp=self.n0s_exp,
+            n0g_exp=self.n0g_exp,
+            n0h_exp=self.n0h_exp,
             muw=self.muw,
             mui=self.mui,
+            mur=self.mur,
+            mus=self.mus,
+            mug=self.mug,
+            muh=self.muh,
             inflag=self.inflag,
             igflag=self.igflag,
             ifflag=self.ifflag,
