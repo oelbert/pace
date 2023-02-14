@@ -1,5 +1,6 @@
-import physical_functions as physfun
 from gt4py.cartesian.gtscript import BACKWARD, FORWARD, PARALLEL, computation, interval
+
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
@@ -172,7 +173,7 @@ class AdjustNegativeTracers:
         self._adjust_negative_tracers = stencil_factory.from_origin_domain(
             func=adjust_negative_tracers,
             externals={
-                "c1_vapor": config.c1_vap,
+                "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
                 "c1_ice": config.c1_ice,
                 "lv00": config.lv00,

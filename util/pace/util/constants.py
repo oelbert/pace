@@ -1,3 +1,6 @@
+import math
+
+
 ROOT_RANK = 0
 X_DIM = "x"
 X_INTERFACE_DIM = "x_interface"
@@ -104,10 +107,14 @@ RHO_S = 1.0e2  # density of snow (Lin et al. 1983) (kg/m^3)
 RHO_G = 4.0e2  # density of graupel (Rutledge and Hobbs 1984) (kg/m^3)
 RHO_H = 9.17e2  # density of hail (Lin et al. 1983) (kg/m^3)
 
+VISK = 1.35e-5  # kinematic viscosity of air at 0 deg C  and 1000 hPa
+# (Mason, 1971) (m^2/s)
 VDIFU = 2.25e-5  # diffusivity of water vapor in air at 0 deg C  and 1000 hPa
 # (Mason, 1971) (m^2/s)
 TCOND = 2.40e-2  # thermal conductivity of air at 0 C and 1000 hPa
 # (Mason, 1971) (J/m/s/K)
+SCM3 = math.exp(1.0 / 3 * math.log(VISK / VDIFU))  # S =chmidt number, Sc ** (1 / 3)
+# Lin et al. (1983)
 
 QCMIN = 1.0e-15  # min value for cloud condensates (kg/kg)
 QFMIN = 1.0e-8  # min value for sedimentation (kg/kg)
@@ -117,3 +124,7 @@ CDG = 3.15121  # drag coefficient of graupel (Locatelli and Hobbs, 1974)
 CDH = 0.5  # drag coefficient of hail (Heymsfield and Wright, 2014)
 
 DZ_MIN_FLIP = 1.0e-2  # used for correcting flipped height (m)
+
+# Terminal Velocity Parameters, Lin et al. (1983)
+GCON = (4.0 * GRAV * RHO_G / (3.0 * CDG * RHO_0)) ** 0.5
+HCON = (4.0 * GRAV * RHO_H / (3.0 * CDH * RHO_0)) ** 0.5

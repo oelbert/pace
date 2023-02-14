@@ -51,6 +51,7 @@ class NamelistDefaults:
     cld_min = 0.05  # !< minimum cloud fraction
     tau_l2v = 300.0  # cloud water to water vapor (evaporation)
     tau_v2l = 150.0  # water vapor to cloud water (condensation)
+    tau_revp = 0.0  # rain evaporation time scale (s)
     c2l_ord = 4
     regional = False
     m_split = 0
@@ -75,6 +76,7 @@ class NamelistDefaults:
     ccn_l = 270.0  # CCN over land (cm^-3)
     ccn_o = 90.0  # CCN over ocean (cm^-3)
     use_rhc_cevap = False  # cap of rh for cloud water evaporation
+    use_rhc_revap = False  # cap of rh for rain evaporation
     const_vg = False  # Fall velocity tuning constant of graupel
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
@@ -84,6 +86,7 @@ class NamelistDefaults:
     sed_fac = 1.0  # coefficient for sedimentation fall,
     # Scale from 1.0 (implicit) to 0.0 (lagrangian)
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
+    rhc_revap = 0.85  # maximum relative humidity for rain evaporation
     vw_fac = 1.0
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
@@ -364,6 +367,7 @@ class Namelist:
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
+    rhc_revap: float = NamelistDefaults.rhc_revap
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac
@@ -399,6 +403,7 @@ class Namelist:
     ntimes: int = NamelistDefaults.ntimes
     do_inline_mp: bool = NamelistDefaults.do_inline_mp
     use_rhc_cevap: bool = NamelistDefaults.use_rhc_cevap
+    use_rhc_revap: bool = NamelistDefaults.use_rhc_revap
     # c0s_shal: Any
     # c1_shal: Any
     # cal_pre: Any
@@ -551,6 +556,7 @@ class Namelist:
     tau_v2l: float = (
         NamelistDefaults.tau_v2l
     )  # water vapor to cloud water (condensation)
+    tau_revp: float = NamelistDefaults.tau_revp
     n0w_sig: float = NamelistDefaults.n0w_sig
     n0i_sig: float = NamelistDefaults.n0i_sig
     n0r_sig: float = NamelistDefaults.n0r_sig

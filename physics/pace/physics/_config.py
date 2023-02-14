@@ -132,6 +132,7 @@ class MicroPhysicsConfig:
     dw_land: float
     tau_l2v: float
     tau_v2l: float
+    tau_revp: float
     tau_wbf: float
     c2l_ord: int
     do_sedi_heat: bool
@@ -156,6 +157,7 @@ class MicroPhysicsConfig:
     qi0_crt: float
     qs0_crt: float
     rhc_cevap: float
+    rhc_revap: float
     is_fac: float
     rh_fac: float
     sed_fac: float
@@ -167,6 +169,7 @@ class MicroPhysicsConfig:
     # use_ccn: Any
     use_ppm: bool
     use_rhc_cevap: bool
+    use_rhc_revap: bool
     vw_max: float
     vg_max: float
     vi_max: float
@@ -244,6 +247,31 @@ class MicroPhysicsConfig:
     tvbg: float = dataclasses.field(init=False)
     tvah: float = dataclasses.field(init=False)
     tvbh: float = dataclasses.field(init=False)
+    crevp_1: float = dataclasses.field(init=False)
+    crevp_2: float = dataclasses.field(init=False)
+    crevp_3: float = dataclasses.field(init=False)
+    crevp_4: float = dataclasses.field(init=False)
+    crevp_5: float = dataclasses.field(init=False)
+    cssub_1: float = dataclasses.field(init=False)
+    cssub_2: float = dataclasses.field(init=False)
+    cssub_3: float = dataclasses.field(init=False)
+    cssub_4: float = dataclasses.field(init=False)
+    cssub_5: float = dataclasses.field(init=False)
+    cgsub_1: float = dataclasses.field(init=False)
+    cgsub_2: float = dataclasses.field(init=False)
+    cgsub_3: float = dataclasses.field(init=False)
+    cgsub_4: float = dataclasses.field(init=False)
+    cgsub_5: float = dataclasses.field(init=False)
+    normw: float = dataclasses.field(init=False)
+    normr: float = dataclasses.field(init=False)
+    normi: float = dataclasses.field(init=False)
+    norms: float = dataclasses.field(init=False)
+    normg: float = dataclasses.field(init=False)
+    expow: float = dataclasses.field(init=False)
+    expor: float = dataclasses.field(init=False)
+    expoi: float = dataclasses.field(init=False)
+    expos: float = dataclasses.field(init=False)
+    expog: float = dataclasses.field(init=False)
 
     def __post_init__(self):
         if self.hydrostatic:
@@ -267,6 +295,10 @@ class MicroPhysicsConfig:
         self.c1_ice = constants.C_ICE / self.c_air
 
         self._calculate_particle_parameters()
+
+        self._calculate_slope_parameters()
+
+        self._calculate_evaporation_and_sublimation_constants()
 
         self.n_min = 1600
         self.delt = 0.1
@@ -394,7 +426,9 @@ class MicroPhysicsConfig:
             * math.exp(3 * n0w_exp / (muw + 3) * math.log(10.0))
         )
         self.pcbw = math.exp(
-            muw / (muw + 3) * math.log(math.pi * constants.RHO_W * math.gamma(muw + 3))
+            muw
+            / (muw + 3)
+            * math.log(constants.PI * constants.RHO_W * math.gamma(muw + 3))
         )
         self.pcai = (
             math.exp(3 / (mui + 3) * math.log(n0i_sig))
@@ -402,7 +436,9 @@ class MicroPhysicsConfig:
             * math.exp(3 * n0i_exp / (mui + 3) * math.log(10.0))
         )
         self.pcbi = math.exp(
-            mui / (mui + 3) * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+            mui
+            / (mui + 3)
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
         )
 
         # Effective Diameter
@@ -421,7 +457,7 @@ class MicroPhysicsConfig:
         self.tvbw = math.exp(
             blinw
             / (muw + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(muw + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(muw + 3))
         ) * math.gamma(muw + 3)
 
         self.tvai = (
@@ -433,7 +469,7 @@ class MicroPhysicsConfig:
         self.tvbi = math.exp(
             blini
             / (mui + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(mui + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
         ) * math.gamma(mui + 3)
 
         self.tvar = (
@@ -445,7 +481,7 @@ class MicroPhysicsConfig:
         self.tvbr = math.exp(
             blinr
             / (mur + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(mur + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mur + 3))
         ) * math.gamma(mur + 3)
 
         self.tvas = (
@@ -457,44 +493,188 @@ class MicroPhysicsConfig:
         self.tvbs = math.exp(
             blins
             / (mus + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(mus + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mus + 3))
         ) * math.gamma(mus + 3)
 
-        gcon = (
-            4.0
-            * constants.GRAV
-            * constants.RHO_G
-            / (3.0 * constants.CDG * constants.RHO_0)
-        ) ** 0.5
         self.tvag = (
             math.exp(-bling / (mug + 3) * math.log(n0g_sig))
             * aling
             * math.gamma(mug + bling + 3)
             * math.exp(-bling * n0g_exp / (mug + 3) * math.log(10.0))
-        ) * gcon
+        ) * constants.GCON
         self.tvbg = math.exp(
             bling
             / (mug + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(mug + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mug + 3))
         ) * math.gamma(mug + 3)
 
-        hcon = (
-            4.0
-            * constants.GRAV
-            * constants.RHO_H
-            / (3.0 * constants.CDH * constants.RHO_0)
-        ) ** 0.5
         self.tvah = (
             math.exp(-blinh / (muh + 3) * math.log(n0h_sig))
             * alinh
             * math.gamma(muh + blinh + 3)
             * math.exp(-blinh * n0h_exp / (muh + 3) * math.log(10.0))
-        ) * hcon
+        ) * constants.HCON
         self.tvbh = math.exp(
             blinh
             / (muh + 3)
-            * math.log(math.pi * constants.RHO_I * math.gamma(muh + 3))
+            * math.log(constants.PI * constants.RHO_I * math.gamma(muh + 3))
         ) * math.gamma(muh + 3)
+
+    def _calculate_slope_parameters(self):
+        """
+        Calculates slope parameters used for other variables
+        """
+        self.normw = (
+            constants.PI * constants.RHO_W * self.n0w_sig * math.gamma(self.muw + 3)
+        )
+        self.normi = (
+            constants.PI * constants.RHO_I * self.n0i_sig * math.gamma(self.mui + 3)
+        )
+        self.normr = (
+            constants.PI * constants.RHO_R * self.n0r_sig * math.gamma(self.mur + 3)
+        )
+        self.norms = (
+            constants.PI * constants.RHO_S * self.n0s_sig * math.gamma(self.mus + 3)
+        )
+        self.normg = (
+            constants.PI * constants.RHO_G * self.n0g_sig * math.gamma(self.mug + 3)
+        )
+        self.normh = (
+            constants.PI * constants.RHO_H * self.n0h_sig * math.gamma(self.muh + 3)
+        )
+
+        self.expow = math.exp(self.n0w_exp / (self.muw + 3) * math.log(10.0))
+        self.expoi = math.exp(self.n0i_exp / (self.mui + 3) * math.log(10.0))
+        self.expor = math.exp(self.n0r_exp / (self.mur + 3) * math.log(10.0))
+        self.expos = math.exp(self.n0s_exp / (self.mus + 3) * math.log(10.0))
+        self.expog = math.exp(self.n0g_exp / (self.mug + 3) * math.log(10.0))
+        self.expoh = math.exp(self.n0h_exp / (self.muh + 3) * math.log(10.0))
+
+    def _calculate_evaporation_and_sublimation_constants(self):
+        """
+        calculates crevp, cssub, and cgsub constants for rain evaporation,
+        snow sublimation, and graupel or hail sublimation, Lin et al. (1983)
+        """
+
+        self.crevp_1 = (
+            2.0
+            * constants.PI
+            * constants.VDIFU
+            * constants.TCOND
+            * constants.RVGAS
+            * self.n0r_sig
+            * math.gamma(1 + self.mur)
+            / math.exp((1 + self.mur) / (self.mur + 3) * math.log(self.normr))
+            * math.exp(2.0 * math.log(self.expor))
+        )
+        self.crevp_2 = 0.78
+        self.crevp_3 = (
+            0.31
+            * constants.SCM3
+            * math.sqrt(self.alinr / constants.VISK)
+            * math.gamma((3 + 2 * self.mur + self.blinr) / 2)
+            / math.exp(
+                (3 + 2 * self.mur + self.blinr)
+                / (self.mur + 3)
+                / 2
+                * math.log(self.normr)
+            )
+            * math.exp((1 + self.mur) / (self.mur + 3) * math.log(self.normr))
+            / math.gamma(1 + self.mur)
+            * math.exp((-1 - self.blinr) / 2 * math.log(self.expor))
+        )
+        self.crevp_4 = constants.TCOND * constants.RVGAS
+        self.crevp_5 = constants.VDIFU
+
+        self.cssub_1 = (
+            2.0
+            * constants.PI
+            * constants.VDIFU
+            * constants.TCOND
+            * constants.RVGAS
+            * self.n0s_sig
+            * math.gamma(1 + self.mus)
+            / math.exp((1 + self.mus) / (self.mus + 3) * math.log(self.norms))
+            * math.exp(2.0 * math.log(self.expos))
+        )
+        self.cssub_2 = 0.78
+        self.cssub_3 = (
+            0.31
+            * constants.SCM3
+            * math.sqrt(self.alins / constants.VISK)
+            * math.gamma((3 + 2 * self.mus + self.blins) / 2)
+            / math.exp(
+                (3 + 2 * self.mus + self.blins)
+                / (self.mus + 3)
+                / 2
+                * math.log(self.norms)
+            )
+            * math.exp((1 + self.mus) / (self.mus + 3) * math.log(self.norms))
+            / math.gamma(1 + self.mus)
+            * math.exp((-1 - self.blins) / 2 * math.log(self.expos))
+        )
+        self.cssub_4 = constants.TCOND * constants.RVGAS
+        self.cssub_5 = constants.VDIFU
+
+        if self.do_hail:
+            self.cgsub_1 = (
+                2.0
+                * constants.PI
+                * constants.VDIFU
+                * constants.TCOND
+                * constants.RVGAS
+                * self.n0h_sig
+                * math.gamma(1 + self.muh)
+                / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh))
+                * math.exp(2.0 * math.log(self.expoh))
+            )
+            self.cgsub_2 = 0.78
+            self.cgsub_3 = (
+                0.31
+                * constants.SCM3
+                * math.sqrt(self.alinh * constants.HCON / constants.VISK)
+                * math.gamma((3 + 2 * self.muh + self.blinh) / 2)
+                / math.exp(
+                    1.0
+                    / (self.muh + 3)
+                    * (3 + 2 * self.muh + self.blinh)
+                    / 2
+                    * math.log(self.normh)
+                )
+                * math.exp(1.0 / (self.muh + 3) * (1 + self.muh) * math.log(self.normh))
+                / math.gamma(1 + self.muh)
+                * math.exp((-1 - self.blinh) / 2.0 * math.log(self.expoh))
+            )
+        else:
+            self.cgsub_1 = (
+                2.0
+                * constants.PI
+                * constants.VDIFU
+                * constants.TCOND
+                * constants.RVGAS
+                * self.n0g_sig
+                * math.gamma(1 + self.mug)
+                / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg))
+                * math.exp(2.0 * math.log(self.expog))
+            )
+            self.cgsub_2 = 0.78
+            self.cgsub_3 = (
+                0.31
+                * constants.SCM3
+                * math.sqrt(self.aling * constants.GCON / constants.VISK)
+                * math.gamma((3 + 2 * self.mug + self.bling) / 2)
+                / math.exp(
+                    (3 + 2 * self.mug + self.bling)
+                    / (self.mug + 3)
+                    / 2
+                    * math.log(self.normg)
+                )
+                * math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg))
+                / math.gamma(1 + self.mug)
+                * math.exp((-1 - self.bling) / 2.0 * math.log(self.expog))
+            )
+        self.cgsub_4 = constants.TCOND * constants.RVGAS
+        self.cgsub_5 = constants.VDIFU
 
 
 @dataclasses.dataclass
@@ -571,6 +751,7 @@ class PhysicsConfig:
     tau_v2l: float = (
         NamelistDefaults.tau_v2l
     )  # water vapor to cloud water (condensation)
+    tau_revp: float = NamelistDefaults.tau_revp
     tau_wbf: float = NamelistDefaults.tau_wbf
     c2l_ord: int = NamelistDefaults.c2l_ord
     do_sedi_heat: bool = NamelistDefaults.do_sedi_heat
@@ -595,6 +776,7 @@ class PhysicsConfig:
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
+    rhc_revap: float = NamelistDefaults.rhc_revap
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac
@@ -606,6 +788,7 @@ class PhysicsConfig:
     # use_ccn: Any
     use_ppm: bool = NamelistDefaults.use_ppm
     use_rhc_cevap: bool = NamelistDefaults.use_rhc_cevap
+    use_rhc_revap: bool = NamelistDefaults.use_rhc_revap
     vw_max: float = NamelistDefaults.vw_max
     vg_max: float = NamelistDefaults.vg_max
     vi_max: float = NamelistDefaults.vi_max
@@ -718,6 +901,7 @@ class PhysicsConfig:
             dw_land=namelist.dw_land,
             tau_l2v=namelist.tau_l2v,
             tau_v2l=namelist.tau_v2l,
+            tau_revp=namelist.tau_revp,
             c2l_ord=namelist.c2l_ord,
             do_sedi_heat=namelist.do_sedi_heat,
             do_sedi_melt=namelist.do_sedi_melt,
@@ -741,6 +925,7 @@ class PhysicsConfig:
             qi0_crt=namelist.qi0_crt,
             qs0_crt=namelist.qs0_crt,
             rhc_cevap=namelist.rhc_cevap,
+            rhc_revap=namelist.rhc_revap,
             is_fac=namelist.is_fac,
             rh_fac=namelist.rh_fac,
             sed_fac=namelist.sed_fac,
@@ -750,6 +935,7 @@ class PhysicsConfig:
             sedi_transport=namelist.sedi_transport,
             use_ppm=namelist.use_ppm,
             use_rhc_cevap=namelist.use_rhc_cevap,
+            use_rhc_revap=namelist.use_rhc_revap,
             vw_max=namelist.vw_max,
             vg_max=namelist.vg_max,
             vi_max=namelist.vi_max,
@@ -849,6 +1035,7 @@ class PhysicsConfig:
             dw_land=self.dw_land,
             tau_l2v=self.tau_l2v,
             tau_v2l=self.tau_v2l,
+            tau_revp=self.tau_revp,
             tau_wbf=self.tau_wbf,
             c2l_ord=self.c2l_ord,
             do_sedi_heat=self.do_sedi_heat,
@@ -873,6 +1060,7 @@ class PhysicsConfig:
             qi0_crt=self.qi0_crt,
             qs0_crt=self.qs0_crt,
             rhc_cevap=self.rhc_cevap,
+            rhc_revap=self.rhc_revap,
             is_fac=self.is_fac,
             rh_fac=self.rh_fac,
             sed_fac=self.sed_fac,
@@ -882,6 +1070,7 @@ class PhysicsConfig:
             sedi_transport=self.sedi_transport,
             use_ppm=self.use_ppm,
             use_rhc_cevap=self.use_rhc_cevap,
+            use_rhc_revap=self.use_rhc_revap,
             vw_max=self.vw_max,
             vg_max=self.vg_max,
             vi_max=self.vi_max,

@@ -68,7 +68,7 @@ def fall_implicit(
     delp: FloatField,
     z_edge: FloatField,
     no_fall: FloatFieldIJ,
-    m1: FloatField,
+    flux: FloatField,
     precip: FloatFieldIJ,
 ):
     from __externals__ import timestep
@@ -94,15 +94,15 @@ def fall_implicit(
 
         with interval(0, 1):
             if no_fall > 0.0:
-                m1 = q_fall - qm
+                flux = q_fall - qm
 
         with interval(1, None):
             if no_fall > 0.0:
-                m1 = m1[0, 0, -1] + q_fall - qm
+                flux = flux[0, 0, -1] + q_fall - qm
 
         with interval(-1, None):
             if no_fall > 0.0:
-                precip += m1
+                precip += flux
 
         with interval(...):
             if no_fall > 0.0:
@@ -134,7 +134,7 @@ def fall_lagrangian(
     q4_4: FloatField,
     delz: FloatField,
     delp: FloatField,
-    m1: FloatField,
+    flux: FloatField,
     precipitation: FloatFieldIJ,
     lev: IntFieldIJ,
     no_fall: FloatFieldIJ,
@@ -153,7 +153,7 @@ def fall_lagrangian(
         delp (in):
         delz (in):
         qm (out):
-        m1 (out)
+        flux (out)
         precipitation (inout):
         lev (inout):
         no_fall (in):
@@ -200,17 +200,17 @@ def fall_lagrangian(
 
     with computation(BACKWARD), interval(0, 1):
         if no_fall > 0.0:
-            m1 = q - qm
+            flux = q - qm
             q = qm / delp
 
     with computation(FORWARD), interval(1, None):
         if no_fall > 0.0:
-            m1 = m1[0, 0, -1] + q - qm
+            flux = flux[0, 0, -1] + q - qm
             q = qm / delp
 
     with computation(FORWARD), interval(-1, None):
         if no_fall > 0.0:
-            precipitation += m1
+            precipitation += flux
 
 
 def finish_implicit_lagrangian(
@@ -244,18 +244,20 @@ def sedi_uv(
     ua,
     va,
     delp,
-    m1,
+    flux,
 ):
-    ua = (delp * ua + m1[0, 0, -1] * ua[0, 0, -1]) / (delp + m1[0, 0, -1])
-    va = (delp * va + m1[0, 0, -1] * va[0, 0, -1]) / (delp + m1[0, 0, -1])
+    ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (delp + flux[0, 0, -1])
+    va = (delp * va + flux[0, 0, -1] * va[0, 0, -1]) / (delp + flux[0, 0, -1])
     return ua, va
 
 
 @gtscript.function
-def sedi_w(wa, dm, m1, v_terminal):
+def sedi_w(wa, dm, flux, v_terminal):
     wa = (
-        dm * wa + m1[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1]) + m1 * v_terminal
-    ) / (dm + m1[0, 0, -1])
+        dm * wa
+        + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
+        + flux * v_terminal
+    ) / (dm + flux[0, 0, -1])
     return wa
 
 
@@ -273,7 +275,7 @@ def update_energy_wind_heat_post_fall(
     temperature: FloatField,
     delp: FloatField,
     delz: FloatField,
-    m1: FloatField,
+    flux: FloatField,
     dm: FloatField,
     v_terminal: FloatField,
     column_energy_change: FloatFieldIJ,
@@ -301,17 +303,17 @@ def update_energy_wind_heat_post_fall(
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv is True):
             if no_fall > 0.0:
-                ua, va = sedi_uv(ua, va, delp, m1)
+                ua, va = sedi_uv(ua, va, delp, flux)
 
     with computation(FORWARD), interval(0, 1):
         if __INLINED(do_sedi_w is True):
             if no_fall > 0.0:
-                wa = wa + m1 * v_terminal / dm
+                wa = wa + flux * v_terminal / dm
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_w is True):
             if no_fall > 0.0:
-                wa = sedi_w(wa, dm, m1, v_terminal)
+                wa = sedi_w(wa, dm, flux, v_terminal)
 
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
@@ -338,15 +340,15 @@ def update_energy_wind_heat_post_fall(
                     + qvapor * constants.CV_VAP
                     + (qrain + qliquid) * constants.C_LIQ
                     + (qice + qsnow + qgraupel) * constants.C_ICE
-                ) + cw * (m1 - m1[0, 0, -1])
+                ) + cw * (flux - flux[0, 0, -1])
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_heat is True):
             if no_fall > 0.0:
                 temperature = (
                     cv0 * temperature
-                    + m1[0, 0, -1] * (cw * temperature[0, 0, -1] + dgz)
-                ) / (cv0 + cw * m1[0, 0, -1])
+                    + flux[0, 0, -1] * (cw * temperature[0, 0, -1] + dgz)
+                ) / (cv0 + cw * flux[0, 0, -1])
 
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
@@ -657,7 +659,7 @@ class TerminalFall:
             temperature,
             delp,
             delz,
-            self._m1,
+            flux,
             self._dm,
             v_terminal,
             column_energy_change,

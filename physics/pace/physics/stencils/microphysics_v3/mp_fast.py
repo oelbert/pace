@@ -1,4 +1,3 @@
-import physical_functions as physfun
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
@@ -11,6 +10,7 @@ from gt4py.cartesian.gtscript import (
 )
 
 import pace.fv3core.stencils.basic_operations as basic
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
@@ -1195,7 +1195,7 @@ class FastMicrophysics:
             externals={
                 "do_warm_rain_mp": config.do_warm_rain,
                 "do_wbf": config.do_wbf,
-                "c1_vapor": config.c1_vap,
+                "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
                 "c1_ice": config.c1_ice,
                 "lv00": config.lv00,

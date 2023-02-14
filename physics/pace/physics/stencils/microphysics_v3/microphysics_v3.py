@@ -1,5 +1,3 @@
-import physical_functions as physfun  # noqa
-from gt4py.cartesian import gtscript  # noqa
 from gt4py.cartesian.gtscript import (
     __INLINED,
     FORWARD,
@@ -67,7 +65,7 @@ def moist_total_energy_and_water(
     from __externals__ import (
         c1_ice,
         c1_liq,
-        c1_vapor,
+        c1_vap,
         c_air,
         hydrostatic,
         li00,
@@ -82,9 +80,9 @@ def moist_total_energy_and_water(
         q_cond = q_liq + q_solid
         if __INLINED(moist_q is True):
             con = 1.0 - (qvapor + q_cond)
-            cvm = con + qvapor * c1_vapor + q_liq * c1_liq + q_solid * c1_ice
+            cvm = con + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
         else:
-            cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liq + q_solid * c1_ice
+            cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
         tot_energy = (cvm * temp + lv00 * qvapor - li00 * q_solid) * c_air
         if __INLINED(hydrostatic is True):
             tot_energy = tot_energy + 0.5 * (ua ** 2 + va ** 2)
@@ -276,7 +274,7 @@ class Microphysics:
             externals={
                 "hydrostatic": self.config.hydrostatic,
                 "c_air": self.config.c_air,
-                "c1_vapor": self.config.c1_vap,
+                "c1_vap": self.config.c1_vap,
                 "c1_liq": self.config.c1_liq,
                 "c1_ice": self.config.c1_ice,
             },
@@ -290,7 +288,7 @@ class Microphysics:
                 externals={
                     "hydrostatic": self.config.hydrostatic,
                     "moist_q": True,
-                    "c1_vapor": self.config.c1_vap,
+                    "c1_vap": self.config.c1_vap,
                     "c1_liq": self.config.c1_liq,
                     "c1_ice": self.config.c1_ice,
                     "lv00": self.config.lv00,
@@ -307,7 +305,7 @@ class Microphysics:
                 externals={
                     "hydrostatic": self.config.hydrostatic,
                     "moist_q": False,
-                    "c1_vapor": self.config.c1_vap,
+                    "c1_vap": self.config.c1_vap,
                     "c1_liq": self.config.c1_liq,
                     "c1_ice": self.config.c1_ice,
                     "lv00": self.config.lv00,

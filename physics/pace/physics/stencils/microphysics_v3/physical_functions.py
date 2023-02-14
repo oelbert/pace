@@ -68,7 +68,7 @@ def calc_heat_cap_and_latent_heat_coeff(
     from __externals__ import (
         c1_ice,
         c1_liq,
-        c1_vapor,
+        c1_vap,
         d1_ice,
         d1_vap,
         li00,
@@ -80,7 +80,7 @@ def calc_heat_cap_and_latent_heat_coeff(
 
     q_liq = qliquid + qrain
     q_solid = qice + qsnow + qgraupel
-    cvm = 1.0 + qvapor * c1_vapor + q_liq * c1_liq + q_solid * c1_ice
+    cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
     te = cvm + temp + lv00 * qvapor - li00 * q_solid
     lcpk = (lv00 + d1_vap * temp) / cvm
     icpk = (li00 + d1_ice * temp) / cvm
@@ -113,7 +113,7 @@ def update_hydrometeors_and_temperatures(
     from __externals__ import (
         c1_ice,
         c1_liq,
-        c1_vapor,
+        c1_vap,
         d1_ice,
         d1_vap,
         li00,
@@ -132,7 +132,7 @@ def update_hydrometeors_and_temperatures(
 
     q_l = qrain + qliquid
     q_solid = qice + qsnow + qgraupel
-    cvm = 1.0 + qvapor * c1_vapor + q_l * c1_liq + q_solid * c1_ice
+    cvm = 1.0 + qvapor * c1_vap + q_l * c1_liq + q_solid * c1_ice
 
     tk = (te - lv00 + qvapor + li00 * (qice + qsnow + qgraupel)) / cvm
     lcpk = (lv00 + d1_vap * tk) / cvm

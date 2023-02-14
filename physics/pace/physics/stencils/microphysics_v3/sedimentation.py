@@ -313,7 +313,7 @@ class Sedimentation:
         self._init_heat_cap_latent_heat = stencil_factory.from_origin_domain(
             func=init_heat_cap_latent_heat,
             externals={
-                "c1_vapor": config.c1_vap,
+                "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
                 "c1_ice": config.c1_ice,
                 "lv00": config.lv00,
