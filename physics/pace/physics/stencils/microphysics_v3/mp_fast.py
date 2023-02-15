@@ -17,81 +17,9 @@ import pace.util.constants as constants
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 
+from pace.physics.stencils.microphysics_v3.ice_cloud import melt_cloud_ice, freeze_cloud_water
+
 from ..._config import FastMPConfig
-
-
-@gtscript.function
-def melt_cloud_ice(
-    qvapor,
-    qliquid,
-    qrain,
-    qice,
-    qsnow,
-    qgraupel,
-    temp,
-    cvm,
-    te,
-    lcpk,
-    icpk,
-    tcpk,
-    tcp3,
-):
-    """
-    Cloud ice melting to form cloud water and rain
-    Fortran name is pimlt
-    """
-
-    from __externals__ import ql_mlt, tau_imlt, tice_mlt, timestep
-
-    fac_imlt = 1.0 - exp(-timestep / tau_imlt)
-    tc = temp - tice_mlt
-    if (tc > 0.0) and (qice > constants.QCMIN):
-        sink = fac_imlt * tc / icpk
-        sink = min(qice, sink)
-        tmp = min(sink, basic.dim(ql_mlt, qliquid))
-
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            cvm,
-            temp,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = physfun.update_hydrometeors_and_temperatures(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            0.0,
-            tmp,
-            sink - tmp,
-            -sink,
-            0,
-            0,
-            te,
-        )
-    return (
-        qvapor,
-        qliquid,
-        qrain,
-        qice,
-        qsnow,
-        qgraupel,
-        temp,
-        cvm,
-        lcpk,
-        icpk,
-        tcpk,
-        tcp3,
-    )
 
 
 @gtscript.function
@@ -259,82 +187,6 @@ def cloud_condensation_evaporation(
         tcp3,
         reevaporation,
         condensation,
-    )
-
-
-@gtscript.function
-def freeze_cloud_water(
-    qvapor,
-    qliquid,
-    qrain,
-    qice,
-    qsnow,
-    qgraupel,
-    temp,
-    density,
-    cvm,
-    te,
-    lcpk,
-    icpk,
-    tcpk,
-    tcp3,
-):
-    """
-    Cloud water freezing to form cloud ice and snow, Lin et al. (1983)
-    Fortran name is pifr
-    """
-
-    from __externals__ import qi0_crt, t_wfr
-
-    tc = t_wfr - temp
-    if (tc > 0.0) and (qliquid > constants.QCMIN):
-        sink = qliquid * tc / constants.DT_FR
-        sink = min(qliquid, sink, tc / icpk)
-        qim = qi0_crt / density
-        tmp = min(sink, basic.dim(qim, qice))
-
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            cvm,
-            temp,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = physfun.update_hydrometeors_and_temperatures(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            0.0,
-            -sink,
-            0.0,
-            tmp,
-            sink - tmp,
-            0.0,
-            te,
-        )
-
-    return (
-        qvapor,
-        qliquid,
-        qrain,
-        qice,
-        qsnow,
-        qgraupel,
-        cvm,
-        temp,
-        lcpk,
-        icpk,
-        tcpk,
-        tcp3,
     )
 
 

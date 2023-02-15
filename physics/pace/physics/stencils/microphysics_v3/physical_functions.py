@@ -269,3 +269,10 @@ def moist_heat_capacity(qvapor, qliquid, qrain, qice, qsnow, qgraupel):
     q_liq = qliquid + qrain
     q_solid = qice + qsnow + qgraupel
     return 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
+
+@gtscript.function
+def melting_function():
+    """
+    Melting function, Lin et al. (1983)
+    Fortran name is pmlt
+    """

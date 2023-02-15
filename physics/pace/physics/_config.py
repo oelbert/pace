@@ -274,6 +274,16 @@ class MicroPhysicsConfig:
     cgsub_3: float = dataclasses.field(init=False)
     cgsub_4: float = dataclasses.field(init=False)
     cgsub_5: float = dataclasses.field(init=False)
+    csmelt_1: float = dataclasses.field(init=False)
+    csmelt_2: float = dataclasses.field(init=False)
+    csmelt_3: float = dataclasses.field(init=False)
+    csmelt_4: float = dataclasses.field(init=False)
+    cgmelt_1: float = dataclasses.field(init=False)
+    cgmelt_2: float = dataclasses.field(init=False)
+    cgmelt_3: float = dataclasses.field(init=False)
+    cgmelt_4: float = dataclasses.field(init=False)
+    cgfr_1: float = dataclasses.field(init=False)
+    cgfr_2: float = dataclasses.field(init=False)
     normw: float = dataclasses.field(init=False)
     normr: float = dataclasses.field(init=False)
     normi: float = dataclasses.field(init=False)
@@ -326,6 +336,8 @@ class MicroPhysicsConfig:
         self._calculate_evaporation_and_sublimation_constants()
 
         self._calculate_accretion_parameters()
+
+        self._calculate_melting_and_freezing_constants()
 
         self.n_min = 1600
         self.delt = 0.1
@@ -876,6 +888,32 @@ class MicroPhysicsConfig:
             acco.append(accoi)
         
         self.acco=acco
+
+    def _calculate_melting_and_freezing_constants(self):
+        """
+        Calculates parameters for snow and graupel melting, 
+        and rain freezing
+        """
+
+        # Snow melting, Lin et al. (1983)
+        self.csmlt_1 = 2. * constants.PI * constants.TCOND * self.n0s_sig * math.gamma(1 + self.mus) / math.exp((1 + self.mus) / (self.mus + 3) * math.log (self.norms)) * math.exp(2.0 * math.log(self.expos))
+        self.csmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0s_sig * math.gamma(1 + self.mus) / math.exp((1 + self.mus) / (self.mus + 3) * math.log (self.norms)) * math.exp(2.0 * math.log(self.expos))
+        self.csmlt_3 = self.cssub_2
+        self.csmlt_4 = self.cssub_3
+
+        # Graupel or hail melting, Lin et al. (1983)
+        if self.do_hail is True:
+            self.cgmlt_1 = 2. * constants.PI * constants.TCOND * self.n0h_sig * math.gamma(1 + self.muh) / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh)) * math.exp(2.0 * math.log(self.expoh))
+            self.cgmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0h_sig * math.gamma(1 + self.muh) / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh)) * math.exp(2.0 * math.log(self.expoh))
+        else:
+            self.cgmlt_1 = 2. * constants.PI * constants.TCOND * self.n0g_sig * math.gamma(1 + self.mug) / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg)) * math.exp(2.0 * math.log(self.expog))
+            self.cgmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0g_sig * math.gamma(1 + self.mug) / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg)) * math.exp(2.0 * math.log(self.expog))
+        self.cgmlt_3 = self.cgsub_2
+        self.cgmlt_4 = self.cgsub_3
+
+        # Rain freezing, Lin et al. (1983)
+        self.cgfr_1 = 1.e2 / 36 * constants.PI**2 * self.n0r_sig * constants.RHO_R * math.gamma(6 + self.mur) / math.exp((6 + self.mur) / (self.mur + 3) * math.log(self.normr)) * math.exp(- 3.0 * math.log(self.expor))
+        self.cgfr_2 = 0.66
 
 
 @dataclasses.dataclass

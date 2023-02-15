@@ -7,6 +7,7 @@ from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
 from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
+from pace.physics.stencils.microphysics_v3.ice_cloud import IceCloud
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
@@ -86,6 +87,8 @@ class FullMicrophysics:
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
 
+        self._do_warm_rain = config.do_warm_rain
+
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
@@ -131,6 +134,11 @@ class FullMicrophysics:
         self._warm_rain = WarmRain(
             stencil_factory, config, timestep
         )
+
+        if self._do_warm_rain is True:
+            self._ice_cloud = IceCloud(
+                stencil_factory, quantity_factory, config, timestep
+            )
 
         self._accumulate_state_changes = stencil_factory.from_origin_domain(
             func=accumulate_state_changes,
@@ -256,5 +264,24 @@ class FullMicrophysics:
             self._g1,
             self._reevap,
         )
+
+        if self._do_warm_rain is True:
+            self._ice_cloud(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                density,
+                density_factor,
+                self._vtw,
+                self._vtr,
+                self._vti,
+                self._vts,
+                self._vtg,
+                h_var,
+            )
 
         pass
