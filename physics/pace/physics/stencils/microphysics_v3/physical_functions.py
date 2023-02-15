@@ -1,5 +1,5 @@
 from gt4py.cartesian import gtscript
-from gt4py.cartesian.gtscript import exp, log
+from gt4py.cartesian.gtscript import exp, log, sqrt
 
 import pace.fv3core.stencils.basic_operations as basic
 import pace.util.constants as constants
@@ -49,6 +49,55 @@ def calc_terminal_velocity(tracer, density, tva, tvb, mu, blin):
     """
 
     return tva / tvb * exp(blin / (mu + 3) * log(6 * density * tracer))
+
+
+@gtscript.function
+def accretion_2d(
+    qden,
+    denfac,
+    c,
+    blin,
+    mu
+):
+    return denfac * c * exp((2 + mu + blin) / (mu + 3) * log(6*qden))
+
+
+@gtscript.function
+def accretion_3d(
+    q1,
+    q2,
+    v1,
+    v2,
+    density,
+    c,
+    acco1,
+    acco2,
+    acco3,
+    acc1,
+    acc2,
+):
+    """
+    Accretion function, Lin et al. (1983)
+    Fortran name is acr3d
+    """
+    from __externals__ import vdiffflag
+
+    t1 = exp(1. / (acc1 + 3) * log(6 * q1 * density))
+    t2 = exp(1. / (acc2 + 3) * log(6 * q2 * density))
+
+    if vdiffflag == 1:
+        vdiff = abs(v1-v2)
+    elif vdiffflag == 2:
+        sqrt((1.20 * v1 - 0.95 * v2) ** 2. + 0.08 * v1 * v2)
+    else: # vdiffflag == 3:
+        vdiff = sqrt((1.00 * v1 - 1.00 * v2) ** 2. + 0.04 * v1 * v2)
+
+    accrete = c * vdiff / density
+    tmp = acco1 * exp((6+acc1 - 1) * log(t1)) * exp((acc2 + 1 - 1) * log(t2))
+    tmp += acco2 * exp((6+acc1 - 2) * log(t1)) * exp((acc2 + 2 - 1) * log(t2))
+    tmp += acco3 * exp((6+acc1 - 3) * log(t1)) * exp((acc2 + 3 - 1) * log(t2))
+
+    return accrete * tmp
 
 
 @gtscript.function

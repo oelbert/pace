@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import f90nml
 
@@ -94,8 +94,16 @@ class MicroPhysicsConfig:
     do_inline_mp: bool
     c_cracw: float
     c_paut: float
+    c_pracs: float
+    c_psacr: float
+    c_pgacr: float
     c_pgacs: float
+    c_psacw: float
     c_psaci: float
+    c_pracw: float
+    c_praci: float
+    c_pgacw: float
+    c_pgaci: float
     ccn_l: float
     ccn_o: float
     const_vg: bool
@@ -151,6 +159,8 @@ class MicroPhysicsConfig:
     do_psd_ice_fall: bool
     do_psd_water_num: bool
     do_psd_ice_num: bool
+    do_new_acc_water: bool
+    do_new_acc_ice: bool
     irain_f: int
     mp_time: float
     prog_ccn: bool
@@ -210,10 +220,12 @@ class MicroPhysicsConfig:
     mus: float
     mug: float
     muh: float
+    irain_f: int
     inflag: int
     igflag: int
     ifflag: int
     sedflag: int
+    vdiffflag: int
     c_air: float = dataclasses.field(init=False)
     c_vap: float = dataclasses.field(init=False)
     d0_vap: float = dataclasses.field(init=False)
@@ -272,6 +284,19 @@ class MicroPhysicsConfig:
     expoi: float = dataclasses.field(init=False)
     expos: float = dataclasses.field(init=False)
     expog: float = dataclasses.field(init=False)
+    cracw: float = dataclasses.field(init=False)
+    craci: float = dataclasses.field(init=False)
+    csacw: float = dataclasses.field(init=False)
+    csaci: float = dataclasses.field(init=False)
+    cgacw: float = dataclasses.field(init=False)
+    cgaci: float = dataclasses.field(init=False)
+    cracs: float = dataclasses.field(init=False)
+    csacr: float = dataclasses.field(init=False)
+    cgacr: float = dataclasses.field(init=False)
+    cgacs: float = dataclasses.field(init=False)
+    acc: List[float] = dataclasses.field(init=False)
+    acco: List[List[float]] = dataclasses.field(init=False)
+
 
     def __post_init__(self):
         if self.hydrostatic:
@@ -299,6 +324,8 @@ class MicroPhysicsConfig:
         self._calculate_slope_parameters()
 
         self._calculate_evaporation_and_sublimation_constants()
+
+        self._calculate_accretion_parameters()
 
         self.n_min = 1600
         self.delt = 0.1
@@ -676,6 +703,180 @@ class MicroPhysicsConfig:
         self.cgsub_4 = constants.TCOND * constants.RVGAS
         self.cgsub_5 = constants.VDIFU
 
+    def _calculate_accretion_parameters(self):
+        """
+        Accretion between cloud water, cloud ice, rain,snow, and graupel or hail,
+        Lin et al. (1983)
+        """
+        self.cracw = (constants.PI * self.n0r_sig * self.alinr * math.gamma(2 + self.mur + self.blinr)
+            / (4. * math.exp((2 + self.mur + self.blinr) / (self.mur + 3) * math.log(self.normr)))
+            * math.exp((1 - self.blinr) * math.log(self.expor))
+        )
+        self.craci = self.cracw
+        self.csacw = (constants.PI * self.n0s_sig * self.alins * math.gamma(2 + self.mus + self.blins)
+            / (4. * math.exp((2 + self.mus + self.blins) / (self.mus + 3) * math.log(self.norms)))
+            * math.exp((1 - self.blins) * math.log(self.expos))
+        )
+        self.csaci = self.csacw
+        if self.do_hail is True:
+            self.cgacw = (constants.PI * self.n0h_sig * self.alinh * math.gamma(2 + self.muh + self.blinh) * constants.HCON
+                / (4. * math.exp((2 + self.muh + self.blinh) / (self.muh + 3) * math.log(self.normh)))
+                * math.exp((1 - self.blinh) * math.log(self.expoh))
+            )
+            self.cgaci = self.cgacw
+        else:
+            self.cgacw = (constants.PI * self.n0g_sig * self.aling * math.gamma(2 + self.mug + self.bling) * constants.GCON
+                / (4. * math.exp((2 + self.mug + self.bling) / (self.mug + 3) * math.log(self.normg)))
+                * math.exp((1 - self.bling) * math.log(self.expog))
+            )
+            self.cgaci = self.cgacw
+
+        if self.do_new_acc_water is True:
+            self.cracw = constants.PI**2 * self.n0r_sig * self.n0w_sig * constants.RHO_W / 24.
+            self.csacw = constants.PI**2 * self.n0s_sig * self.n0w_sig * constants.RHO_W / 24.
+            if self.do_hail is True:
+                self.cgacw = constants.PI**2 * self.n0h_sig * self.n0w_sig * constants.RHO_W / 24.
+            else:
+                self.cgacw = constants.PI**2 * self.n0g_sig * self.n0w_sig * constants.RHO_W / 24.
+
+        if self.do_new_acc_ice is True:
+            self.craci = constants.PI**2 * self.n0r_sig * self.n0i_sig * constants.RHO_I / 24.
+            self.csaci = constants.PI**2 * self.n0s_sig * self.n0i_sig * constants.RHO_I / 24.
+            if self.do_hail is True:
+                self.cgaci = constants.PI**2 * self.n0h_sig * self.n0i_sig * constants.RHO_I / 24.
+            else:
+                self.cgaci = constants.PI**2 * self.n0g_sig * self.n0i_sig * constants.RHO_I / 24.
+        else:
+            pass
+
+        self.cracw = self.cracw * self.c_pracw
+        self.craci = self.craci * self.c_praci
+        self.csacw = self.csacw * self.c_psacw
+        self.csaci = self.csaci * self.c_psaci
+        self.cgacw = self.cgacw * self.c_pgacw
+        self.cgaci = self.cgaci * self.c_pgaci
+
+        self.cracs = constants.PI**2 * self.n0r_sig * self.n0s_sig * constants.RHO_S / 24.
+        self.csacr = constants.PI**2 * self.n0s_sig * self.n0r_sig * constants.RHO_R / 24.
+        if self.do_hail is True:
+            self.cgacs = constants.PI**2 * self.n0h_sig * self.n0s_sig * constants.RHO_S / 24.
+            self.cgacr = constants.PI**2 * self.n0h_sig * self.n0r_sig * constants.RHO_R / 24.
+        else:
+            self.cgacs = constants.PI**2 * self.n0g_sig * self.n0s_sig * constants.RHO_S / 24.
+            self.cgacr = constants.PI**2 * self.n0g_sig * self.n0r_sig * constants.RHO_R / 24.
+
+        self.cracs *= self.c_pracs
+        self.csacr *= self.c_psacr
+        self.cgacs *= self.c_pgacs
+        self.cgacr *= self.c_pgacr
+
+        """
+        act / ace / acc:
+         0 -  1: racs (s - r)
+         2 -  3: sacr (r - s)
+         4 -  5: gacr (r - g)
+         6 -  7: gacs (s - g)
+         8 -  9: racw (w - r)
+        10 - 11: raci (i - r)
+        12 - 13: sacw (w - s)
+        14 - 15: saci (i - s)
+        16 - 17: sacw (w - g)
+        18 - 19: saci (i - g)
+        """
+        act = []
+        act.append(self.norms)
+        act.append(self.normr)
+        act.append(act[1])
+        act.append(act[0])
+        act.append(act[1])
+        if self.do_hail is True:
+            act.append(self.normh)
+        else:
+            act.append(self.normg)
+        act.append(act[0])
+        act.append(act[5])
+        act.append(self.normw)
+        act.append(act[1])
+        act.append(self.normi)
+        act.append(act[1])
+        act.append(act[8])
+        act.append(act[0])
+        act.append(act[10])
+        act.append(act[0])
+        act.append(act[8])
+        act.append(act[5])
+        act.append(act[10])
+        act.append(act[5])
+
+        ace = []
+        ace.append(self.expos)
+        ace.append(self.expor)
+        ace.append(ace[1])
+        ace.append(ace[0])
+        ace.append(ace[1])
+        if self.do_hail is True:
+            ace.append(self.expoh)
+        else:
+            ace.append(self.expog)
+        ace.append(ace[0])
+        ace.append(ace[5])
+        ace.append(self.expow)
+        ace.append(ace[1])
+        ace.append(self.expoi)
+        ace.append(ace[1])
+        ace.append(ace[8])
+        ace.append(ace[0])
+        ace.append(ace[10])
+        ace.append(ace[0])
+        ace.append(ace[8])
+        ace.append(ace[5])
+        ace.append(ace[10])
+        ace.append(ace[5])
+
+        acc = []
+        acc.append(self.mus)
+        acc.append(self.mur)
+        acc.append(acc[1])
+        acc.append(acc[0])
+        acc.append(acc[1])
+        if self.do_hail is True:
+            acc.append(self.muh)
+        else:
+            acc.append(self.mug)
+        acc.append(acc[0])
+        acc.append(acc[5])
+        acc.append(self.muw)
+        acc.append(acc[1])
+        acc.append(self.mui)
+        acc.append(acc[1])
+        acc.append(acc[8])
+        acc.append(acc[0])
+        acc.append(acc[10])
+        acc.append(acc[0])
+        acc.append(acc[8])
+        acc.append(acc[5])
+        acc.append(acc[10])
+        acc.append(acc[5])
+
+        self.acc = acc
+
+        acco = []
+        occ = [1.,2.,1.]
+        for i in range(3):
+            accoi = []
+            for k in range(10):
+                accoi.append(
+                    occ[i] * math.gamma(6 + acc[2*k] - (i+1)) * math.gamma(acc[2*k+1] + (i+1) - 1)
+                    / (
+                        math.exp((6+acc[2*k] - (i+1)) / (acc[2*k] + 3) * math.log(act[2*k]))
+                        * math.exp((acc[2*k+1] + (i+1) - 1) / (acc[2*k+1] + 3) * math.log(act[2*k+1]))
+                    )
+                    * math.exp((i+1 - 3) * math.log(ace[2*k])) * math.exp((4-(i+1)) * math.log(ace[2*k+1]))
+                )
+            acco.append(accoi)
+        
+        self.acco=acco
+
 
 @dataclasses.dataclass
 class PhysicsConfig:
@@ -690,8 +891,16 @@ class PhysicsConfig:
     do_inline_mp: bool = NamelistDefaults.do_inline_mp
     c_cracw: float = NamelistDefaults.c_cracw
     c_paut: float = NamelistDefaults.c_paut
+    c_pracs: float = NamelistDefaults.c_pracs
+    c_psacr: float = NamelistDefaults.c_psacr
+    c_pgacr: float = NamelistDefaults.c_pgacr
     c_pgacs: float = NamelistDefaults.c_pgacs
+    c_psacw: float = NamelistDefaults.c_psacw
     c_psaci: float = NamelistDefaults.c_psaci
+    c_pracw: float = NamelistDefaults.c_pracw
+    c_praci: float = NamelistDefaults.c_praci
+    c_pgacw: float = NamelistDefaults.c_pgacw
+    c_pgaci: float = NamelistDefaults.c_pgaci
     ccn_l: float = NamelistDefaults.ccn_l
     ccn_o: float = NamelistDefaults.ccn_o
     const_vg: bool = NamelistDefaults.const_vg
@@ -770,6 +979,8 @@ class PhysicsConfig:
     do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
+    do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
+    do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
     irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
@@ -829,10 +1040,12 @@ class PhysicsConfig:
     mus: float = NamelistDefaults.mus
     mug: float = NamelistDefaults.mug
     muh: float = NamelistDefaults.muh
+    irain_f: int = NamelistDefaults.irain_f
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
     ifflag: int = NamelistDefaults.ifflag
     sedflag: int = NamelistDefaults.sedflag
+    vdiffflag: int = NamelistDefaults.vdiffflag
 
     namelist_override: Optional[str] = None
 
@@ -863,8 +1076,16 @@ class PhysicsConfig:
             do_qa=namelist.do_qa,
             c_cracw=namelist.c_cracw,
             c_paut=namelist.c_paut,
+            c_pracs=namelist.c_pracs,
+            c_psacr=namelist.c_psacr,
+            c_pgacr=namelist.c_pgacr,
             c_pgacs=namelist.c_pgacs,
+            c_psacw=namelist.c_psacw,
             c_psaci=namelist.c_psaci,
+            c_pracw=namelist.c_pracw,
+            c_praci=namelist.c_praci,
+            c_pgacw=namelist.c_pgacw,
+            c_pgaci=namelist.c_pgaci,
             ccn_l=namelist.ccn_l,
             ccn_o=namelist.ccn_o,
             const_vg=namelist.const_vg,
@@ -919,6 +1140,8 @@ class PhysicsConfig:
             do_psd_ice_fall=namelist.do_psd_ice_fall,
             do_psd_water_num=namelist.do_psd_water_num,
             do_psd_ice_num=namelist.do_psd_ice_num,
+            do_new_acc_water=namelist.do_new_acc_water,
+            do_new_acc_ice=namelist.do_new_acc_ice,
             irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
@@ -976,10 +1199,12 @@ class PhysicsConfig:
             mus=namelist.mus,
             mug=namelist.mug,
             muh=namelist.muh,
+            irain_f=namelist.irain_f,
             inflag=namelist.inflag,
             igflag=namelist.igflag,
             ifflag=namelist.ifflag,
             sedflag=namelist.sedflag,
+            vdiffflag=namelist.vdiffflag,
             ntimes=namelist.ntimes,
             do_inline_mp=namelist.do_inline_mp,
         )
@@ -998,8 +1223,16 @@ class PhysicsConfig:
             do_inline_mp=self.do_inline_mp,
             c_cracw=self.c_cracw,
             c_paut=self.c_paut,
+            c_pracs=self.c_pracs,
+            c_psacr=self.c_psacr,
+            c_pgacr=self.c_pgacr,
             c_pgacs=self.c_pgacs,
+            c_psacw=self.c_psacw,
             c_psaci=self.c_psaci,
+            c_pracw=self.c_pracw,
+            c_praci=self.c_praci,
+            c_pgacw=self.c_pgacw,
+            c_pgaci=self.c_pgaci,
             ccn_l=self.ccn_l,
             ccn_o=self.ccn_o,
             const_vg=self.const_vg,
@@ -1054,6 +1287,8 @@ class PhysicsConfig:
             do_psd_ice_fall=self.do_psd_ice_fall,
             do_psd_water_num=self.do_psd_water_num,
             do_psd_ice_num=self.do_psd_ice_num,
+            do_new_acc_water=self.do_new_acc_water,
+            do_new_acc_ice=self.do_new_acc_ice,
             irain_f=self.irain_f,
             mp_time=self.mp_time,
             prog_ccn=self.prog_ccn,
@@ -1111,8 +1346,10 @@ class PhysicsConfig:
             mus=self.mus,
             mug=self.mug,
             muh=self.muh,
+            irain_f=self.irain_f,
             inflag=self.inflag,
             igflag=self.igflag,
             ifflag=self.ifflag,
             sedflag=self.sedflag,
+            vdiffflag=self.vdiffflag,
         )

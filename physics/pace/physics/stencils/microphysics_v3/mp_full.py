@@ -6,6 +6,7 @@ import pace.util
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
+from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
@@ -27,11 +28,13 @@ def add_fluxes_and_surface_tracers(
     ice: FloatFieldIJ,
     snow: FloatFieldIJ,
     graupel: FloatFieldIJ,
+    evaporation: FloatFieldIJ,
     w1: FloatFieldIJ,
     r1: FloatFieldIJ,
     i1: FloatFieldIJ,
     s1: FloatFieldIJ,
     g1: FloatFieldIJ,
+    reevap: FloatFieldIJ,
 ):
     from __externals__ import convt
 
@@ -48,6 +51,27 @@ def add_fluxes_and_surface_tracers(
             ice += i1 * convt
             snow += s1 * convt
             graupel += g1 * convt
+            evaporation += reevap * convt
+
+
+def accumulate_state_changes(
+    cond: FloatFieldIJ,
+    dep: FloatFieldIJ,
+    reevap: FloatFieldIJ,
+    sub: FloatFieldIJ,
+    condensation: FloatFieldIJ,
+    deposition: FloatFieldIJ,
+    evaporation: FloatFieldIJ,
+    sublimation: FloatFieldIJ,
+):
+    from __externals__ import convt
+    
+    with computation(FORWARD), interval(-1,None):
+        condensation += cond * convt
+        deposition += dep * convt
+        evaporation += reevap * convt
+        sublimation += sub * convt
+
 
 
 class FullMicrophysics:
@@ -86,7 +110,10 @@ class FullMicrophysics:
         self._s1 = make_quantity_2D()
         self._g1 = make_quantity_2D()
 
+        self._cond = make_quantity_2D()
+        self._dep = make_quantity_2D()
         self._reevap = make_quantity_2D()
+        self._sub = make_quantity_2D()
 
         self._sedimentation = Sedimentation(
             stencil_factory, quantity_factory, config, timestep, convert_mm_day
@@ -94,6 +121,19 @@ class FullMicrophysics:
 
         self._add_fluxes_and_surface_tracers = stencil_factory.from_origin_domain(
             func=add_fluxes_and_surface_tracers,
+            externals={
+                "convt": convert_mm_day,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._warm_rain = WarmRain(
+            stencil_factory, config, timestep
+        )
+
+        self._accumulate_state_changes = stencil_factory.from_origin_domain(
+            func=accumulate_state_changes,
             externals={
                 "convt": convert_mm_day,
             },
@@ -119,17 +159,24 @@ class FullMicrophysics:
         delz: FloatField,
         density: FloatField,
         density_factor: FloatField,
+        cloud_condensation_nuclei: FloatField,
+        cloud_ice_nuclei: FloatField,
         preflux_water: FloatField,
         preflux_rain: FloatField,
         preflux_ice: FloatField,
         preflux_snow: FloatField,
         preflux_graupel: FloatField,
+        h_var: FloatFieldIJ,
         column_energy_change: FloatFieldIJ,
         surface_water: FloatFieldIJ,
         surface_rain: FloatFieldIJ,
         surface_ice: FloatFieldIJ,
         surface_snow: FloatFieldIJ,
         surface_graupel: FloatFieldIJ,
+        condensation: FloatFieldIJ,
+        deposition: FloatFieldIJ,
+        evaporation: FloatFieldIJ,
+        sublimation: FloatFieldIJ,
     ):
         """
         Full Microphysics Loop
@@ -167,6 +214,24 @@ class FullMicrophysics:
             self._g1,
         )
 
+        self._warm_rain(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            delp,
+            density,
+            density_factor,
+            self._vtw,
+            self._vtr,
+            cloud_condensation_nuclei,
+            self._reevap,
+            h_var,
+        )
+
         self._add_fluxes_and_surface_tracers(
             preflux_water,
             preflux_rain,
@@ -183,11 +248,13 @@ class FullMicrophysics:
             surface_ice,
             surface_snow,
             surface_graupel,
+            evaporation,
             self._w1,
             self._r1,
             self._i1,
             self._s1,
             self._g1,
+            self._reevap,
         )
 
         pass

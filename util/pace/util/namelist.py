@@ -71,8 +71,16 @@ class NamelistDefaults:
     c_paut = (
         0.5  # Autoconversion cloud water to rain (use 0.5 to reduce autoconversion)
     )
+    c_pracs = 1.0 # snow to rain accretion efficiency
+    c_psacr = 1.0 # rain to snow accretion efficiency
+    c_pgacr = 1.0 # rain to graupel accretion efficiency
     c_pgacs = 0.01  # Snow to graupel "accretion" eff. (was 0.1 in zetac)
+    c_psacw = 1.0 # Cloud water to snow accretion efficiency
     c_psaci = 0.05  # Accretion: cloud ice to snow (was 0.1 in zetac)
+    c_pracw = 0.8 # Cloud water to rain accretion efficiency
+    c_praci = 1.0 # Cloud ice to rain accretion efficiency
+    c_pgacw = 1.0 # Cloud water to graupel accretion efficiency
+    c_pgaci = 0.05 # Cloud ice to graupel accretion efficiency (was 0.1 in ZETAC)
     ccn_l = 270.0  # CCN over land (cm^-3)
     ccn_o = 90.0  # CCN over ocean (cm^-3)
     use_rhc_cevap = False  # cap of rh for cloud water evaporation
@@ -108,6 +116,8 @@ class NamelistDefaults:
     do_psd_ice_fall = False  # Calculate cloud ice terminal velocity based on PSD
     do_psd_water_num = False  # Calculate cloud water number concentration based on PSD
     do_psd_ice_num = False  # Calculate cloud ice number concentration based on PSD
+    do_new_acc_water = False  # Perform the new accretion for cloud water
+    do_new_acc_ice = False  # Perform the new accretion for cloud water
     irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
@@ -169,6 +179,9 @@ class NamelistDefaults:
     mug = 1.0  # shape parameter of graupel in Gamma distribution (Houze et al. 1979)
     muh = 1.0
     # shape parameter of hail in Gamma distribution (Federer and Waldvogel 1975)
+    irain_f = 0 # cloud water to rain auto conversion scheme
+    # 0: subgrid variability based scheme
+    # 1: no subgrid varaibility
     inflag = 1  # Ice nucleation scheme:
     # 1: Hong et al. (2004)
     # 2: Meyers et al. (1992)
@@ -188,6 +201,10 @@ class NamelistDefaults:
     # 2: explicit scheme
     # 3: lagrangian scheme
     # 4: combined implicit and lagrangian scheme
+    vdiffflag = 1 # wind difference scheme in accretion
+    # 1: Wisner et al. (1972)
+    # 2: Mizuno (1990)
+    # 3: Murakami (1990)
 
     @classmethod
     def as_dict(cls):
@@ -329,8 +346,16 @@ class Namelist:
     z_tracer: bool = DEFAULT_BOOL
     c_cracw: float = NamelistDefaults.c_cracw
     c_paut: float = NamelistDefaults.c_paut
+    c_pracs: float = NamelistDefaults.c_pracs
+    c_psacr: float = NamelistDefaults.c_psacr
+    c_pgacr: float = NamelistDefaults.c_pgacr
     c_pgacs: float = NamelistDefaults.c_pgacs
+    c_psacw: float = NamelistDefaults.c_psacw
     c_psaci: float = NamelistDefaults.c_psaci
+    c_pracw: float = NamelistDefaults.c_pracw
+    c_praci: float = NamelistDefaults.c_praci
+    c_pgacw: float = NamelistDefaults.c_pgacw
+    c_pgaci: float = NamelistDefaults.c_pgaci
     ccn_l: float = NamelistDefaults.ccn_l
     ccn_o: float = NamelistDefaults.ccn_o
     const_vg: bool = NamelistDefaults.const_vg
@@ -360,6 +385,8 @@ class Namelist:
     do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall
     do_psd_water_num: bool = NamelistDefaults.do_psd_water_num
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
+    do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
+    do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
     irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
@@ -575,10 +602,12 @@ class Namelist:
     mus: float = NamelistDefaults.mus
     muh: float = NamelistDefaults.muh
     mug: float = NamelistDefaults.mug
+    irain_f: int = NamelistDefaults.irain_f
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
     ifflag: int = NamelistDefaults.ifflag
     sedflag: int = NamelistDefaults.sedflag
+    vdiffflag: int = NamelistDefaults.vdiffflag
     c2l_ord: int = NamelistDefaults.c2l_ord
     regional: bool = NamelistDefaults.regional
     m_split: int = NamelistDefaults.m_split

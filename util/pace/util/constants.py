@@ -107,6 +107,8 @@ RHO_S = 1.0e2  # density of snow (Lin et al. 1983) (kg/m^3)
 RHO_G = 4.0e2  # density of graupel (Rutledge and Hobbs 1984) (kg/m^3)
 RHO_H = 9.17e2  # density of hail (Lin et al. 1983) (kg/m^3)
 
+VISD = 1.717e-5 # dynamics viscosity of air at 0 deg C and 1000 hPa 
+# (Mason, 1971) (kg/m/s)
 VISK = 1.35e-5  # kinematic viscosity of air at 0 deg C  and 1000 hPa
 # (Mason, 1971) (m^2/s)
 VDIFU = 2.25e-5  # diffusivity of water vapor in air at 0 deg C  and 1000 hPa

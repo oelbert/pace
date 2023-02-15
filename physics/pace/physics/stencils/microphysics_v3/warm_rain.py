@@ -1,7 +1,7 @@
 import math
 
 from gt4py.cartesian import gtscript
-from gt4py.cartesian.gtscript import PARALLEL, computation, exp, interval, log, sqrt
+from gt4py.cartesian.gtscript import __INLINED, FORWARD, PARALLEL, computation, exp, interval, log, sqrt
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
@@ -159,20 +159,130 @@ def evaporate_rain(
             )
 
 
+def accrete_rain(
+    qliquid: FloatField,
+    qrain: FloatField,
+    temperature: FloatField,
+    density: FloatField,
+    density_factor: FloatField,
+    vterminal_water: FloatField,
+    vterminal_rain: FloatField,
+
+):
+    """
+    Rain accretion with cloud water, Lin et al. (1983)
+    Fortran name is pracw
+    """
+    from __externals__ import t_wfr, timestep, do_new_acc_water, cracw, acco0_4, acco1_4, acco2_4, acc8, acc9, blinr, mur
+
+    with computation(PARALLEL), interval(...):
+        if (temperature > t_wfr) and (qrain > constants.QCMIN) and (qliquid > constants.QCMIN):
+            qden = qrain * density
+
+            if __INLINED(do_new_acc_water is True):
+                sink = timestep * physfun.accretion_3d(qliquid, qrain, vterminal_rain, vterminal_water, density, cracw, acco0_4, acco1_4, acco2_4, acc8, acc9)
+            else:
+                sink = timestep * physfun.accretion_2d(qden, cracw, density_factor, blinr, mur)
+                sink = sink / (1. + sink) * qliquid
+
+            qliquid -= sink
+            qrain += sink
+
+
+def autoconvert_water_rain(
+    qliquid: FloatField,
+    qrain: FloatField,
+    cloud_condensation_nuclei: FloatField,
+    temperature: FloatField,
+    density: FloatField,
+    h_var: FloatFieldIJ,
+):
+    """
+    Cloud water to rain autoconversion, Hong et al. (2004)
+    Fortran name is praut
+    """
+    from __externals__ import timestep, irain_f, z_slope_liq, t_wfr, do_psd_water_num, pcaw, pcbw, muw, fac_rc, cpaut
+    
+    with computation(FORWARD):
+        with interval(0, 1):
+            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+                # linear_prof
+                dl = 0.
+        with interval(1, None):
+            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+                dq = 0.5 * (qliquid - qliquid[0, 0, -1])
+        with interval(1,-1):
+            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+                # Use twice the strength of the
+                # positive definiteness limiter (lin et al 1994)
+                dl = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qliquid[0, 0, 0])
+                if dq * dq[0, 0, +1] <= 0.0:
+                    if dq > 0.0:  # Local maximum
+                        dl = min(dl, min(dq, -dq[0, 0, +1]))
+                    else: # Local minimum
+                        dl = 0.0
+        with interval(-1, None):
+            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+                dl = 0.
+    with computation(PARALLEL), interval(...):
+        if __INLINED(irain_f == 0):
+            if __INLINED(z_slope_liq is True):
+                # Impose a presumed background horizontal variability that is
+                # proportional to the value itself
+                dl = max(dl, 0., h_var * qliquid)
+            else:
+                dl = max(0., h_var * qliquid)
+            
+            #rest of praut
+            if (temperature > t_wfr) and (qliquid > constants.QCMIN):
+                if __INLINED(do_psd_water_num):
+                    cloud_condensation_nuclei = physfun.calc_particle_concentration(qliquid, density, pcaw, pcbw, muw)
+                    cloud_condensation_nuclei /= density
+                qc = fac_rc * cloud_condensation_nuclei
+                dl = min(max(constants.QCMIN, dl), 0.5*qliquid)
+                dq = 0.5 * (qliquid + dl - qc)
+
+                if dq > 0.:
+                    c_praut = cpaut * exp((-1./3.) * log(cloud_condensation_nuclei * constants.RHO_W))
+                    sink = min (1., dq / dl) * timestep * c_praut * density * exp((7./3.) * log (qliquid))
+                    sink = min(qliquid, sink)
+
+                    qliquid -= sink
+                    qrain += sink
+        else: # if irain_f == 1:
+            if (temperature > t_wfr) and (qliquid > constants.QCMIN):
+                if __INLINED(do_psd_water_num):
+                    cloud_condensation_nuclei = physfun.calc_particle_concentration(qliquid, density, pcaw, pcbw, muw)
+                    cloud_condensation_nuclei /= density
+                
+                qc = fac_rc * cloud_condensation_nuclei
+                dq = qliquid - qc
+
+                if dq > 0:
+                    c_praut = cpaut * exp((-1./3.) * log(cloud_condensation_nuclei * constants.RHO_W))
+                    sink = min(dq, timestep * c_praut * density * exp((7./3.) * log(qliquid)))
+                    sink = min(sink, qliquid)
+
+                    qliquid -= sink
+                    qrain += sink
+
+
 class WarmRain:
     def __init__(
         self,
         stencil_factory: StencilFactory,
-        quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
         timestep: float,
-        convert_mm_day: float,
     ):
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._fac_revap = 1.0
         if config.tau_revp > 1.0e6:
             self._fac_revap = 1.0 - math.exp(-timestep / config.tau_revp)
+
+        fac_rc = (4. / 3.) * constants.PI * constants.RHO_W * config.rthresh ** 3
+        aone = 2. / 9. * (3. / 4.) ** (4. / 3.) / constants.PI ** (1. / 3.)
+        cpaut = config.c_paut * aone * constants.GRAV / constants.VISD
 
         self._evaporate_rain = stencil_factory.from_origin_domain(
             func=evaporate_rain,
@@ -202,6 +312,44 @@ class WarmRain:
             domain=self._idx.domain_compute(),
         )
 
+        self._accrete_rain = stencil_factory.from_origin_domain(
+            func=accrete_rain,
+            externals={
+                "timestep": timestep,
+                "t_wfr": config.t_wfr,
+                "do_new_acc_water": config.do_new_acc_water,
+                "cracw": config.cracw,
+                "acco0_4": config.acco[0,4],
+                "acco1_4": config.acco[1,4],
+                "acco2_4": config.acco[2,4],
+                "acc9": config.acc[8],
+                "acc9": config.acc[9],
+                "blinr": config.blinr,
+                "mur": config.mur,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._autoconvert_water_rain = stencil_factory.from_origin_domain(
+            func=autoconvert_water_rain,
+            externals={
+                "timestep": timestep,
+                "t_wfr": config.t_wfr,
+                "irain_f": config.irain_f,
+                "z_slope_liq": config.z_slope_liq,
+                "do_psd_water_num": config.do_psd_water_num,
+                "pcaw": config.pcaw,
+                "pcbw": config.pcbw,
+                "muw": config.muw,
+                "fac_rc": fac_rc,
+                "cpaut": cpaut,
+                
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
     def __call__(
         self,
         qvapor: FloatField,
@@ -212,7 +360,6 @@ class WarmRain:
         qgraupel: FloatField,
         temperature: FloatField,
         delp: FloatField,
-        delz: FloatField,
         density: FloatField,
         density_factor: FloatField,
         vterminal_water: FloatField,
@@ -221,4 +368,55 @@ class WarmRain:
         reevap: FloatFieldIJ,
         h_var: FloatFieldIJ,
     ):
-        pass
+        """
+        Warm rain cloud microphysics
+        Args:
+            qvapor (inout):
+            qliquid (inout):
+            qrain (inout):
+            qice (inout):
+            qsnow (inout):
+            qgraupel (inout):
+            temperature (inout):
+            delp (in):
+            density (in):
+            density_factor (in):
+            vterminal_water (in):
+            vterminal_rain (in):
+            cloud_condensation_nuclei (inout):
+            reevap (inout):
+            h_var (in):
+        """
+        self._evaporate_rain(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            delp,
+            temperature,
+            density,
+            density_factor,
+            reevap,
+            h_var,
+        )
+
+        self._accrete_rain(
+            qliquid,
+            qrain,
+            temperature,
+            density,
+            density_factor,
+            vterminal_water,
+            vterminal_rain,
+        )
+
+        self._autoconvert_water_rain(
+            qliquid,
+            qrain,
+            cloud_condensation_nuclei,
+            temperature,
+            density,
+            h_var,
+        )
