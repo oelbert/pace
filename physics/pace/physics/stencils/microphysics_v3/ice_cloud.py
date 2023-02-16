@@ -1,3 +1,6 @@
+from math import factorial
+from os import times
+from socket import SOL_NETROM
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
@@ -105,7 +108,7 @@ def freeze_cloud_water(
     qice,
     qsnow,
     qgraupel,
-    temp,
+    temperature,
     density,
     cvm,
     te,
@@ -121,7 +124,7 @@ def freeze_cloud_water(
 
     from __externals__ import qi0_crt, t_wfr
 
-    tc = t_wfr - temp
+    tc = t_wfr - temperature
     if (tc > 0.0) and (qliquid > constants.QCMIN):
         sink = qliquid * tc / constants.DT_FR
         sink = min(qliquid, sink, tc / icpk)
@@ -136,7 +139,7 @@ def freeze_cloud_water(
             qsnow,
             qgraupel,
             cvm,
-            temp,
+            temperature,
             lcpk,
             icpk,
             tcpk,
@@ -164,8 +167,8 @@ def freeze_cloud_water(
         qice,
         qsnow,
         qgraupel,
+        temperature,
         cvm,
-        temp,
         lcpk,
         icpk,
         tcpk,
@@ -217,7 +220,6 @@ def melt_snow(
         acco_2_1,
         acco_2_6,
         blins,
-        c_liq,
         csacr,
         csacw,
         csmlt_1,
@@ -306,7 +308,7 @@ def melt_snow(
                 cvm,
                 blins,
                 mus,
-                c_liq,
+                constants.C_LIQ,
                 csmlt_1,
                 csmlt_2,
                 csmlt_3,
@@ -324,7 +326,7 @@ def melt_snow(
             qsnow,
             qgraupel,
             cvm,
-            tk,
+            temperature,
             lcpk,
             icpk,
             tcpk,
@@ -362,13 +364,555 @@ def melt_snow(
 
 
 @gtscript.function
-def melt_graupel():
+def melt_graupel(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temperature,
+    density,
+    density_factor,
+    vterminal_w,
+    vterminal_r,
+    vterminal_g,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
     """
     graupel melting (includes graupel accretion with cloud water and rain)
     to form rain, Lin et al. (1983)
     Fortran name is pgmlt
     """
-    pass
+
+    from __externals__ import timestep, do_new_acc_water, cgacw, acco_0_8, acco_1_8, acco_2_8, acc16, acc17, cgacr, acco_0_2, acco_1_2, acco_2_2, bling, mug, acc4, acc5, cgmlt_1, cgmlt_2, cgmlt_3, cgmlt_4
+
+    tc = temperature - constants.TICE0
+
+    if (tc >= 0) and (qgraupel > constants.QCMIN):
+        pgacw = 0.0
+        qden = qgraupel * density
+        if qliquid > constants.QCMIN:
+            if __INLINED(do_new_acc_water is True):
+                pgacw = physfun.accretion_3d(
+                    qliquid,
+                    qgraupel,
+                    vterminal_g,
+                    vterminal_w,
+                    density,
+                    cgacw,
+                    acco_0_8,
+                    acco_1_8,
+                    acco_2_8,
+                    acc16,
+                    acc17,
+                )
+            else:
+                factor = physfun.accretion_2d(qden, density_factor, cgacw, bling, mug)
+                pgacw = factor / (1.0 + timestep * factor) * qliquid
+
+        pgacr = 0.
+        if qrain > constants.QCMIN:
+            pgacr = min(
+                qrain / timestep,
+                physfun.accretion_3d(
+                    qrain,
+                    qgraupel,
+                    vterminal_g,
+                    vterminal_r,
+                    density,
+                    cgacr,
+                    acco_0_2,
+                    acco_1_2,
+                    acco_2_2,
+                    acc4,
+                    acc5,
+                ),
+            )
+
+        tin = temperature
+        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        dq = qsi - qvapor
+
+        sink = max(
+            0.0,
+            physfun.melting_function(
+                tc,
+                dq,
+                qden,
+                pgacw,
+                pgacr,
+                density,
+                density_factor,
+                lcpk,
+                icpk,
+                cvm,
+                bling,
+                mug,
+                constants.C_LIQ,
+                cgmlt_1,
+                cgmlt_2,
+                cgmlt_3,
+                cgmlt_4,
+            ),
+        )
+        sink = min(qgraupel, sink * timestep, tc / icpk)
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temperature,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            0.0,
+            sink,
+            0.0,
+            0.0,
+            - sink,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def accrete_snow_with_ice(
+    qice,
+    qsnow,
+    temperature,
+    density,
+    density_factor,
+    vterminal_i,
+    vterminal_s,
+):
+    """
+    Snow accretion with cloud ice, Lin et al. (1983)
+    Fortran name is psaci
+    """
+    
+    from __externals__ import timestep, do_new_acc_ice, csaci, acco_0_7, acco_1_7, acco_2_7, acc14, acc15, blins, mus, fi2s_fac
+
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qice > constants.QCMIN):
+        sink = 0.
+        qden = qsnow * density
+        if qsnow > constants.QCMIN:
+            if __INLINED(do_new_acc_ice is True):
+                sink = timestep * physfun.accretion_3d(
+                    qice,
+                    qsnow,
+                    vterminal_s,
+                    vterminal_i,
+                    density,
+                    csaci,
+                    acco_0_7,
+                    acco_1_7,
+                    acco_2_7,
+                    acc14,
+                    acc15
+                )
+            else:
+                factor = timestep * physfun.accretion_2d(
+                    qden,
+                    density_factor,
+                    csaci,
+                    blins,
+                    mus
+                )
+                sink = factor / (1. + factor) * qice
+
+        sink = min (fi2s_fac * qice, sink)
+
+        qice -= sink
+        qsnow += sink
+
+    return qice, qsnow
+
+
+@gtscript.function
+def autoconvert_ice_to_snow(
+    qice,
+    qsnow,
+    temperature,
+    density,
+    di,
+):
+    """
+    Cloud ice to snow autoconversion, Lin et al. (1983)
+    Fortran name is psaut
+    """
+    from __externals__ import timestep, tau_i2s, qi0_crt, fi2s_fac
+
+    fac_i2s = 1. - exp(-timestep / tau_i2s)
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qice > constants.QCMIN):
+        sink = 0.
+        tmp = fac_i2s * exp(0.025 * tc)
+        di = max(di, constants.QCMIN)
+        q_plus = qice + di
+        qim = qi0_crt / density
+
+        if q_plus > (qim + constants.QCMIN):
+            if qim > (qice - di):
+                dq = (0.25 * (q_plus - qim) ** 2) / di
+            else:
+                dq = qice - qim
+            sink = tmp * dq
+
+        sink = min (fi2s_fac * qice, sink)
+
+        qice -= sink
+        qsnow += sink
+
+    return qice, qsnow, di, temperature
+
+
+@gtscript.function
+def accrete_graupel_with_ice(
+    qice,
+    qgraupel,
+    temperature,
+    density,
+    density_factor,
+    vtermainal_i,
+    vterminal_g
+):
+    """
+    Graupel accretion with cloud ice, Lin et al. (1983)
+    Fortran name is pgaci
+    """
+    from __externals__ import timestep, do_new_acc_ice, cgaci, acco_0_9, acco_1_9, acco_2_9, acc18, acc19, mug, bling, fi2g_fac
+
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qice > constants.QCMIN):
+        sink = 0.
+        qden = qgraupel * density
+        
+        if qgraupel > constants.QCMIN:
+            if __INLINED(do_new_acc_ice):
+                sink = timestep * physfun.accretion_3d(
+                    qice,
+                    qgraupel,
+                    vterminal_g,
+                    vtermainal_i,
+                    density,
+                    cgaci,
+                    acco_0_9,
+                    acco_1_9,
+                    acco_2_9,
+                    acc18,
+                    acc19,
+                )
+            else:
+                factor = timestep * physfun.accretion_2d(
+                    qden,
+                    density_factor,
+                    cgaci,
+                    bling,
+                    mug
+                )
+                sink = factor / (1. + factor) * qice
+        
+        sink = min (fi2g_fac * qice, sink)
+
+        qice -= sink
+        qgraupel += sink
+
+    return qice, qgraupel
+
+
+@gtscript.function
+def accrete_snow_with_rain_and_freeze_to_graupel(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temperature,   
+    density,
+    vterminal_r,
+    vterminal_s,
+    te,
+    cvm,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Snow accretion with rain and rain freezing to form graupel, Lin et al. (1983)
+    Fortran name is psacr_pgfr
+    """
+    from __externals__ import timestep, csacr, acco_0_2, acco_1_2, acco_2_2, acc2, acc3, cgfr_1, cgfr_2, mur
+
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qrain > constants.QCMIN):
+        psacr = 0.
+        if qsnow > constants.QCMIN:
+            psacr = timestep * physfun.accretion_3d(
+                qrain,
+                qsnow,
+                vterminal_s,
+                vterminal_r,
+                density,
+                csacr,
+                acco_0_2,
+                acco_1_2,
+                acco_2_2,
+                acc2,
+                acc3
+            )
+        
+        pgfr = timestep * cgfr_1 / density * (exp(-cgfr_2 * tc) -1) * exp((6 + mur) / (mur + 3) * log (6 * qrain * density))
+        sink = psacr + pgfr
+        factor = min(sink, qrain, - tc / icpk) / max (sink, constants.QCMIN)
+        psacr = factor * psacr
+        pgfr = factor * pgfr
+
+        sink = min (qrain, psacr + pgfr)
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temperature,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            0.,
+            -sink,
+            0.,
+            psacr,
+            pgfr,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
+
+
+@gtscript.function
+def accrete_graupel_with_snow(
+    qsnow,
+    qgraupel,
+    temperature,
+    density,
+    vterminal_s,
+    vterminal_g,
+):
+    """
+    Graupel accretion with snow, Lin et al. (1983)
+    Fortran name is pgacs
+    """
+    from __externals__ import timestep, cgacs, acco_0_3, acco_1_3, acco_2_3, acc6, acc7, fs2g_fac
+
+    if (temperature < constants.TICE0) and (qsnow > constants.QCMIN) and (qgraupel > constants.QCMIN):
+        sink = timestep * physfun.accretion_3d(
+            qsnow,
+            qgraupel,
+            vterminal_g,
+            vterminal_s,
+            density,
+            cgacs,
+            acco_0_3,
+            acco_1_3,
+            acco_2_3,
+            acc6,
+            acc7
+        )
+        sink = min (fs2g_fac * qsnow, sink)
+
+        qsnow -= sink
+        qgraupel += sink
+
+    return qsnow, qgraupel
+
+@gtscript.function
+def autoconvert_snow_to_graupel(
+    qsnow,
+    qgraupel,
+    temperature,
+    density,
+):
+    """
+    Snow to graupel autoconversion, Lin et al. (1983)
+    Fortran name is pgaut
+    """
+    from __externals__ import timestep, qs0_crt, fs2g_fac
+
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qsnow > constants.QCMIN):
+        sink = 0.
+        qsm = qs0_crt / density
+
+        if qsnow > qsm:
+            factor = timestep * 1.e-3 * exp(0.09 * tc)
+            sink = factor / (1. + factor) * (qsnow - qsm)
+
+        sink = min(fs2g_fac * qsnow, sink)
+
+        qsnow -= sink
+        qgraupel += sink
+    
+    return qsnow, qgraupel
+
+
+@gtscript.function
+def accrete_graupel_with_cloud_water_and_rain(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temperature,   
+    density,
+    density_factor,
+    vterminal_r,
+    vterminal_g,
+    te,
+    cvm,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+):
+    """
+    Graupel accretion with cloud water and rain, Lin et al. (1983)
+    Fortran name is pgacw_pgacr
+    """
+    from __externals__ import timestep, cgacw, bling, mug, cgacr, acco_0_2, acco_1_2, acco_2_2, acc4, acc5
+
+    tc = temperature - constants.TICE0
+
+    if (tc < 0.) and (qgraupel > constants.QCMIN):
+        pgacw = 0.
+
+        if qliquid > constants.QCMIN:
+            qden = qgraupel * density
+            factor = timestep * physfun.accretion_2d(qden, cgacw, density_factor, bling, mug)
+            pgacw = factor / (1. + factor) * qliquid
+
+        pgacr = 0.
+        if qrain > constants.QCMIN:
+            pgacr = min(timestep * physfun.accretion_3d(
+                qrain, qgraupel, vterminal_g, vterminal_r, density, cgacr, acco_0_2, acco_1_2, acco_2_2, acc4, acc5
+            ), qrain)
+        
+        sink = pgacr + pgacw
+        factor = min (sink, basic.dim(constants.TICE0, temperature) / icpk) / max (sink, constants.QCMIN)
+        pgacr = factor * pgacr
+        pgacw = factor * pgacw
+
+        sink = pgacr + pgacw
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temperature,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.,
+            -pgacw,
+            -pgacr,
+            0.,
+            0.,
+            sink,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
 
 
 def ice_cloud(
@@ -380,6 +924,12 @@ def ice_cloud(
     qgraupel: FloatField,
     temperature: FloatField,
     density: FloatField,
+    density_factor: FloatField,
+    vterminal_w: FloatField,
+    vterminal_r: FloatField,
+    vterminal_i: FloatField,
+    vterminal_s: FloatField,
+    vterminal_g: FloatField,
     h_var: FloatFieldIJ,
 ):
     from __externals__ import z_slope_ice
@@ -433,8 +983,8 @@ def ice_cloud(
             qice,
             qsnow,
             qgraupel,
+            temperature,
             cvm,
-            temp,
             lcpk,
             icpk,
             tcpk,
@@ -485,6 +1035,189 @@ def ice_cloud(
         else:
             di = max(0.0, h_var * qice)
 
+    with computation(PARALLEL), interval(...):
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = melt_snow(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_w,
+            vterminal_r,
+            vterminal_s,
+            cvm,
+            te,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        )
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = melt_graupel(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_w,
+            vterminal_r,
+            vterminal_g,
+            cvm,
+            te,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        )
+
+        qice, qsnow = accrete_snow_with_ice(
+            qice,
+            qsnow,
+            temperature,
+            density,
+            density_factor,
+            vterminal_i,
+            vterminal_s,
+        )
+
+        (
+            qice,
+            qsnow,
+            di,
+            temperature
+        ) = autoconvert_ice_to_snow(
+            qice,
+            qsnow,
+            temperature,
+            density,
+            di
+        )
+
+        qice, qgraupel = accrete_graupel_with_ice(
+            qice,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_i,
+            vterminal_g
+        )
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = accrete_snow_with_rain_and_freeze_to_graupel(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            vterminal_r,
+            vterminal_s,
+            te,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3
+        )
+
+        qsnow, qgraupel = accrete_graupel_with_snow(
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            vterminal_s,
+            vterminal_g,
+        )
+
+        qsnow, qgraupel = autoconvert_snow_to_graupel(
+            qsnow,
+            qgraupel,
+            temperature,
+            density
+        )
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = accrete_graupel_with_cloud_water_and_rain(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,   
+            density,
+            density_factor,
+            vterminal_r,
+            vterminal_g,
+            te,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        )
+
     pass
 
 
@@ -497,7 +1230,108 @@ class IceCloud:
         timestep: float,
     ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
-        pass
+        if config.do_hail:
+            mu_g = config.muh
+            blin_g = config.blinh
+        else:
+            mu_g = config.mug
+            blin_g = config.bling
+        
+        self._ice_cloud = stencil_factory.from_origin_domain(
+            func=ice_cloud,
+            externals={
+                "timestep": timestep,
+                "z_slope_ice": config.z_slope_ice,
+                "vdiffflag": config.vdiffflag,
+                "c1_ice": config.c1_ice,
+                "c1_liq": config.c1_liq,
+                "c1_vap": config.c1_vap,
+                "d1_ice": config.d1_ice,
+                "d1_vap": config.d1_vap,
+                "li00": config.li00,
+                "li20": config.li20,
+                "lv00": config.lv00,
+                "t_wfr": config.t_wfr,
+                "tice": config.tice,
+                "ql_mlt": config.ql_mlt,
+                "tau_imlt": config.tau_imlt,
+                "tice_mlt": config.tice_mlt,
+                "tau_i2s": config.tau_i2s,
+                "qi0_crt": config.qi0_crt,
+                "qs0_crt": config.qs0_crt,
+                "acc0": config.acc[0],
+                "acc1": config.acc[1],
+                "acc2": config.acc[2],
+                "acc3": config.acc[3],
+                "acc4": config.acc[4],
+                "acc5": config.acc[5],
+                "acc6": config.acc[6],
+                "acc7": config.acc[7],
+                "acc12": config.acc[12],
+                "acc13": config.acc[13],
+                "acc14": config.acc[14],
+                "acc15": config.acc[15],
+                "acc16": config.acc[16],
+                "acc17": config.acc[17],
+                "acc18": config.acc[18],
+                "acc19": config.acc[19],
+                "acco_0_0": config.acco[0][0],
+                "acco_0_1": config.acco[0][1],
+                "acco_0_6": config.acco[0][6],
+                "acco_1_0": config.acco[1][0],
+                "acco_1_1": config.acco[1][1],
+                "acco_1_6": config.acco[1][6],
+                "acco_2_0": config.acco[2][0],
+                "acco_2_1": config.acco[2][1],
+                "acco_2_6": config.acco[2][6],
+                "acco_0_2": config.acco[0][2],
+                "acco_1_2": config.acco[1][2],
+                "acco_2_2": config.acco[2][2],
+                "acco_0_3": config.acco[0][3],
+                "acco_1_3": config.acco[1][3],
+                "acco_2_3": config.acco[2][3],
+                "acco_0_7": config.acco[0][7],
+                "acco_1_7": config.acco[1][7],
+                "acco_2_7": config.acco[2][7],
+                "acco_0_8": config.acco[0][8],
+                "acco_1_8": config.acco[1][8],
+                "acco_2_8": config.acco[2][8],
+                "acco_0_9": config.acco[0][9],
+                "acco_1_9": config.acco[1][9],
+                "acco_2_9": config.acco[2][9],
+                "csacr": config.csacr,
+                "csacw": config.csacw,
+                "cgacw": config.cgacw,
+                "cgacr": config.cgacr,
+                "cgacs": config.cgacs,
+                "csaci": config.csaci,
+                "cgaci": config.cgaci,
+                "csmlt_1": config.csmlt_1,
+                "csmlt_2": config.csmlt_2,
+                "csmlt_3": config.csmlt_3,
+                "csmlt_4": config.csmlt_4,
+                "cgmlt_1": config.cgmlt_1,
+                "cgmlt_2": config.cgmlt_2,
+                "cgmlt_3": config.cgmlt_3,
+                "cgmlt_4": config.cgmlt_4,
+                "cgfr_1": config.cgfr_1,
+                "cgfr_2": config.cgfr_2,
+                "do_new_acc_water": config.do_new_acc_water,
+                "do_new_acc_ice": config.do_new_acc_ice,
+                "mur": config.mur,
+                "blinr": config.blinr,
+                "mus": config.mus,
+                "blins": config.blins,
+                "qs_mlt": config.qs_mlt,
+                "mug": mu_g,
+                "bling": blin_g,
+                "fi2s_fac": config.fi2s_fac,
+                "fi2g_fac": config.fi2g_fac,
+                "fs2g_fac": config.fs2g_fac
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
 
     def __call__(
         self,
@@ -517,4 +1351,40 @@ class IceCloud:
         vterminal_graupel: FloatField,
         h_var: FloatFieldIJ,
     ):
-        pass
+        """
+        Ice cloud microphysics,
+        Fortran name is ice_cloud
+        Args:
+            qvapor (inout):
+            qliquid (inout):
+            qrain (inout):
+            qice (inout):
+            qsnow (inout):
+            qgraupel (inout):
+            temperature (inout):
+            density (in):
+            density_factor (in):
+            vterminal_water (in):
+            vterminal_rain (in):
+            vterminal_ice (in):
+            vterminal_snow (in):
+            vterminal_graupel (in):
+            h_var (in):
+        """
+        self._ice_cloud(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_water,
+            vterminal_rain,
+            vterminal_ice,
+            vterminal_snow,
+            vterminal_graupel,
+            h_var,
+        )

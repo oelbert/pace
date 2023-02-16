@@ -95,6 +95,9 @@ class NamelistDefaults:
     # Scale from 1.0 (implicit) to 0.0 (lagrangian)
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     rhc_revap = 0.85  # maximum relative humidity for rain evaporation
+    fi2s_fac = 1.0 # maximum sink of cloud ice to form snow: 0-1
+    fi2g_fac = 1.0 # maximum sink of cloud ice to form graupel: 0-1
+    fs2g_fac = 1.0 # maximum sink of snow to form graupel: 0-1
     vw_fac = 1.0
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
@@ -393,6 +396,9 @@ class Namelist:
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
+    fi2s_fac: float = NamelistDefaults.fi2s_fac
+    fi2g_fac: float = NamelistDefaults.fi2g_fac
+    fs2g_fac: float = NamelistDefaults.fs2g_fac
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac

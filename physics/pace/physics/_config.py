@@ -167,6 +167,9 @@ class MicroPhysicsConfig:
     qs0_crt: float
     rhc_cevap: float
     rhc_revap: float
+    fi2s_fac: float
+    fi2g_fac: float
+    fs2g_fac: float
     is_fac: float
     rh_fac: float
     sed_fac: float
@@ -1177,6 +1180,9 @@ class PhysicsConfig:
     qs0_crt: float = NamelistDefaults.qs0_crt
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
+    fi2s_fac: float = NamelistDefaults.fi2s_fac
+    fi2g_fac: float = NamelistDefaults.fi2g_fac
+    fs2g_fac: float = NamelistDefaults.fs2g_fac
     is_fac: float = NamelistDefaults.is_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac
@@ -1337,6 +1343,9 @@ class PhysicsConfig:
             qs0_crt=namelist.qs0_crt,
             rhc_cevap=namelist.rhc_cevap,
             rhc_revap=namelist.rhc_revap,
+            fi2s_fac=namelist.fi2s_fac,
+            fi2g_fac=namelist.fi2g_fac,
+            fs2g_fac=namelist.fs2g_fac,
             is_fac=namelist.is_fac,
             rh_fac=namelist.rh_fac,
             sed_fac=namelist.sed_fac,
@@ -1483,6 +1492,9 @@ class PhysicsConfig:
             qs0_crt=self.qs0_crt,
             rhc_cevap=self.rhc_cevap,
             rhc_revap=self.rhc_revap,
+            fi2s_fac=self.fi2s_fac,
+            fi2g_fac=self.fi2g_fac,
+            fs2g_fac=self.fs2g_fac,
             is_fac=self.is_fac,
             rh_fac=self.rh_fac,
             sed_fac=self.sed_fac,
