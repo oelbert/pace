@@ -11,7 +11,6 @@ from gt4py.cartesian.gtscript import (
 
 import pace.fv3core.stencils.basic_operations as basic
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
-import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
@@ -1299,7 +1298,6 @@ class IceCloud:
     def __init__(
         self,
         stencil_factory: StencilFactory,
-        quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
         timestep: float,
     ):
@@ -1350,20 +1348,20 @@ class IceCloud:
                 "acc18": config.acc[18],
                 "acc19": config.acc[19],
                 "acco_0_0": config.acco[0][0],
-                "acco_0_1": config.acco[0][1],
-                "acco_0_6": config.acco[0][6],
                 "acco_1_0": config.acco[1][0],
-                "acco_1_1": config.acco[1][1],
-                "acco_1_6": config.acco[1][6],
                 "acco_2_0": config.acco[2][0],
+                "acco_0_1": config.acco[0][1],
+                "acco_1_1": config.acco[1][1],
                 "acco_2_1": config.acco[2][1],
-                "acco_2_6": config.acco[2][6],
                 "acco_0_2": config.acco[0][2],
                 "acco_1_2": config.acco[1][2],
                 "acco_2_2": config.acco[2][2],
                 "acco_0_3": config.acco[0][3],
                 "acco_1_3": config.acco[1][3],
                 "acco_2_3": config.acco[2][3],
+                "acco_0_6": config.acco[0][6],
+                "acco_1_6": config.acco[1][6],
+                "acco_2_6": config.acco[2][6],
                 "acco_0_7": config.acco[0][7],
                 "acco_1_7": config.acco[1][7],
                 "acco_2_7": config.acco[2][7],
