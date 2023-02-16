@@ -1,6 +1,6 @@
 import dataclasses
 import math
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 import f90nml
 
@@ -161,7 +161,6 @@ class MicroPhysicsConfig:
     do_psd_ice_num: bool
     do_new_acc_water: bool
     do_new_acc_ice: bool
-    irain_f: int
     mp_time: float
     prog_ccn: bool
     qi0_crt: float
@@ -306,7 +305,6 @@ class MicroPhysicsConfig:
     cgacs: float = dataclasses.field(init=False)
     acc: List[float] = dataclasses.field(init=False)
     acco: List[List[float]] = dataclasses.field(init=False)
-
 
     def __post_init__(self):
         if self.hydrostatic:
@@ -720,44 +718,118 @@ class MicroPhysicsConfig:
         Accretion between cloud water, cloud ice, rain,snow, and graupel or hail,
         Lin et al. (1983)
         """
-        self.cracw = (constants.PI * self.n0r_sig * self.alinr * math.gamma(2 + self.mur + self.blinr)
-            / (4. * math.exp((2 + self.mur + self.blinr) / (self.mur + 3) * math.log(self.normr)))
+        self.cracw = (
+            constants.PI
+            * self.n0r_sig
+            * self.alinr
+            * math.gamma(2 + self.mur + self.blinr)
+            / (
+                4.0
+                * math.exp(
+                    (2 + self.mur + self.blinr) / (self.mur + 3) * math.log(self.normr)
+                )
+            )
             * math.exp((1 - self.blinr) * math.log(self.expor))
         )
         self.craci = self.cracw
-        self.csacw = (constants.PI * self.n0s_sig * self.alins * math.gamma(2 + self.mus + self.blins)
-            / (4. * math.exp((2 + self.mus + self.blins) / (self.mus + 3) * math.log(self.norms)))
+        self.csacw = (
+            constants.PI
+            * self.n0s_sig
+            * self.alins
+            * math.gamma(2 + self.mus + self.blins)
+            / (
+                4.0
+                * math.exp(
+                    (2 + self.mus + self.blins) / (self.mus + 3) * math.log(self.norms)
+                )
+            )
             * math.exp((1 - self.blins) * math.log(self.expos))
         )
         self.csaci = self.csacw
         if self.do_hail is True:
-            self.cgacw = (constants.PI * self.n0h_sig * self.alinh * math.gamma(2 + self.muh + self.blinh) * constants.HCON
-                / (4. * math.exp((2 + self.muh + self.blinh) / (self.muh + 3) * math.log(self.normh)))
+            self.cgacw = (
+                constants.PI
+                * self.n0h_sig
+                * self.alinh
+                * math.gamma(2 + self.muh + self.blinh)
+                * constants.HCON
+                / (
+                    4.0
+                    * math.exp(
+                        (2 + self.muh + self.blinh)
+                        / (self.muh + 3)
+                        * math.log(self.normh)
+                    )
+                )
                 * math.exp((1 - self.blinh) * math.log(self.expoh))
             )
             self.cgaci = self.cgacw
         else:
-            self.cgacw = (constants.PI * self.n0g_sig * self.aling * math.gamma(2 + self.mug + self.bling) * constants.GCON
-                / (4. * math.exp((2 + self.mug + self.bling) / (self.mug + 3) * math.log(self.normg)))
+            self.cgacw = (
+                constants.PI
+                * self.n0g_sig
+                * self.aling
+                * math.gamma(2 + self.mug + self.bling)
+                * constants.GCON
+                / (
+                    4.0
+                    * math.exp(
+                        (2 + self.mug + self.bling)
+                        / (self.mug + 3)
+                        * math.log(self.normg)
+                    )
+                )
                 * math.exp((1 - self.bling) * math.log(self.expog))
             )
             self.cgaci = self.cgacw
 
         if self.do_new_acc_water is True:
-            self.cracw = constants.PI**2 * self.n0r_sig * self.n0w_sig * constants.RHO_W / 24.
-            self.csacw = constants.PI**2 * self.n0s_sig * self.n0w_sig * constants.RHO_W / 24.
+            self.cracw = (
+                constants.PI ** 2 * self.n0r_sig * self.n0w_sig * constants.RHO_W / 24.0
+            )
+            self.csacw = (
+                constants.PI ** 2 * self.n0s_sig * self.n0w_sig * constants.RHO_W / 24.0
+            )
             if self.do_hail is True:
-                self.cgacw = constants.PI**2 * self.n0h_sig * self.n0w_sig * constants.RHO_W / 24.
+                self.cgacw = (
+                    constants.PI ** 2
+                    * self.n0h_sig
+                    * self.n0w_sig
+                    * constants.RHO_W
+                    / 24.0
+                )
             else:
-                self.cgacw = constants.PI**2 * self.n0g_sig * self.n0w_sig * constants.RHO_W / 24.
+                self.cgacw = (
+                    constants.PI ** 2
+                    * self.n0g_sig
+                    * self.n0w_sig
+                    * constants.RHO_W
+                    / 24.0
+                )
 
         if self.do_new_acc_ice is True:
-            self.craci = constants.PI**2 * self.n0r_sig * self.n0i_sig * constants.RHO_I / 24.
-            self.csaci = constants.PI**2 * self.n0s_sig * self.n0i_sig * constants.RHO_I / 24.
+            self.craci = (
+                constants.PI ** 2 * self.n0r_sig * self.n0i_sig * constants.RHO_I / 24.0
+            )
+            self.csaci = (
+                constants.PI ** 2 * self.n0s_sig * self.n0i_sig * constants.RHO_I / 24.0
+            )
             if self.do_hail is True:
-                self.cgaci = constants.PI**2 * self.n0h_sig * self.n0i_sig * constants.RHO_I / 24.
+                self.cgaci = (
+                    constants.PI ** 2
+                    * self.n0h_sig
+                    * self.n0i_sig
+                    * constants.RHO_I
+                    / 24.0
+                )
             else:
-                self.cgaci = constants.PI**2 * self.n0g_sig * self.n0i_sig * constants.RHO_I / 24.
+                self.cgaci = (
+                    constants.PI ** 2
+                    * self.n0g_sig
+                    * self.n0i_sig
+                    * constants.RHO_I
+                    / 24.0
+                )
         else:
             pass
 
@@ -768,14 +840,26 @@ class MicroPhysicsConfig:
         self.cgacw = self.cgacw * self.c_pgacw
         self.cgaci = self.cgaci * self.c_pgaci
 
-        self.cracs = constants.PI**2 * self.n0r_sig * self.n0s_sig * constants.RHO_S / 24.
-        self.csacr = constants.PI**2 * self.n0s_sig * self.n0r_sig * constants.RHO_R / 24.
+        self.cracs = (
+            constants.PI ** 2 * self.n0r_sig * self.n0s_sig * constants.RHO_S / 24.0
+        )
+        self.csacr = (
+            constants.PI ** 2 * self.n0s_sig * self.n0r_sig * constants.RHO_R / 24.0
+        )
         if self.do_hail is True:
-            self.cgacs = constants.PI**2 * self.n0h_sig * self.n0s_sig * constants.RHO_S / 24.
-            self.cgacr = constants.PI**2 * self.n0h_sig * self.n0r_sig * constants.RHO_R / 24.
+            self.cgacs = (
+                constants.PI ** 2 * self.n0h_sig * self.n0s_sig * constants.RHO_S / 24.0
+            )
+            self.cgacr = (
+                constants.PI ** 2 * self.n0h_sig * self.n0r_sig * constants.RHO_R / 24.0
+            )
         else:
-            self.cgacs = constants.PI**2 * self.n0g_sig * self.n0s_sig * constants.RHO_S / 24.
-            self.cgacr = constants.PI**2 * self.n0g_sig * self.n0r_sig * constants.RHO_R / 24.
+            self.cgacs = (
+                constants.PI ** 2 * self.n0g_sig * self.n0s_sig * constants.RHO_S / 24.0
+            )
+            self.cgacr = (
+                constants.PI ** 2 * self.n0g_sig * self.n0r_sig * constants.RHO_R / 24.0
+            )
 
         self.cracs *= self.c_pracs
         self.csacr *= self.c_psacr
@@ -873,46 +957,114 @@ class MicroPhysicsConfig:
         self.acc = acc
 
         acco = []
-        occ = [1.,2.,1.]
+        occ = [1.0, 2.0, 1.0]
         for i in range(3):
             accoi = []
             for k in range(10):
                 accoi.append(
-                    occ[i] * math.gamma(6 + acc[2*k] - (i+1)) * math.gamma(acc[2*k+1] + (i+1) - 1)
+                    occ[i]
+                    * math.gamma(6 + acc[2 * k] - (i + 1))
+                    * math.gamma(acc[2 * k + 1] + (i + 1) - 1)
                     / (
-                        math.exp((6+acc[2*k] - (i+1)) / (acc[2*k] + 3) * math.log(act[2*k]))
-                        * math.exp((acc[2*k+1] + (i+1) - 1) / (acc[2*k+1] + 3) * math.log(act[2*k+1]))
+                        math.exp(
+                            (6 + acc[2 * k] - (i + 1))
+                            / (acc[2 * k] + 3)
+                            * math.log(act[2 * k])
+                        )
+                        * math.exp(
+                            (acc[2 * k + 1] + (i + 1) - 1)
+                            / (acc[2 * k + 1] + 3)
+                            * math.log(act[2 * k + 1])
+                        )
                     )
-                    * math.exp((i+1 - 3) * math.log(ace[2*k])) * math.exp((4-(i+1)) * math.log(ace[2*k+1]))
+                    * math.exp((i + 1 - 3) * math.log(ace[2 * k]))
+                    * math.exp((4 - (i + 1)) * math.log(ace[2 * k + 1]))
                 )
             acco.append(accoi)
-        
-        self.acco=acco
+
+        self.acco = acco
 
     def _calculate_melting_and_freezing_constants(self):
         """
-        Calculates parameters for snow and graupel melting, 
+        Calculates parameters for snow and graupel melting,
         and rain freezing
         """
 
         # Snow melting, Lin et al. (1983)
-        self.csmlt_1 = 2. * constants.PI * constants.TCOND * self.n0s_sig * math.gamma(1 + self.mus) / math.exp((1 + self.mus) / (self.mus + 3) * math.log (self.norms)) * math.exp(2.0 * math.log(self.expos))
-        self.csmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0s_sig * math.gamma(1 + self.mus) / math.exp((1 + self.mus) / (self.mus + 3) * math.log (self.norms)) * math.exp(2.0 * math.log(self.expos))
+        self.csmlt_1 = (
+            2.0
+            * constants.PI
+            * constants.TCOND
+            * self.n0s_sig
+            * math.gamma(1 + self.mus)
+            / math.exp((1 + self.mus) / (self.mus + 3) * math.log(self.norms))
+            * math.exp(2.0 * math.log(self.expos))
+        )
+        self.csmlt_2 = (
+            2.0
+            * constants.PI
+            * constants.VDIFU
+            * self.n0s_sig
+            * math.gamma(1 + self.mus)
+            / math.exp((1 + self.mus) / (self.mus + 3) * math.log(self.norms))
+            * math.exp(2.0 * math.log(self.expos))
+        )
         self.csmlt_3 = self.cssub_2
         self.csmlt_4 = self.cssub_3
 
         # Graupel or hail melting, Lin et al. (1983)
         if self.do_hail is True:
-            self.cgmlt_1 = 2. * constants.PI * constants.TCOND * self.n0h_sig * math.gamma(1 + self.muh) / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh)) * math.exp(2.0 * math.log(self.expoh))
-            self.cgmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0h_sig * math.gamma(1 + self.muh) / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh)) * math.exp(2.0 * math.log(self.expoh))
+            self.cgmlt_1 = (
+                2.0
+                * constants.PI
+                * constants.TCOND
+                * self.n0h_sig
+                * math.gamma(1 + self.muh)
+                / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh))
+                * math.exp(2.0 * math.log(self.expoh))
+            )
+            self.cgmlt_2 = (
+                2.0
+                * constants.PI
+                * constants.VDIFU
+                * self.n0h_sig
+                * math.gamma(1 + self.muh)
+                / math.exp((1 + self.muh) / (self.muh + 3) * math.log(self.normh))
+                * math.exp(2.0 * math.log(self.expoh))
+            )
         else:
-            self.cgmlt_1 = 2. * constants.PI * constants.TCOND * self.n0g_sig * math.gamma(1 + self.mug) / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg)) * math.exp(2.0 * math.log(self.expog))
-            self.cgmlt_2 = 2. * constants.PI * constants.VDIFU * self.n0g_sig * math.gamma(1 + self.mug) / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg)) * math.exp(2.0 * math.log(self.expog))
+            self.cgmlt_1 = (
+                2.0
+                * constants.PI
+                * constants.TCOND
+                * self.n0g_sig
+                * math.gamma(1 + self.mug)
+                / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg))
+                * math.exp(2.0 * math.log(self.expog))
+            )
+            self.cgmlt_2 = (
+                2.0
+                * constants.PI
+                * constants.VDIFU
+                * self.n0g_sig
+                * math.gamma(1 + self.mug)
+                / math.exp((1 + self.mug) / (self.mug + 3) * math.log(self.normg))
+                * math.exp(2.0 * math.log(self.expog))
+            )
         self.cgmlt_3 = self.cgsub_2
         self.cgmlt_4 = self.cgsub_3
 
         # Rain freezing, Lin et al. (1983)
-        self.cgfr_1 = 1.e2 / 36 * constants.PI**2 * self.n0r_sig * constants.RHO_R * math.gamma(6 + self.mur) / math.exp((6 + self.mur) / (self.mur + 3) * math.log(self.normr)) * math.exp(- 3.0 * math.log(self.expor))
+        self.cgfr_1 = (
+            1.0e2
+            / 36
+            * constants.PI ** 2
+            * self.n0r_sig
+            * constants.RHO_R
+            * math.gamma(6 + self.mur)
+            / math.exp((6 + self.mur) / (self.mur + 3) * math.log(self.normr))
+            * math.exp(-3.0 * math.log(self.expor))
+        )
         self.cgfr_2 = 0.66
 
 
@@ -1019,7 +1171,6 @@ class PhysicsConfig:
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
     do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
-    irain_f: int = NamelistDefaults.irain_f
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
@@ -1180,7 +1331,6 @@ class PhysicsConfig:
             do_psd_ice_num=namelist.do_psd_ice_num,
             do_new_acc_water=namelist.do_new_acc_water,
             do_new_acc_ice=namelist.do_new_acc_ice,
-            irain_f=namelist.irain_f,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
             qi0_crt=namelist.qi0_crt,
@@ -1327,7 +1477,6 @@ class PhysicsConfig:
             do_psd_ice_num=self.do_psd_ice_num,
             do_new_acc_water=self.do_new_acc_water,
             do_new_acc_ice=self.do_new_acc_ice,
-            irain_f=self.irain_f,
             mp_time=self.mp_time,
             prog_ccn=self.prog_ccn,
             qi0_crt=self.qi0_crt,

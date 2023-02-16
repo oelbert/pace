@@ -52,14 +52,8 @@ def calc_terminal_velocity(tracer, density, tva, tvb, mu, blin):
 
 
 @gtscript.function
-def accretion_2d(
-    qden,
-    denfac,
-    c,
-    blin,
-    mu
-):
-    return denfac * c * exp((2 + mu + blin) / (mu + 3) * log(6*qden))
+def accretion_2d(qden, denfac, c, blin, mu):
+    return denfac * c * exp((2 + mu + blin) / (mu + 3) * log(6 * qden))
 
 
 @gtscript.function
@@ -82,20 +76,20 @@ def accretion_3d(
     """
     from __externals__ import vdiffflag
 
-    t1 = exp(1. / (acc1 + 3) * log(6 * q1 * density))
-    t2 = exp(1. / (acc2 + 3) * log(6 * q2 * density))
+    t1 = exp(1.0 / (acc1 + 3) * log(6 * q1 * density))
+    t2 = exp(1.0 / (acc2 + 3) * log(6 * q2 * density))
 
     if vdiffflag == 1:
-        vdiff = abs(v1-v2)
+        vdiff = abs(v1 - v2)
     elif vdiffflag == 2:
-        sqrt((1.20 * v1 - 0.95 * v2) ** 2. + 0.08 * v1 * v2)
-    else: # vdiffflag == 3:
-        vdiff = sqrt((1.00 * v1 - 1.00 * v2) ** 2. + 0.04 * v1 * v2)
+        sqrt((1.20 * v1 - 0.95 * v2) ** 2.0 + 0.08 * v1 * v2)
+    else:  # vdiffflag == 3:
+        vdiff = sqrt((1.00 * v1 - 1.00 * v2) ** 2.0 + 0.04 * v1 * v2)
 
     accrete = c * vdiff / density
-    tmp = acco1 * exp((6+acc1 - 1) * log(t1)) * exp((acc2 + 1 - 1) * log(t2))
-    tmp += acco2 * exp((6+acc1 - 2) * log(t1)) * exp((acc2 + 2 - 1) * log(t2))
-    tmp += acco3 * exp((6+acc1 - 3) * log(t1)) * exp((acc2 + 3 - 1) * log(t2))
+    tmp = acco1 * exp((6 + acc1 - 1) * log(t1)) * exp((acc2 + 1 - 1) * log(t2))
+    tmp += acco2 * exp((6 + acc1 - 2) * log(t1)) * exp((acc2 + 2 - 1) * log(t2))
+    tmp += acco3 * exp((6 + acc1 - 3) * log(t1)) * exp((acc2 + 3 - 1) * log(t2))
 
     return accrete * tmp
 
@@ -270,9 +264,46 @@ def moist_heat_capacity(qvapor, qliquid, qrain, qice, qsnow, qgraupel):
     q_solid = qice + qsnow + qgraupel
     return 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
 
+
 @gtscript.function
-def melting_function():
+def melting_function(
+    tc,
+    dq,
+    qden,
+    pxacw,
+    pxacr,
+    density,
+    density_factor,
+    lcpk,
+    icpk,
+    cvm,
+    blin,
+    mu,
+    c_liq,
+    c1,
+    c2,
+    c3,
+    c4,
+):
     """
     Melting function, Lin et al. (1983)
     Fortran name is pmlt
     """
+    return (c1 / (icpk * cvm) * tc / density - c2 * lcpk / icpk * dq) * exp(
+        (1 + mu) / (mu + 3) * log(6 * qden)
+    ) * vent_coeff(qden, c3, c4, density_factor, blin, mu) + c_liq / (
+        icpk * cvm
+    ) * tc * (
+        pxacw + pxacr
+    )
+
+
+@gtscript.function
+def vent_coeff(qden, density_factor, c1, c2, blin, mu):
+    """
+    Ventilation coefficient, Lin et al. (1983)
+    """
+
+    return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
+        density_factor
+    ) / exp((1 + mu) / (mu + 3) * log(6 * qden))

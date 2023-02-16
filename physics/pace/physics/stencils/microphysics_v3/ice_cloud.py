@@ -200,36 +200,174 @@ def melt_snow(
     Fortran name is psmlt
     """
 
-    from __externals__ import timestep, do_new_acc_water, csacw, csacr, acco_0_0, acco_1_0, acco_2_0, acco_0_1, acco_1_1, acco_2_1, acco_0_6, acco_1_6, acco_2_6, acc0, acc1, acc2, acc3, acc12, acc13, blins, mus
+    from __externals__ import (
+        acc0,
+        acc1,
+        acc2,
+        acc3,
+        acc12,
+        acc13,
+        acco_0_0,
+        acco_0_1,
+        acco_0_6,
+        acco_1_0,
+        acco_1_1,
+        acco_1_6,
+        acco_2_0,
+        acco_2_1,
+        acco_2_6,
+        blins,
+        c_liq,
+        csacr,
+        csacw,
+        csmlt_1,
+        csmlt_2,
+        csmlt_3,
+        csmlt_4,
+        do_new_acc_water,
+        mus,
+        qs_mlt,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
     if (tc >= 0) and (qsnow > constants.QCMIN):
-        psacw = 0.
+        psacw = 0.0
         qden = qsnow * density
         if qliquid > constants.QCMIN:
             if __INLINED(do_new_acc_water is True):
-                psacw = physfun.accretion_3d(qliquid, qsnow, vterminal_s, vterminal_w, density, csacw, acco_0_6, acco_1_6, acco_2_6, acc12, acc13)
+                psacw = physfun.accretion_3d(
+                    qliquid,
+                    qsnow,
+                    vterminal_s,
+                    vterminal_w,
+                    density,
+                    csacw,
+                    acco_0_6,
+                    acco_1_6,
+                    acco_2_6,
+                    acc12,
+                    acc13,
+                )
             else:
                 factor = physfun.accretion_2d(qden, density_factor, csacw, blins, mus)
-                psacw = factor / (1. + timestep * factor) * qliquid
+                psacw = factor / (1.0 + timestep * factor) * qliquid
 
-        psacr = 0.
-        pracs = 0.
+        psacr = 0.0
+        pracs = 0.0
         if qrain > constants.QCMIN:
-            psacr = min(qrain/timestep, physfun.accretion_3d(
-                qrain, qsnow, vterminal_s, vterminal_r, density, csacr, acco_0_1, acco_1_1, acco_2_1, acc2, acc3
-            ))
+            psacr = min(
+                qrain / timestep,
+                physfun.accretion_3d(
+                    qrain,
+                    qsnow,
+                    vterminal_s,
+                    vterminal_r,
+                    density,
+                    csacr,
+                    acco_0_1,
+                    acco_1_1,
+                    acco_2_1,
+                    acc2,
+                    acc3,
+                ),
+            )
             pracs = physfun.accretion_3d(
-                qsnow, qrain, vterminal_r, vterminal_s, density, csacr, acco_0_0, acco_1_0, acco_2_0, acc0, acc1
+                qsnow,
+                qrain,
+                vterminal_r,
+                vterminal_s,
+                density,
+                csacr,
+                acco_0_0,
+                acco_1_0,
+                acco_2_0,
+                acc0,
+                acc1,
             )
 
         tin = temperature
         qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         dq = qsi - qvapor
 
+        sink = max(
+            0.0,
+            physfun.melting_function(
+                tc,
+                dq,
+                qden,
+                psacw,
+                psacr,
+                density,
+                density_factor,
+                lcpk,
+                icpk,
+                cvm,
+                blins,
+                mus,
+                c_liq,
+                csmlt_1,
+                csmlt_2,
+                csmlt_3,
+                csmlt_4,
+            ),
+        )
+        sink = min(qsnow, (sink + pracs) * timestep, tc / icpk)
+        tmp = min(sink, basic.dim(qs_mlt, qliquid))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            tk,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
+            -sink,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
 
 
+@gtscript.function
+def melt_graupel():
+    """
+    graupel melting (includes graupel accretion with cloud water and rain)
+    to form rain, Lin et al. (1983)
+    Fortran name is pgmlt
+    """
     pass
 
 
@@ -308,7 +446,7 @@ def ice_cloud(
             qice,
             qsnow,
             qgraupel,
-            temp,
+            temperature,
             density,
             cvm,
             te,
@@ -317,16 +455,16 @@ def ice_cloud(
             tcpk,
             tcp3,
         )
-    
+
     with computation(FORWARD):
         with interval(0, 1):
             if __INLINED(z_slope_ice is True):
                 # linear_prof
-                di = 0.
+                di = 0.0
         with interval(1, None):
             if __INLINED(z_slope_ice is True):
                 dq = 0.5 * (qice - qice[0, 0, -1])
-        with interval(1,-1):
+        with interval(1, -1):
             if __INLINED(z_slope_ice is True):
                 # Use twice the strength of the
                 # positive definiteness limiter (lin et al 1994)
@@ -334,21 +472,20 @@ def ice_cloud(
                 if dq * dq[0, 0, +1] <= 0.0:
                     if dq > 0.0:  # Local maximum
                         di = min(di, min(dq, -dq[0, 0, +1]))
-                    else: # Local minimum
+                    else:  # Local minimum
                         di = 0.0
         with interval(-1, None):
             if __INLINED(z_slope_ice is True):
-                di = 0.
+                di = 0.0
     with computation(PARALLEL), interval(...):
         if __INLINED(z_slope_ice is True):
             # Impose a presumed background horizontal variability that is
             # proportional to the value itself
-            di = max(di, 0., h_var * qice)
+            di = max(di, 0.0, h_var * qice)
         else:
-            di = max(0., h_var * qice)
+            di = max(0.0, h_var * qice)
 
     pass
-
 
 
 class IceCloud:

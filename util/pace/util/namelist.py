@@ -71,16 +71,16 @@ class NamelistDefaults:
     c_paut = (
         0.5  # Autoconversion cloud water to rain (use 0.5 to reduce autoconversion)
     )
-    c_pracs = 1.0 # snow to rain accretion efficiency
-    c_psacr = 1.0 # rain to snow accretion efficiency
-    c_pgacr = 1.0 # rain to graupel accretion efficiency
+    c_pracs = 1.0  # snow to rain accretion efficiency
+    c_psacr = 1.0  # rain to snow accretion efficiency
+    c_pgacr = 1.0  # rain to graupel accretion efficiency
     c_pgacs = 0.01  # Snow to graupel "accretion" eff. (was 0.1 in zetac)
-    c_psacw = 1.0 # Cloud water to snow accretion efficiency
+    c_psacw = 1.0  # Cloud water to snow accretion efficiency
     c_psaci = 0.05  # Accretion: cloud ice to snow (was 0.1 in zetac)
-    c_pracw = 0.8 # Cloud water to rain accretion efficiency
-    c_praci = 1.0 # Cloud ice to rain accretion efficiency
-    c_pgacw = 1.0 # Cloud water to graupel accretion efficiency
-    c_pgaci = 0.05 # Cloud ice to graupel accretion efficiency (was 0.1 in ZETAC)
+    c_pracw = 0.8  # Cloud water to rain accretion efficiency
+    c_praci = 1.0  # Cloud ice to rain accretion efficiency
+    c_pgacw = 1.0  # Cloud water to graupel accretion efficiency
+    c_pgaci = 0.05  # Cloud ice to graupel accretion efficiency (was 0.1 in ZETAC)
     ccn_l = 270.0  # CCN over land (cm^-3)
     ccn_o = 90.0  # CCN over ocean (cm^-3)
     use_rhc_cevap = False  # cap of rh for cloud water evaporation
@@ -118,7 +118,6 @@ class NamelistDefaults:
     do_psd_ice_num = False  # Calculate cloud ice number concentration based on PSD
     do_new_acc_water = False  # Perform the new accretion for cloud water
     do_new_acc_ice = False  # Perform the new accretion for cloud water
-    irain_f = 0  # Cloud water to rain auto conversion scheme
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
@@ -179,7 +178,7 @@ class NamelistDefaults:
     mug = 1.0  # shape parameter of graupel in Gamma distribution (Houze et al. 1979)
     muh = 1.0
     # shape parameter of hail in Gamma distribution (Federer and Waldvogel 1975)
-    irain_f = 0 # cloud water to rain auto conversion scheme
+    irain_f = 0  # cloud water to rain auto conversion scheme
     # 0: subgrid variability based scheme
     # 1: no subgrid varaibility
     inflag = 1  # Ice nucleation scheme:
@@ -201,7 +200,7 @@ class NamelistDefaults:
     # 2: explicit scheme
     # 3: lagrangian scheme
     # 4: combined implicit and lagrangian scheme
-    vdiffflag = 1 # wind difference scheme in accretion
+    vdiffflag = 1  # wind difference scheme in accretion
     # 1: Wisner et al. (1972)
     # 2: Mizuno (1990)
     # 3: Murakami (1990)
@@ -387,7 +386,6 @@ class Namelist:
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
     do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
-    irain_f: int = NamelistDefaults.irain_f
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
