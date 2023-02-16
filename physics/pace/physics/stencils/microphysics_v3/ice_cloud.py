@@ -1,10 +1,6 @@
-from math import factorial
-from os import times
-from socket import SOL_NETROM
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
-    BACKWARD,
     FORWARD,
     PARALLEL,
     computation,
@@ -21,7 +17,6 @@ import pace.util.constants as constants
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
 
 from ..._config import MicroPhysicsConfig
 
@@ -390,7 +385,28 @@ def melt_graupel(
     Fortran name is pgmlt
     """
 
-    from __externals__ import timestep, do_new_acc_water, cgacw, acco_0_8, acco_1_8, acco_2_8, acc16, acc17, cgacr, acco_0_2, acco_1_2, acco_2_2, bling, mug, acc4, acc5, cgmlt_1, cgmlt_2, cgmlt_3, cgmlt_4
+    from __externals__ import (
+        acc4,
+        acc5,
+        acc16,
+        acc17,
+        acco_0_2,
+        acco_0_8,
+        acco_1_2,
+        acco_1_8,
+        acco_2_2,
+        acco_2_8,
+        bling,
+        cgacr,
+        cgacw,
+        cgmlt_1,
+        cgmlt_2,
+        cgmlt_3,
+        cgmlt_4,
+        do_new_acc_water,
+        mug,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
@@ -416,7 +432,7 @@ def melt_graupel(
                 factor = physfun.accretion_2d(qden, density_factor, cgacw, bling, mug)
                 pgacw = factor / (1.0 + timestep * factor) * qliquid
 
-        pgacr = 0.
+        pgacr = 0.0
         if qrain > constants.QCMIN:
             pgacr = min(
                 qrain / timestep,
@@ -488,7 +504,7 @@ def melt_graupel(
             sink,
             0.0,
             0.0,
-            - sink,
+            -sink,
             te,
         )
 
@@ -522,13 +538,25 @@ def accrete_snow_with_ice(
     Snow accretion with cloud ice, Lin et al. (1983)
     Fortran name is psaci
     """
-    
-    from __externals__ import timestep, do_new_acc_ice, csaci, acco_0_7, acco_1_7, acco_2_7, acc14, acc15, blins, mus, fi2s_fac
+
+    from __externals__ import (
+        acc14,
+        acc15,
+        acco_0_7,
+        acco_1_7,
+        acco_2_7,
+        blins,
+        csaci,
+        do_new_acc_ice,
+        fi2s_fac,
+        mus,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qice > constants.QCMIN):
-        sink = 0.
+    if (tc < 0.0) and (qice > constants.QCMIN):
+        sink = 0.0
         qden = qsnow * density
         if qsnow > constants.QCMIN:
             if __INLINED(do_new_acc_ice is True):
@@ -543,19 +571,15 @@ def accrete_snow_with_ice(
                     acco_1_7,
                     acco_2_7,
                     acc14,
-                    acc15
+                    acc15,
                 )
             else:
                 factor = timestep * physfun.accretion_2d(
-                    qden,
-                    density_factor,
-                    csaci,
-                    blins,
-                    mus
+                    qden, density_factor, csaci, blins, mus
                 )
-                sink = factor / (1. + factor) * qice
+                sink = factor / (1.0 + factor) * qice
 
-        sink = min (fi2s_fac * qice, sink)
+        sink = min(fi2s_fac * qice, sink)
 
         qice -= sink
         qsnow += sink
@@ -575,13 +599,13 @@ def autoconvert_ice_to_snow(
     Cloud ice to snow autoconversion, Lin et al. (1983)
     Fortran name is psaut
     """
-    from __externals__ import timestep, tau_i2s, qi0_crt, fi2s_fac
+    from __externals__ import fi2s_fac, qi0_crt, tau_i2s, timestep
 
-    fac_i2s = 1. - exp(-timestep / tau_i2s)
+    fac_i2s = 1.0 - exp(-timestep / tau_i2s)
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qice > constants.QCMIN):
-        sink = 0.
+    if (tc < 0.0) and (qice > constants.QCMIN):
+        sink = 0.0
         tmp = fac_i2s * exp(0.025 * tc)
         di = max(di, constants.QCMIN)
         q_plus = qice + di
@@ -594,7 +618,7 @@ def autoconvert_ice_to_snow(
                 dq = qice - qim
             sink = tmp * dq
 
-        sink = min (fi2s_fac * qice, sink)
+        sink = min(fi2s_fac * qice, sink)
 
         qice -= sink
         qsnow += sink
@@ -604,26 +628,32 @@ def autoconvert_ice_to_snow(
 
 @gtscript.function
 def accrete_graupel_with_ice(
-    qice,
-    qgraupel,
-    temperature,
-    density,
-    density_factor,
-    vtermainal_i,
-    vterminal_g
+    qice, qgraupel, temperature, density, density_factor, vtermainal_i, vterminal_g
 ):
     """
     Graupel accretion with cloud ice, Lin et al. (1983)
     Fortran name is pgaci
     """
-    from __externals__ import timestep, do_new_acc_ice, cgaci, acco_0_9, acco_1_9, acco_2_9, acc18, acc19, mug, bling, fi2g_fac
+    from __externals__ import (
+        acc18,
+        acc19,
+        acco_0_9,
+        acco_1_9,
+        acco_2_9,
+        bling,
+        cgaci,
+        do_new_acc_ice,
+        fi2g_fac,
+        mug,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qice > constants.QCMIN):
-        sink = 0.
+    if (tc < 0.0) and (qice > constants.QCMIN):
+        sink = 0.0
         qden = qgraupel * density
-        
+
         if qgraupel > constants.QCMIN:
             if __INLINED(do_new_acc_ice):
                 sink = timestep * physfun.accretion_3d(
@@ -641,15 +671,11 @@ def accrete_graupel_with_ice(
                 )
             else:
                 factor = timestep * physfun.accretion_2d(
-                    qden,
-                    density_factor,
-                    cgaci,
-                    bling,
-                    mug
+                    qden, density_factor, cgaci, bling, mug
                 )
-                sink = factor / (1. + factor) * qice
-        
-        sink = min (fi2g_fac * qice, sink)
+                sink = factor / (1.0 + factor) * qice
+
+        sink = min(fi2g_fac * qice, sink)
 
         qice -= sink
         qgraupel += sink
@@ -665,7 +691,7 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
     qice,
     qsnow,
     qgraupel,
-    temperature,   
+    temperature,
     density,
     vterminal_r,
     vterminal_s,
@@ -680,12 +706,23 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
     Snow accretion with rain and rain freezing to form graupel, Lin et al. (1983)
     Fortran name is psacr_pgfr
     """
-    from __externals__ import timestep, csacr, acco_0_2, acco_1_2, acco_2_2, acc2, acc3, cgfr_1, cgfr_2, mur
+    from __externals__ import (
+        acc2,
+        acc3,
+        acco_0_2,
+        acco_1_2,
+        acco_2_2,
+        cgfr_1,
+        cgfr_2,
+        csacr,
+        mur,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qrain > constants.QCMIN):
-        psacr = 0.
+    if (tc < 0.0) and (qrain > constants.QCMIN):
+        psacr = 0.0
         if qsnow > constants.QCMIN:
             psacr = timestep * physfun.accretion_3d(
                 qrain,
@@ -698,16 +735,22 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
                 acco_1_2,
                 acco_2_2,
                 acc2,
-                acc3
+                acc3,
             )
-        
-        pgfr = timestep * cgfr_1 / density * (exp(-cgfr_2 * tc) -1) * exp((6 + mur) / (mur + 3) * log (6 * qrain * density))
+
+        pgfr = (
+            timestep
+            * cgfr_1
+            / density
+            * (exp(-cgfr_2 * tc) - 1)
+            * exp((6 + mur) / (mur + 3) * log(6 * qrain * density))
+        )
         sink = psacr + pgfr
-        factor = min(sink, qrain, - tc / icpk) / max (sink, constants.QCMIN)
+        factor = min(sink, qrain, -tc / icpk) / max(sink, constants.QCMIN)
         psacr = factor * psacr
         pgfr = factor * pgfr
 
-        sink = min (qrain, psacr + pgfr)
+        sink = min(qrain, psacr + pgfr)
 
         (
             qvapor,
@@ -730,9 +773,9 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
             qsnow,
             qgraupel,
             0.0,
-            0.,
+            0.0,
             -sink,
-            0.,
+            0.0,
             psacr,
             pgfr,
             te,
@@ -767,9 +810,22 @@ def accrete_graupel_with_snow(
     Graupel accretion with snow, Lin et al. (1983)
     Fortran name is pgacs
     """
-    from __externals__ import timestep, cgacs, acco_0_3, acco_1_3, acco_2_3, acc6, acc7, fs2g_fac
+    from __externals__ import (
+        acc6,
+        acc7,
+        acco_0_3,
+        acco_1_3,
+        acco_2_3,
+        cgacs,
+        fs2g_fac,
+        timestep,
+    )
 
-    if (temperature < constants.TICE0) and (qsnow > constants.QCMIN) and (qgraupel > constants.QCMIN):
+    if (
+        (temperature < constants.TICE0)
+        and (qsnow > constants.QCMIN)
+        and (qgraupel > constants.QCMIN)
+    ):
         sink = timestep * physfun.accretion_3d(
             qsnow,
             qgraupel,
@@ -781,14 +837,15 @@ def accrete_graupel_with_snow(
             acco_1_3,
             acco_2_3,
             acc6,
-            acc7
+            acc7,
         )
-        sink = min (fs2g_fac * qsnow, sink)
+        sink = min(fs2g_fac * qsnow, sink)
 
         qsnow -= sink
         qgraupel += sink
 
     return qsnow, qgraupel
+
 
 @gtscript.function
 def autoconvert_snow_to_graupel(
@@ -801,23 +858,23 @@ def autoconvert_snow_to_graupel(
     Snow to graupel autoconversion, Lin et al. (1983)
     Fortran name is pgaut
     """
-    from __externals__ import timestep, qs0_crt, fs2g_fac
+    from __externals__ import fs2g_fac, qs0_crt, timestep
 
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qsnow > constants.QCMIN):
-        sink = 0.
+    if (tc < 0.0) and (qsnow > constants.QCMIN):
+        sink = 0.0
         qsm = qs0_crt / density
 
         if qsnow > qsm:
-            factor = timestep * 1.e-3 * exp(0.09 * tc)
-            sink = factor / (1. + factor) * (qsnow - qsm)
+            factor = timestep * 1.0e-3 * exp(0.09 * tc)
+            sink = factor / (1.0 + factor) * (qsnow - qsm)
 
         sink = min(fs2g_fac * qsnow, sink)
 
         qsnow -= sink
         qgraupel += sink
-    
+
     return qsnow, qgraupel
 
 
@@ -829,7 +886,7 @@ def accrete_graupel_with_cloud_water_and_rain(
     qice,
     qsnow,
     qgraupel,
-    temperature,   
+    temperature,
     density,
     density_factor,
     vterminal_r,
@@ -845,26 +902,55 @@ def accrete_graupel_with_cloud_water_and_rain(
     Graupel accretion with cloud water and rain, Lin et al. (1983)
     Fortran name is pgacw_pgacr
     """
-    from __externals__ import timestep, cgacw, bling, mug, cgacr, acco_0_2, acco_1_2, acco_2_2, acc4, acc5
+    from __externals__ import (
+        acc4,
+        acc5,
+        acco_0_2,
+        acco_1_2,
+        acco_2_2,
+        bling,
+        cgacr,
+        cgacw,
+        mug,
+        timestep,
+    )
 
     tc = temperature - constants.TICE0
 
-    if (tc < 0.) and (qgraupel > constants.QCMIN):
-        pgacw = 0.
+    if (tc < 0.0) and (qgraupel > constants.QCMIN):
+        pgacw = 0.0
 
         if qliquid > constants.QCMIN:
             qden = qgraupel * density
-            factor = timestep * physfun.accretion_2d(qden, cgacw, density_factor, bling, mug)
-            pgacw = factor / (1. + factor) * qliquid
+            factor = timestep * physfun.accretion_2d(
+                qden, cgacw, density_factor, bling, mug
+            )
+            pgacw = factor / (1.0 + factor) * qliquid
 
-        pgacr = 0.
+        pgacr = 0.0
         if qrain > constants.QCMIN:
-            pgacr = min(timestep * physfun.accretion_3d(
-                qrain, qgraupel, vterminal_g, vterminal_r, density, cgacr, acco_0_2, acco_1_2, acco_2_2, acc4, acc5
-            ), qrain)
-        
+            pgacr = min(
+                timestep
+                * physfun.accretion_3d(
+                    qrain,
+                    qgraupel,
+                    vterminal_g,
+                    vterminal_r,
+                    density,
+                    cgacr,
+                    acco_0_2,
+                    acco_1_2,
+                    acco_2_2,
+                    acc4,
+                    acc5,
+                ),
+                qrain,
+            )
+
         sink = pgacr + pgacw
-        factor = min (sink, basic.dim(constants.TICE0, temperature) / icpk) / max (sink, constants.QCMIN)
+        factor = min(sink, basic.dim(constants.TICE0, temperature) / icpk) / max(
+            sink, constants.QCMIN
+        )
         pgacr = factor * pgacr
         pgacw = factor * pgacw
 
@@ -890,11 +976,11 @@ def accrete_graupel_with_cloud_water_and_rain(
             qice,
             qsnow,
             qgraupel,
-            0.,
+            0.0,
             -pgacw,
             -pgacr,
-            0.,
-            0.,
+            0.0,
+            0.0,
             sink,
             te,
         )
@@ -1114,17 +1200,8 @@ def ice_cloud(
             vterminal_s,
         )
 
-        (
-            qice,
-            qsnow,
-            di,
-            temperature
-        ) = autoconvert_ice_to_snow(
-            qice,
-            qsnow,
-            temperature,
-            density,
-            di
+        (qice, qsnow, di, temperature) = autoconvert_ice_to_snow(
+            qice, qsnow, temperature, density, di
         )
 
         qice, qgraupel = accrete_graupel_with_ice(
@@ -1134,7 +1211,7 @@ def ice_cloud(
             density,
             density_factor,
             vterminal_i,
-            vterminal_g
+            vterminal_g,
         )
 
         (
@@ -1166,7 +1243,7 @@ def ice_cloud(
             lcpk,
             icpk,
             tcpk,
-            tcp3
+            tcp3,
         )
 
         qsnow, qgraupel = accrete_graupel_with_snow(
@@ -1179,10 +1256,7 @@ def ice_cloud(
         )
 
         qsnow, qgraupel = autoconvert_snow_to_graupel(
-            qsnow,
-            qgraupel,
-            temperature,
-            density
+            qsnow, qgraupel, temperature, density
         )
 
         (
@@ -1205,7 +1279,7 @@ def ice_cloud(
             qice,
             qsnow,
             qgraupel,
-            temperature,   
+            temperature,
             density,
             density_factor,
             vterminal_r,
@@ -1236,7 +1310,7 @@ class IceCloud:
         else:
             mu_g = config.mug
             blin_g = config.bling
-        
+
         self._ice_cloud = stencil_factory.from_origin_domain(
             func=ice_cloud,
             externals={
@@ -1327,7 +1401,7 @@ class IceCloud:
                 "bling": blin_g,
                 "fi2s_fac": config.fi2s_fac,
                 "fi2g_fac": config.fi2g_fac,
-                "fs2g_fac": config.fs2g_fac
+                "fs2g_fac": config.fs2g_fac,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
