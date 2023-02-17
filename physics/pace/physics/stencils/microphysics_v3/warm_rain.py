@@ -1,6 +1,5 @@
 import math
 
-from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
     FORWARD,
@@ -9,11 +8,9 @@ from gt4py.cartesian.gtscript import (
     exp,
     interval,
     log,
-    sqrt,
 )
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
-import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
@@ -21,23 +18,6 @@ from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 
 from ..._config import MicroPhysicsConfig
-
-
-@gtscript.function
-def psub(t2, dq, qden, qsat, density, density_factor, cpk, cvm):
-    """
-    Sublimation or evaporation function, Lin et al. (1983)
-    """
-    from __externals__ import blin, c1, c2, c3, c4, c5, mu
-
-    return (
-        c1
-        * t2
-        * dq
-        * exp((1 + mu) / (mu + 3) * log(6 * qden))
-        * physfun.vent_coeff(qden, density_factor, c2, c3, blin, mu)
-        / (c4 * t2 + c5 * (cpk * cvm) ** 2 * qsat * density)
-    )
 
 
 def evaporate_rain(
@@ -59,11 +39,18 @@ def evaporate_rain(
     Fortran name is prevp
     """
     from __externals__ import (
+        blinr,
+        c1,
         c1_ice,
         c1_liq,
         c1_vap,
+        c2,
+        c3,
+        c4,
+        c5,
         fac_revap,
         lv00,
+        mur,
         rhc_revap,
         t_wfr,
         timestep,
@@ -119,7 +106,23 @@ def evaporate_rain(
                 dq = 0.25 * (qsat - q_minus) ** 2 / dqh
             qden = qrain * density
             t2 = tin * tin
-            sink = psub(t2, dq, qden, qsat, density, density_factor, lcpk, cvm)
+            sink = physfun.sublimation_function(
+                t2,
+                dq,
+                qden,
+                qsat,
+                density,
+                density_factor,
+                lcpk,
+                cvm,
+                c1,
+                c2,
+                c3,
+                c4,
+                c5,
+                blinr,
+                mur,
+            )
             sink = min(qrain, timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
             if (use_rhc_revap is True) and (rh_tem >= rhc_revap):
                 sink = 0
@@ -342,8 +345,8 @@ class WarmRain:
             func=evaporate_rain,
             externals={
                 "timestep": timestep,
-                "mu": config.mur,
-                "blin": config.mur,
+                "mur": config.mur,
+                "blinr": config.mur,
                 "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
                 "c1_ice": config.c1_ice,

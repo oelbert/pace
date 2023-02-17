@@ -131,11 +131,14 @@ class MicroPhysicsConfig:
     ql0_max: float
     qs_mlt: float
     t_sub: float
+    t_min: float
     qi_gen: float
     qi_lim: float
     qi0_max: float
     rad_snow: bool
+    rad_graupel: bool
     rad_rain: bool
+    do_cld_adj: bool
     dw_ocean: float
     dw_land: float
     tau_l2v: float
@@ -165,12 +168,17 @@ class MicroPhysicsConfig:
     prog_ccn: bool
     qi0_crt: float
     qs0_crt: float
+    rh_thres: float
     rhc_cevap: float
     rhc_revap: float
+    f_dq_p: float
+    f_dq_m: float
     fi2s_fac: float
     fi2g_fac: float
     fs2g_fac: float
     is_fac: float
+    ss_fac: float
+    gs_fac: float
     rh_fac: float
     sed_fac: float
     rh_inc: float
@@ -222,6 +230,7 @@ class MicroPhysicsConfig:
     mus: float
     mug: float
     muh: float
+    cfflag: float
     irain_f: int
     inflag: int
     igflag: int
@@ -1126,6 +1135,9 @@ class PhysicsConfig:
         NamelistDefaults.ql0_max
     )  # max cloud water value (auto converted to rain)
     qs_mlt: float = NamelistDefaults.qs_mlt  # max cloud water due to snow melt
+    t_min: float = (
+        NamelistDefaults.t_min
+    )  # minimum temperature to freeze - dry all water vapor (K)
     t_sub: float = NamelistDefaults.t_sub  # min temp for sublimation of cloud ice
     qi_gen: float = (
         NamelistDefaults.qi_gen
@@ -1137,9 +1149,13 @@ class PhysicsConfig:
     rad_snow: bool = (
         NamelistDefaults.rad_snow
     )  # consider snow in cloud fraction calculation
+    rad_graupel: bool = (
+        NamelistDefaults.rad_graupel
+    )  # consider graupel in cloud fraction calculation
     rad_rain: bool = (
         NamelistDefaults.rad_rain
     )  # consider rain in cloud fraction calculation
+    do_cld_adj: bool = NamelistDefaults.do_cld_adj  # do cloud fraction adjustment
     dw_ocean: float = NamelistDefaults.dw_ocean  # base value for ocean
     dw_land: float = (
         NamelistDefaults.dw_land
@@ -1178,12 +1194,17 @@ class PhysicsConfig:
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
+    f_dq_p: float = NamelistDefaults.f_dq_p
+    f_dq_m: float = NamelistDefaults.f_dq_m
     fi2s_fac: float = NamelistDefaults.fi2s_fac
     fi2g_fac: float = NamelistDefaults.fi2g_fac
     fs2g_fac: float = NamelistDefaults.fs2g_fac
     is_fac: float = NamelistDefaults.is_fac
+    ss_fac: float = NamelistDefaults.ss_fac
+    gs_fac: float = NamelistDefaults.gs_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac
     rh_inc: float = NamelistDefaults.rh_inc
@@ -1235,6 +1256,7 @@ class PhysicsConfig:
     mus: float = NamelistDefaults.mus
     mug: float = NamelistDefaults.mug
     muh: float = NamelistDefaults.muh
+    cfflag: int = NamelistDefaults.cfflag
     irain_f: int = NamelistDefaults.irain_f
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag
@@ -1307,12 +1329,15 @@ class PhysicsConfig:
             ql_mlt=namelist.ql_mlt,
             ql0_max=namelist.ql0_max,
             qs_mlt=namelist.qs_mlt,
+            t_min=namelist.t_min,
             t_sub=namelist.t_sub,
             qi_gen=namelist.qi_gen,
             qi_lim=namelist.qi_lim,
             qi0_max=namelist.qi0_max,
             rad_snow=namelist.rad_snow,
+            rad_graupel=namelist.rad_graupel,
             rad_rain=namelist.rad_rain,
+            do_cld_adj=namelist.do_cld_adj,
             dw_ocean=namelist.dw_ocean,
             dw_land=namelist.dw_land,
             tau_l2v=namelist.tau_l2v,
@@ -1341,12 +1366,17 @@ class PhysicsConfig:
             prog_ccn=namelist.prog_ccn,
             qi0_crt=namelist.qi0_crt,
             qs0_crt=namelist.qs0_crt,
+            rh_thres=namelist.rh_thres,
             rhc_cevap=namelist.rhc_cevap,
             rhc_revap=namelist.rhc_revap,
+            f_dq_p=namelist.f_dq_p,
+            f_dq_m=namelist.f_dq_m,
             fi2s_fac=namelist.fi2s_fac,
             fi2g_fac=namelist.fi2g_fac,
             fs2g_fac=namelist.fs2g_fac,
             is_fac=namelist.is_fac,
+            ss_fac=namelist.ss_fac,
+            gs_fac=namelist.gs_fac,
             rh_fac=namelist.rh_fac,
             sed_fac=namelist.sed_fac,
             rh_inc=namelist.rh_inc,
@@ -1396,6 +1426,7 @@ class PhysicsConfig:
             mus=namelist.mus,
             mug=namelist.mug,
             muh=namelist.muh,
+            cfflag=namelist.cfflag,
             irain_f=namelist.irain_f,
             inflag=namelist.inflag,
             igflag=namelist.igflag,
@@ -1455,12 +1486,15 @@ class PhysicsConfig:
             ql_mlt=self.ql_mlt,
             ql0_max=self.ql0_max,
             qs_mlt=self.qs_mlt,
+            t_min=self.t_min,
             t_sub=self.t_sub,
             qi_gen=self.qi_gen,
             qi_lim=self.qi_lim,
             qi0_max=self.qi0_max,
             rad_snow=self.rad_snow,
+            rad_graupel=self.rad_graupel,
             rad_rain=self.rad_rain,
+            do_cld_adj=self.do_cld_adj,
             dw_ocean=self.dw_ocean,
             dw_land=self.dw_land,
             tau_l2v=self.tau_l2v,
@@ -1490,12 +1524,17 @@ class PhysicsConfig:
             prog_ccn=self.prog_ccn,
             qi0_crt=self.qi0_crt,
             qs0_crt=self.qs0_crt,
+            rh_thres=self.rh_thres,
             rhc_cevap=self.rhc_cevap,
             rhc_revap=self.rhc_revap,
+            f_dq_p=self.f_dq_p,
+            f_dq_m=self.f_dq_m,
             fi2s_fac=self.fi2s_fac,
             fi2g_fac=self.fi2g_fac,
             fs2g_fac=self.fs2g_fac,
             is_fac=self.is_fac,
+            ss_fac=self.ss_fac,
+            gs_fac=self.gs_fac,
             rh_fac=self.rh_fac,
             sed_fac=self.sed_fac,
             rh_inc=self.rh_inc,
@@ -1545,6 +1584,7 @@ class PhysicsConfig:
             mus=self.mus,
             mug=self.mug,
             muh=self.muh,
+            cfflag=self.cfflag,
             irain_f=self.irain_f,
             inflag=self.inflag,
             igflag=self.igflag,

@@ -34,6 +34,7 @@ class NamelistDefaults:
     ql_mlt = 2.0e-3  # max value of cloud water allowed from melted cloud ice
     qs_mlt = 1.0e-6  # max cloud water due to snow melt
     ql0_max = 2.0e-3  # max cloud water value (auto converted to rain)
+    t_min = 178.0  # minimum temperature to freeze - dry all water vapor (K)
     t_sub = 184.0  # min temp for sublimation of cloud ice
     qi_gen = 1.82e-6  # max cloud ice generation during remapping step
     qi_lim = 1.0  # cloud ice limiter to prevent large ice build up
@@ -41,14 +42,19 @@ class NamelistDefaults:
     rad_snow = True  # consider snow in cloud fraciton calculation
     rad_rain = True  # consider rain in cloud fraction calculation
     rad_graupel = True  # consider graupel in cloud fraction calculation
+    do_cld_adj = False  # do cloud fraction adjustment
     tintqs = False  # use temperature in the saturation mixing in PDF
     dw_ocean = 0.10  # base value for ocean
     dw_land = 0.20  # base value for subgrid deviation / variability over land
     # cloud scheme 0 - ?
     # 1: old fvgfs gfdl) mp implementation
     # 2: binary cloud scheme (0 / 1)
-    icloud_f = 0
-    cld_min = 0.05  # !< minimum cloud fraction
+    icloud_f = 0  # GFDL cloud scheme
+    # 0: subgrid variability based scheme
+    # 1: same as 0, but for old fvgfs implementation
+    # 2: binary cloud scheme
+    # 3: extension of 0
+    cld_min = 0.05  # minimum cloud fraction
     tau_l2v = 300.0  # cloud water to water vapor (evaporation)
     tau_v2l = 150.0  # water vapor to cloud water (condensation)
     tau_revp = 0.0  # rain evaporation time scale (s)
@@ -90,14 +96,19 @@ class NamelistDefaults:
     const_vr = False  # Fall velocity tuning constant of rain water
     const_vs = False  # Fall velocity tuning constant of snow
     is_fac = 0.2  # Cloud ice sublimation temperature factor
+    ss_fac = 0.2  # Snow sublimation temperature factor
+    gs_fac = 0.2  # Graupel sublimation temperature factor
     rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
     sed_fac = 1.0  # coefficient for sedimentation fall,
     # Scale from 1.0 (implicit) to 0.0 (lagrangian)
+    rh_thres = 0.75  # minimum relative humidity for cloud fraction
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     rhc_revap = 0.85  # maximum relative humidity for rain evaporation
-    fi2s_fac = 1.0 # maximum sink of cloud ice to form snow: 0-1
-    fi2g_fac = 1.0 # maximum sink of cloud ice to form graupel: 0-1
-    fs2g_fac = 1.0 # maximum sink of snow to form graupel: 0-1
+    f_dq_p = 1.0  # cloud fraction adjustment for supersaturation
+    f_dq_m = 1.0  # cloud fraction adjustment for undersaturation
+    fi2s_fac = 1.0  # maximum sink of cloud ice to form snow: 0-1
+    fi2g_fac = 1.0  # maximum sink of cloud ice to form graupel: 0-1
+    fs2g_fac = 1.0  # maximum sink of snow to form graupel: 0-1
     vw_fac = 1.0
     vi_fac = 1.0  # if const_vi: 1/3
     vs_fac = 1.0  # if const_vs: 1.
@@ -181,6 +192,11 @@ class NamelistDefaults:
     mug = 1.0  # shape parameter of graupel in Gamma distribution (Houze et al. 1979)
     muh = 1.0
     # shape parameter of hail in Gamma distribution (Federer and Waldvogel 1975)
+    cfflag = 1  # cloud fraction scheme
+    # 1: GFDL cloud scheme
+    # 2: Xu and Randall (1996)
+    # 3: Park et al. (2016)
+    # 4: Gultepe and Isaac (2007)
     irain_f = 0  # cloud water to rain auto conversion scheme
     # 0: subgrid variability based scheme
     # 1: no subgrid varaibility
@@ -394,12 +410,17 @@ class Namelist:
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
+    f_dq_p: float = NamelistDefaults.f_dq_p
+    f_dq_m: float = NamelistDefaults.f_dq_m
     fi2s_fac: float = NamelistDefaults.fi2s_fac
     fi2g_fac: float = NamelistDefaults.fi2g_fac
     fs2g_fac: float = NamelistDefaults.fs2g_fac
     is_fac: float = NamelistDefaults.is_fac
+    ss_fac: float = NamelistDefaults.ss_fac
+    gs_fac: float = NamelistDefaults.gs_fac
     rh_fac: float = NamelistDefaults.rh_fac
     sed_fac: float = NamelistDefaults.sed_fac
     rh_inc: float = NamelistDefaults.rh_inc
@@ -552,6 +573,9 @@ class Namelist:
     ql0_max: float = (
         NamelistDefaults.ql0_max
     )  # max cloud water value (auto converted to rain)
+    t_min: float = (
+        NamelistDefaults.t_min
+    )  # minimum temperature to freeze - dry all water vapor (K)
     t_sub: float = NamelistDefaults.t_sub  # min temp for sublimation of cloud ice
     qi_gen: float = (
         NamelistDefaults.qi_gen
@@ -569,6 +593,7 @@ class Namelist:
     rad_graupel: bool = (
         NamelistDefaults.rad_graupel
     )  # consider graupel in cloud fraction calculation
+    do_cld_adj: bool = NamelistDefaults.do_cld_adj  # do cloud fraction adjustment
     tintqs: bool = (
         NamelistDefaults.tintqs
     )  # use temperature in the saturation mixing in PDF
@@ -606,6 +631,7 @@ class Namelist:
     mus: float = NamelistDefaults.mus
     muh: float = NamelistDefaults.muh
     mug: float = NamelistDefaults.mug
+    cfflag: int = NamelistDefaults.cfflag
     irain_f: int = NamelistDefaults.irain_f
     inflag: int = NamelistDefaults.inflag
     igflag: int = NamelistDefaults.igflag

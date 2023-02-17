@@ -299,6 +299,25 @@ def melting_function(
 
 
 @gtscript.function
+def sublimation_function(
+    t2, dq, qden, qsat, density, density_factor, cpk, cvm, c1, c2, c3, c4, c5, blin, mu
+):
+    """
+    Sublimation or evaporation function, Lin et al. (1983)
+    Fortran name is psub
+    """
+
+    return (
+        c1
+        * t2
+        * dq
+        * exp((1 + mu) / (mu + 3) * log(6 * qden))
+        * vent_coeff(qden, density_factor, c2, c3, blin, mu)
+        / (c4 * t2 + c5 * (cpk * cvm) ** 2 * qsat * density)
+    )
+
+
+@gtscript.function
 def vent_coeff(qden, density_factor, c1, c2, blin, mu):
     """
     Ventilation coefficient, Lin et al. (1983)

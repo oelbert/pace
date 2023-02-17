@@ -5,9 +5,12 @@ import pace.util
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
-from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
 from pace.physics.stencils.microphysics_v3.ice_cloud import IceCloud
+from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
+from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (
+    VerticalSubgridProcesses,
+)
+from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
@@ -66,13 +69,12 @@ def accumulate_state_changes(
     sublimation: FloatFieldIJ,
 ):
     from __externals__ import convt
-    
-    with computation(FORWARD), interval(-1,None):
+
+    with computation(FORWARD), interval(-1, None):
         condensation += cond * convt
         deposition += dep * convt
         evaporation += reevap * convt
         sublimation += sub * convt
-
 
 
 class FullMicrophysics:
@@ -82,12 +84,14 @@ class FullMicrophysics:
         quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
         timestep: float,
+        ntimes: int,
         convert_mm_day: float,
     ):
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
 
         self._do_warm_rain = config.do_warm_rain
+        self._ntimes = ntimes
 
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
@@ -131,14 +135,14 @@ class FullMicrophysics:
             domain=self._idx.domain_compute(),
         )
 
-        self._warm_rain = WarmRain(
-            stencil_factory, config, timestep
-        )
+        self._warm_rain = WarmRain(stencil_factory, config, timestep)
 
         if self._do_warm_rain is True:
-            self._ice_cloud = IceCloud(
-                stencil_factory, quantity_factory, config, timestep
-            )
+            self._ice_cloud = IceCloud(stencil_factory, config, timestep)
+
+        self._subgrid_z_proc = VerticalSubgridProcesses(
+            stencil_factory, config, timestep
+        )
 
         self._accumulate_state_changes = stencil_factory.from_origin_domain(
             func=accumulate_state_changes,
@@ -148,8 +152,6 @@ class FullMicrophysics:
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
-
-        pass
 
     def __call__(
         self,
@@ -175,6 +177,7 @@ class FullMicrophysics:
         preflux_snow: FloatField,
         preflux_graupel: FloatField,
         h_var: FloatFieldIJ,
+        rh_adj: FloatFieldIJ,
         column_energy_change: FloatFieldIJ,
         surface_water: FloatFieldIJ,
         surface_rain: FloatFieldIJ,
@@ -188,85 +191,105 @@ class FullMicrophysics:
     ):
         """
         Full Microphysics Loop
+        executes ntimes:
         """
-        self._sedimentation(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            ua,
-            va,
-            wa,
-            temperature,
-            delp,
-            delz,
-            density,
-            density_factor,
-            self._fluxw,
-            self._fluxr,
-            self._fluxi,
-            self._fluxs,
-            self._fluxg,
-            self._vtw,
-            self._vtr,
-            self._vti,
-            self._vts,
-            self._vtg,
-            column_energy_change,
-            self._w1,
-            self._r1,
-            self._i1,
-            self._s1,
-            self._g1,
-        )
+        for i in range(self._ntimes):
+            self._sedimentation(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                ua,
+                va,
+                wa,
+                temperature,
+                delp,
+                delz,
+                density,
+                density_factor,
+                self._fluxw,
+                self._fluxr,
+                self._fluxi,
+                self._fluxs,
+                self._fluxg,
+                self._vtw,
+                self._vtr,
+                self._vti,
+                self._vts,
+                self._vtg,
+                column_energy_change,
+                self._w1,
+                self._r1,
+                self._i1,
+                self._s1,
+                self._g1,
+            )
 
-        self._warm_rain(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            delp,
-            density,
-            density_factor,
-            self._vtw,
-            self._vtr,
-            cloud_condensation_nuclei,
-            self._reevap,
-            h_var,
-        )
+            self._warm_rain(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                delp,
+                density,
+                density_factor,
+                self._vtw,
+                self._vtr,
+                cloud_condensation_nuclei,
+                self._reevap,
+                h_var,
+            )
 
-        self._add_fluxes_and_surface_tracers(
-            preflux_water,
-            preflux_rain,
-            preflux_ice,
-            preflux_snow,
-            preflux_graupel,
-            self._fluxw,
-            self._fluxr,
-            self._fluxi,
-            self._fluxs,
-            self._fluxg,
-            surface_water,
-            surface_rain,
-            surface_ice,
-            surface_snow,
-            surface_graupel,
-            evaporation,
-            self._w1,
-            self._r1,
-            self._i1,
-            self._s1,
-            self._g1,
-            self._reevap,
-        )
+            self._add_fluxes_and_surface_tracers(
+                preflux_water,
+                preflux_rain,
+                preflux_ice,
+                preflux_snow,
+                preflux_graupel,
+                self._fluxw,
+                self._fluxr,
+                self._fluxi,
+                self._fluxs,
+                self._fluxg,
+                surface_water,
+                surface_rain,
+                surface_ice,
+                surface_snow,
+                surface_graupel,
+                evaporation,
+                self._w1,
+                self._r1,
+                self._i1,
+                self._s1,
+                self._g1,
+                self._reevap,
+            )
 
-        if self._do_warm_rain is True:
-            self._ice_cloud(
+            if self._do_warm_rain is True:
+                self._ice_cloud(
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    temperature,
+                    density,
+                    density_factor,
+                    self._vtw,
+                    self._vtr,
+                    self._vti,
+                    self._vts,
+                    self._vtg,
+                    h_var,
+                )
+
+            self._subgrid_z_proc(
                 qvapor,
                 qliquid,
                 qrain,
@@ -276,12 +299,23 @@ class FullMicrophysics:
                 temperature,
                 density,
                 density_factor,
-                self._vtw,
-                self._vtr,
-                self._vti,
-                self._vts,
-                self._vtg,
-                h_var,
+                delp,
+                cloud_condensation_nuclei,
+                cloud_ice_nuclei,
+                self._cond,
+                self._dep,
+                self._reevap,
+                self._sub,
+                rh_adj,
             )
 
-        pass
+            self._accumulate_state_changes(
+                self._cond,
+                self._dep,
+                self._reevap,
+                self._sub,
+                condensation,
+                deposition,
+                evaporation,
+                sublimation,
+            )
