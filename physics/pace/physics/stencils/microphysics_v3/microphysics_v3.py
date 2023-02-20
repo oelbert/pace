@@ -697,12 +697,123 @@ def total_energy_check(
 
 
 class MicrophysicsState:
+    """
+    A state that contains everything that goes into or comes out of microphysics
+    """
+
     def __init__(
         self,
         qvapor: pace.util.Quantity,
+        qliquid: pace.util.Quantity,
+        qrain: pace.util.Quantity,
+        qice: pace.util.Quantity,
+        qsnow: pace.util.Quantity,
+        qgraupel: pace.util.Quantity,
+        qcld: pace.util.Quantity,
+        ua: pace.util.Quantity,
+        va: pace.util.Quantity,
+        wa: pace.util.Quantity,
+        delp: pace.util.Quantity,
+        delz: pace.util.Quantity,
+        pt: pace.util.Quantity,
+        preflux_w: pace.util.Quantity,
+        preflux_r: pace.util.Quantity,
+        preflux_i: pace.util.Quantity,
+        preflux_s: pace.util.Quantity,
+        preflux_g: pace.util.Quantity,
+        column_water: pace.util.Quantity,
+        column_rain: pace.util.Quantity,
+        column_ice: pace.util.Quantity,
+        column_snow: pace.util.Quantity,
+        column_graupel: pace.util.Quantity,
+        condensation: pace.util.Quantity,
+        deposition: pace.util.Quantity,
+        evaporation: pace.util.Quantity,
+        sublimation: pace.util.Quantity,
+        total_energy: pace.util.Quantity,
+        column_energy_change: pace.util.Quantity,
+        adj_vmr: pace.util.Quantity,
+        particle_concentration_w: pace.util.Quantity,
+        effective_diameter_w: pace.util.Quantity,
+        optical_extinction_w: pace.util.Quantity,
+        radar_reflectivity_w: pace.util.Quantity,
+        terminal_velocity_w: pace.util.Quantity,
+        particle_concentration_r: pace.util.Quantity,
+        effective_diameter_r: pace.util.Quantity,
+        optical_extinction_r: pace.util.Quantity,
+        radar_reflectivity_r: pace.util.Quantity,
+        terminal_velocity_r: pace.util.Quantity,
+        particle_concentration_i: pace.util.Quantity,
+        effective_diameter_i: pace.util.Quantity,
+        optical_extinction_i: pace.util.Quantity,
+        radar_reflectivity_i: pace.util.Quantity,
+        terminal_velocity_i: pace.util.Quantity,
+        particle_concentration_s: pace.util.Quantity,
+        effective_diameter_s: pace.util.Quantity,
+        optical_extinction_s: pace.util.Quantity,
+        radar_reflectivity_s: pace.util.Quantity,
+        terminal_velocity_s: pace.util.Quantity,
+        particle_concentration_g: pace.util.Quantity,
+        effective_diameter_g: pace.util.Quantity,
+        optical_extinction_g: pace.util.Quantity,
+        radar_reflectivity_g: pace.util.Quantity,
+        terminal_velocity_g: pace.util.Quantity,
     ):
         self.qvapor = qvapor
-        pass
+        self.qliquid = qliquid
+        self.qrain = qrain
+        self.qice = qice
+        self.qsnow = qsnow
+        self.qgraupel = qgraupel
+        self.qcld = qcld
+        self.ua = ua
+        self.va = va
+        self.wa = wa
+        self.delp = delp
+        self.delz = delz
+        self.pt = pt
+        self.preflux_w = preflux_w
+        self.preflux_r = preflux_r
+        self.preflux_i = preflux_i
+        self.preflux_s = preflux_s
+        self.preflux_g = preflux_g
+        self.column_water = column_water
+        self.column_rain = column_rain
+        self.column_ice = column_ice
+        self.column_snow = column_snow
+        self.column_graupel = column_graupel
+        self.condensation = condensation
+        self.deposition = deposition
+        self.evaporation = evaporation
+        self.sublimation = sublimation
+        self.total_energy = total_energy
+        self.column_energy_change = column_energy_change
+        self.adj_vmr = adj_vmr
+        self.particle_concentration_w = particle_concentration_w
+        self.effective_diameter_w = effective_diameter_w
+        self.optical_extinction_w = optical_extinction_w
+        self.radar_reflectivity_w = radar_reflectivity_w
+        self.terminal_velocity_w = terminal_velocity_w
+        self.particle_concentration_r = particle_concentration_r
+        self.effective_diameter_r = effective_diameter_r
+        self.optical_extinction_r = optical_extinction_r
+        self.radar_reflectivity_r = radar_reflectivity_r
+        self.terminal_velocity_r = terminal_velocity_r
+        self.particle_concentration_i = particle_concentration_i
+        self.effective_diameter_i = effective_diameter_i
+        self.optical_extinction_i = optical_extinction_i
+        self.radar_reflectivity_i = radar_reflectivity_i
+        self.terminal_velocity_i = terminal_velocity_i
+        self.particle_concentration_s = particle_concentration_s
+        self.effective_diameter_s = effective_diameter_s
+        self.optical_extinction_s = optical_extinction_s
+        self.radar_reflectivity_s = radar_reflectivity_s
+        self.terminal_velocity_s = terminal_velocity_s
+        self.particle_concentration_g = particle_concentration_g
+        self.effective_diameter_g = effective_diameter_g
+        self.optical_extinction_g = optical_extinction_g
+        self.radar_reflectivity_g = radar_reflectivity_g
+        self.terminal_velocity_g = terminal_velocity_g
 
 
 class Microphysics:
@@ -766,15 +877,22 @@ class Microphysics:
         self._adj_vmr = quantity_factory.ones(
             dims=[X_DIM, Y_DIM, Z_DIM], units="unknown"
         )
-        self._rain = make_quantity()
-        self._u = make_quantity()
-        self._v = make_quantity()
+        self._qvapor0 = make_quantity()
+        self._qliquid0 = make_quantity()
+        self._qrain0 = make_quantity()
+        self._qice0 = make_quantity()
+        self._qsnow0 = make_quantity()
+        self._qgraupel0 = make_quantity()
+        self._dp0 = make_quantity()
+        self._temperature0 = make_quantity()
+        self._u0 = make_quantity()
+        self._v0 = make_quantity()
         if self.hydrostatic:
             assert (
                 not config.do_sedi_w
             ), "Cannot do_sedi_w in a hydrostatic configuration"
         else:
-            self._w = make_quantity()
+            self._w0 = make_quantity()
 
         if self.consv_checker:
             self.total_energy_dry_end = make_quantity()
@@ -1070,7 +1188,9 @@ class Microphysics:
     def __call__(
         self,
         state: MicrophysicsState,
+        timestep: float,
         last_step: bool,
         timer: Timer = pace.util.NullTimer(),
     ):
+        self._update_timestep_if_needed(timestep)
         pass
