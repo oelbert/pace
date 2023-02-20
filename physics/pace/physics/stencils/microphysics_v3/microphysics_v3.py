@@ -27,6 +27,19 @@ from pace.util.grid import GridData
 from ..._config import MicroPhysicsConfig
 
 
+def reset_initial_values(
+    adj_vmr: FloatField,
+    column_energy_change: FloatFieldIJ,
+    cond: FloatFieldIJ,
+):
+    with computation(PARALLEL):
+        with interval(...):
+            adj_vmr = 1.0
+        with interval(-1, None):
+            column_energy_change = 0.0
+            cond = 0.0
+
+
 def convert_virtual_to_true_temperature(
     qvapor: FloatField,
     qliquid: FloatField,
@@ -933,6 +946,12 @@ class Microphysics:
 
         self._copy_stencil = stencil_factory.from_origin_domain(
             basic.copy_defn,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        self._reset_initial_values = stencil_factory.from_origin_domain(
+            func=reset_initial_values,
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
