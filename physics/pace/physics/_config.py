@@ -141,6 +141,8 @@ class MicroPhysicsConfig:
     do_cld_adj: bool
     dw_ocean: float
     dw_land: float
+    icloud_f: int
+    cld_min: float
     tau_l2v: float
     tau_v2l: float
     tau_revp: float
@@ -164,10 +166,14 @@ class MicroPhysicsConfig:
     do_psd_ice_num: bool
     do_new_acc_water: bool
     do_new_acc_ice: bool
+    cp_heating: bool
     mp_time: float
     prog_ccn: bool
     qi0_crt: float
     qs0_crt: float
+    xr_a: float
+    xr_b: float
+    xr_c: float
     rh_thres: float
     rhc_cevap: float
     rhc_revap: float
@@ -260,6 +266,50 @@ class MicroPhysicsConfig:
     pcbw: float = dataclasses.field(init=False)
     pcai: float = dataclasses.field(init=False)
     pcbi: float = dataclasses.field(init=False)
+    pcar: float = dataclasses.field(init=False)
+    pcbr: float = dataclasses.field(init=False)
+    pcas: float = dataclasses.field(init=False)
+    pcbs: float = dataclasses.field(init=False)
+    pcag: float = dataclasses.field(init=False)
+    pcbg: float = dataclasses.field(init=False)
+    pcah: float = dataclasses.field(init=False)
+    pcbh: float = dataclasses.field(init=False)
+    edaw: float = dataclasses.field(init=False)
+    edbw: float = dataclasses.field(init=False)
+    edai: float = dataclasses.field(init=False)
+    edbi: float = dataclasses.field(init=False)
+    edar: float = dataclasses.field(init=False)
+    edbr: float = dataclasses.field(init=False)
+    edas: float = dataclasses.field(init=False)
+    edbs: float = dataclasses.field(init=False)
+    edag: float = dataclasses.field(init=False)
+    edbg: float = dataclasses.field(init=False)
+    edah: float = dataclasses.field(init=False)
+    edbh: float = dataclasses.field(init=False)
+    oeaw: float = dataclasses.field(init=False)
+    oebw: float = dataclasses.field(init=False)
+    oeai: float = dataclasses.field(init=False)
+    oebi: float = dataclasses.field(init=False)
+    oear: float = dataclasses.field(init=False)
+    oebr: float = dataclasses.field(init=False)
+    oeas: float = dataclasses.field(init=False)
+    oebs: float = dataclasses.field(init=False)
+    oeag: float = dataclasses.field(init=False)
+    oebg: float = dataclasses.field(init=False)
+    oeah: float = dataclasses.field(init=False)
+    oebh: float = dataclasses.field(init=False)
+    rraw: float = dataclasses.field(init=False)
+    rrbw: float = dataclasses.field(init=False)
+    rrai: float = dataclasses.field(init=False)
+    rrbi: float = dataclasses.field(init=False)
+    rrar: float = dataclasses.field(init=False)
+    rrbr: float = dataclasses.field(init=False)
+    rras: float = dataclasses.field(init=False)
+    rrbs: float = dataclasses.field(init=False)
+    rrag: float = dataclasses.field(init=False)
+    rrbg: float = dataclasses.field(init=False)
+    rrah: float = dataclasses.field(init=False)
+    rrbh: float = dataclasses.field(init=False)
     tvai: float = dataclasses.field(init=False)
     tvbi: float = dataclasses.field(init=False)
     tvar: float = dataclasses.field(init=False)
@@ -468,6 +518,7 @@ class MicroPhysicsConfig:
         blins = self.blins
         bling = self.bling
         blinh = self.blinh
+
         # Particle Concentration:
         self.pcaw = (
             math.exp(3 / (muw + 3) * math.log(n0w_sig))
@@ -490,11 +541,256 @@ class MicroPhysicsConfig:
             * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
         )
 
+        self.pcar = (
+            math.exp(3 / (mur + 3) * math.log(n0r_sig))
+            * math.gamma(mur)
+            * math.exp(3 * n0r_exp / (mur + 3) * math.log(10.0))
+        )
+        self.pcbr = math.exp(
+            mur
+            / (mur + 3)
+            * math.log(constants.PI * constants.RHO_R * math.gamma(mur + 3))
+        )
+
+        self.pcas = (
+            math.exp(3 / (mus + 3) * math.log(n0s_sig))
+            * math.gamma(mus)
+            * math.exp(3 * n0s_exp / (mus + 3) * math.log(10.0))
+        )
+        self.pcbs = math.exp(
+            mus
+            / (mus + 3)
+            * math.log(constants.PI * constants.RHO_S * math.gamma(mus + 3))
+        )
+
+        self.pcag = (
+            math.exp(3 / (mug + 3) * math.log(n0g_sig))
+            * math.gamma(mug)
+            * math.exp(3 * n0g_exp / (mug + 3) * math.log(10.0))
+        )
+        self.pcbg = math.exp(
+            mug
+            / (mug + 3)
+            * math.log(constants.PI * constants.RHO_G * math.gamma(mug + 3))
+        )
+
+        self.pcah = (
+            math.exp(3 / (muh + 3) * math.log(n0h_sig))
+            * math.gamma(muh)
+            * math.exp(3 * n0h_exp / (muh + 3) * math.log(10.0))
+        )
+        self.pcbh = math.exp(
+            muh
+            / (muh + 3)
+            * math.log(constants.PI * constants.RHO_H * math.gamma(muh + 3))
+        )
+
         # Effective Diameter
+        self.edaw = (
+            math.exp(-1.0 / (muw + 3) * math.log(n0w_sig))
+            * (muw + 2)
+            * math.exp(-n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self.edbw = math.exp(
+            1.0
+            / (muw + 3)
+            * math.log(constants.PI * constants.RHO_W * math.gamma(muw + 3))
+        )
+
+        self.edai = (
+            math.exp(-1.0 / (mui + 3) * math.log(n0i_sig))
+            * (mui + 2)
+            * math.exp(-n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self.edbi = math.exp(
+            1.0
+            / (mui + 3)
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
+        )
+
+        self.edar = (
+            math.exp(-1.0 / (mur + 3) * math.log(n0r_sig))
+            * (mur + 2)
+            * math.exp(-n0r_exp / (mur + 3) * math.log(10.0))
+        )
+        self.edbr = math.exp(
+            1.0
+            / (mur + 3)
+            * math.log(constants.PI * constants.RHO_R * math.gamma(mur + 3))
+        )
+
+        self.edas = (
+            math.exp(-1.0 / (mus + 3) * math.log(n0s_sig))
+            * (mus + 2)
+            * math.exp(-n0s_exp / (mus + 3) * math.log(10.0))
+        )
+        self.edbs = math.exp(
+            1.0
+            / (mus + 3)
+            * math.log(constants.PI * constants.RHO_S * math.gamma(mus + 3))
+        )
+
+        self.edag = (
+            math.exp(-1.0 / (mug + 3) * math.log(n0g_sig))
+            * (mug + 2)
+            * math.exp(-n0g_exp / (mug + 3) * math.log(10.0))
+        )
+        self.edbg = math.exp(
+            1.0
+            / (mug + 3)
+            * math.log(constants.PI * constants.RHO_G * math.gamma(mug + 3))
+        )
+
+        self.edah = (
+            math.exp(-1.0 / (muh + 3) * math.log(n0h_sig))
+            * (muh + 2)
+            * math.exp(-n0h_exp / (muh + 3) * math.log(10.0))
+        )
+        self.edbh = math.exp(
+            1.0
+            / (muh + 3)
+            * math.log(constants.PI * constants.RHO_H * math.gamma(muh + 3))
+        )
 
         # Optical Extinction
+        self.oeaw = (
+            math.exp(1.0 / (muw + 3) * math.log(n0w_sig))
+            * constants.PI
+            * math.gamma(muw + 2)
+            * math.exp(n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self.oebw = 2 * math.exp(
+            (muw + 2)
+            / (muw + 3)
+            * math.log(constants.PI * constants.RHO_W * math.gamma(muw + 3))
+        )
+
+        self.oeai = (
+            math.exp(1.0 / (mui + 3) * math.log(n0i_sig))
+            * constants.PI
+            * math.gamma(mui + 2)
+            * math.exp(n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self.oebi = 2 * math.exp(
+            (mui + 2)
+            / (mui + 3)
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
+        )
+
+        self.oear = (
+            math.exp(1.0 / (mur + 3) * math.log(n0r_sig))
+            * constants.PI
+            * math.gamma(mur + 2)
+            * math.exp(n0r_exp / (mur + 3) * math.log(10.0))
+        )
+        self.oebr = 2 * math.exp(
+            (mur + 2)
+            / (mur + 3)
+            * math.log(constants.PI * constants.RHO_R * math.gamma(mur + 3))
+        )
+
+        self.oeas = (
+            math.exp(1.0 / (mus + 3) * math.log(n0s_sig))
+            * constants.PI
+            * math.gamma(mus + 2)
+            * math.exp(n0s_exp / (mus + 3) * math.log(10.0))
+        )
+        self.oebs = 2 * math.exp(
+            (mus + 2)
+            / (mus + 3)
+            * math.log(constants.PI * constants.RHO_S * math.gamma(mus + 3))
+        )
+
+        self.oeag = (
+            math.exp(1.0 / (mug + 3) * math.log(n0g_sig))
+            * constants.PI
+            * math.gamma(mug + 2)
+            * math.exp(n0g_exp / (mug + 3) * math.log(10.0))
+        )
+        self.oebg = 2 * math.exp(
+            (mug + 2)
+            / (mug + 3)
+            * math.log(constants.PI * constants.RHO_G * math.gamma(mug + 3))
+        )
+
+        self.oeah = (
+            math.exp(1.0 / (muh + 3) * math.log(n0h_sig))
+            * constants.PI
+            * math.gamma(muh + 2)
+            * math.exp(n0h_exp / (muh + 3) * math.log(10.0))
+        )
+        self.oebh = 2 * math.exp(
+            (muh + 2)
+            / (muh + 3)
+            * math.log(constants.PI * constants.RHO_H * math.gamma(muh + 3))
+        )
 
         # Radar Reflectivity
+        self.rraw = (
+            math.exp(-3 / (muw + 3) * math.log(n0w_sig))
+            * math.gamma(muw + 6)
+            * math.exp(-3 * n0w_exp / (muw + 3) * math.log(10.0))
+        )
+        self.rrbw = math.exp(
+            (muw + 6)
+            / (muw + 3)
+            * math.log(constants.PI * constants.RHO_W * math.gamma(muw + 3))
+        )
+
+        self.rrai = (
+            math.exp(-3 / (mui + 3) * math.log(n0i_sig))
+            * math.gamma(mui + 6)
+            * math.exp(-3 * n0i_exp / (mui + 3) * math.log(10.0))
+        )
+        self.rrbi = math.exp(
+            (mui + 6)
+            / (mui + 3)
+            * math.log(constants.PI * constants.RHO_I * math.gamma(mui + 3))
+        )
+
+        self.rrar = (
+            math.exp(-3 / (mur + 3) * math.log(n0r_sig))
+            * math.gamma(mur + 6)
+            * math.exp(-3 * n0r_exp / (mur + 3) * math.log(10.0))
+        )
+        self.rrbr = math.exp(
+            (mur + 6)
+            / (mur + 3)
+            * math.log(constants.PI * constants.RHO_R * math.gamma(mur + 3))
+        )
+
+        self.rras = (
+            math.exp(-3 / (mus + 3) * math.log(n0s_sig))
+            * math.gamma(mus + 6)
+            * math.exp(-3 * n0s_exp / (mus + 3) * math.log(10.0))
+        )
+        self.rrbs = math.exp(
+            (mus + 6)
+            / (mus + 3)
+            * math.log(constants.PI * constants.RHO_S * math.gamma(mus + 3))
+        )
+
+        self.rrag = (
+            math.exp(-3 / (mug + 3) * math.log(n0g_sig))
+            * math.gamma(mug + 6)
+            * math.exp(-3 * n0g_exp / (mug + 3) * math.log(10.0))
+        )
+        self.rrbg = math.exp(
+            (mug + 6)
+            / (mug + 3)
+            * math.log(constants.PI * constants.RHO_G * math.gamma(mug + 3))
+        )
+
+        self.rrah = (
+            math.exp(-3 / (muh + 3) * math.log(n0h_sig))
+            * math.gamma(muh + 6)
+            * math.exp(-3 * n0h_exp / (muh + 3) * math.log(10.0))
+        )
+        self.rrbh = math.exp(
+            (muh + 6)
+            / (muh + 3)
+            * math.log(constants.PI * constants.RHO_H * math.gamma(muh + 3))
+        )
 
         # Terminal Velocity
         self.tvaw = (
@@ -758,7 +1054,7 @@ class MicroPhysicsConfig:
             * math.exp((1 - self.blins) * math.log(self.expos))
         )
         self.csaci = self.csacw
-        if self.do_hail is True:
+        if self.do_hail:
             self.cgacw = (
                 constants.PI
                 * self.n0h_sig
@@ -795,14 +1091,14 @@ class MicroPhysicsConfig:
             )
             self.cgaci = self.cgacw
 
-        if self.do_new_acc_water is True:
+        if self.do_new_acc_water:
             self.cracw = (
                 constants.PI ** 2 * self.n0r_sig * self.n0w_sig * constants.RHO_W / 24.0
             )
             self.csacw = (
                 constants.PI ** 2 * self.n0s_sig * self.n0w_sig * constants.RHO_W / 24.0
             )
-            if self.do_hail is True:
+            if self.do_hail:
                 self.cgacw = (
                     constants.PI ** 2
                     * self.n0h_sig
@@ -819,14 +1115,14 @@ class MicroPhysicsConfig:
                     / 24.0
                 )
 
-        if self.do_new_acc_ice is True:
+        if self.do_new_acc_ice:
             self.craci = (
                 constants.PI ** 2 * self.n0r_sig * self.n0i_sig * constants.RHO_I / 24.0
             )
             self.csaci = (
                 constants.PI ** 2 * self.n0s_sig * self.n0i_sig * constants.RHO_I / 24.0
             )
-            if self.do_hail is True:
+            if self.do_hail:
                 self.cgaci = (
                     constants.PI ** 2
                     * self.n0h_sig
@@ -858,7 +1154,7 @@ class MicroPhysicsConfig:
         self.csacr = (
             constants.PI ** 2 * self.n0s_sig * self.n0r_sig * constants.RHO_R / 24.0
         )
-        if self.do_hail is True:
+        if self.do_hail:
             self.cgacs = (
                 constants.PI ** 2 * self.n0h_sig * self.n0s_sig * constants.RHO_S / 24.0
             )
@@ -897,7 +1193,7 @@ class MicroPhysicsConfig:
         act.append(act[1])
         act.append(act[0])
         act.append(act[1])
-        if self.do_hail is True:
+        if self.do_hail:
             act.append(self.normh)
         else:
             act.append(self.normg)
@@ -922,7 +1218,7 @@ class MicroPhysicsConfig:
         ace.append(ace[1])
         ace.append(ace[0])
         ace.append(ace[1])
-        if self.do_hail is True:
+        if self.do_hail:
             ace.append(self.expoh)
         else:
             ace.append(self.expog)
@@ -947,7 +1243,7 @@ class MicroPhysicsConfig:
         acc.append(acc[1])
         acc.append(acc[0])
         acc.append(acc[1])
-        if self.do_hail is True:
+        if self.do_hail:
             acc.append(self.muh)
         else:
             acc.append(self.mug)
@@ -1025,7 +1321,7 @@ class MicroPhysicsConfig:
         self.csmlt_4 = self.cssub_3
 
         # Graupel or hail melting, Lin et al. (1983)
-        if self.do_hail is True:
+        if self.do_hail:
             self.cgmlt_1 = (
                 2.0
                 * constants.PI
@@ -1163,6 +1459,8 @@ class PhysicsConfig:
     # cloud scheme 0 - ?
     # 1: old fvgfs gfdl) mp implementation
     # 2: binary cloud scheme (0 / 1)
+    icloud_f: int = NamelistDefaults.icloud_f
+    cld_min: float = NamelistDefaults.cld_min  # minimum cloud fraction
     tau_l2v: float = (
         NamelistDefaults.tau_l2v
     )  # cloud water to water vapor (evaporation)
@@ -1190,10 +1488,14 @@ class PhysicsConfig:
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
     do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
+    cp_heating: bool = NamelistDefaults.cp_heating
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    xr_a: float = NamelistDefaults.xr_a
+    xr_b: float = NamelistDefaults.xr_b
+    xr_c: float = NamelistDefaults.xr_c
     rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
@@ -1340,6 +1642,8 @@ class PhysicsConfig:
             do_cld_adj=namelist.do_cld_adj,
             dw_ocean=namelist.dw_ocean,
             dw_land=namelist.dw_land,
+            icloud_f=namelist.icloud_f,
+            cld_min=namelist.cld_min,
             tau_l2v=namelist.tau_l2v,
             tau_v2l=namelist.tau_v2l,
             tau_revp=namelist.tau_revp,
@@ -1362,10 +1666,14 @@ class PhysicsConfig:
             do_psd_ice_num=namelist.do_psd_ice_num,
             do_new_acc_water=namelist.do_new_acc_water,
             do_new_acc_ice=namelist.do_new_acc_ice,
+            cp_heating=namelist.cp_heating,
             mp_time=namelist.mp_time,
             prog_ccn=namelist.prog_ccn,
             qi0_crt=namelist.qi0_crt,
             qs0_crt=namelist.qs0_crt,
+            xr_a=namelist.xr_a,
+            xr_b=namelist.xr_b,
+            xr_c=namelist.xr_c,
             rh_thres=namelist.rh_thres,
             rhc_cevap=namelist.rhc_cevap,
             rhc_revap=namelist.rhc_revap,
@@ -1497,6 +1805,8 @@ class PhysicsConfig:
             do_cld_adj=self.do_cld_adj,
             dw_ocean=self.dw_ocean,
             dw_land=self.dw_land,
+            icloud_f=self.icloud_f,
+            cld_min=self.cld_min,
             tau_l2v=self.tau_l2v,
             tau_v2l=self.tau_v2l,
             tau_revp=self.tau_revp,
@@ -1520,10 +1830,14 @@ class PhysicsConfig:
             do_psd_ice_num=self.do_psd_ice_num,
             do_new_acc_water=self.do_new_acc_water,
             do_new_acc_ice=self.do_new_acc_ice,
+            cp_heating=self.cp_heating,
             mp_time=self.mp_time,
             prog_ccn=self.prog_ccn,
             qi0_crt=self.qi0_crt,
             qs0_crt=self.qs0_crt,
+            xr_a=self.xr_a,
+            xr_b=self.xr_b,
+            xr_c=self.xr_c,
             rh_thres=self.rh_thres,
             rhc_cevap=self.rhc_cevap,
             rhc_revap=self.rhc_revap,

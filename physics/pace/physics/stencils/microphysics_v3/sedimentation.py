@@ -74,7 +74,7 @@ def calc_terminal_velocity_rsg(
     from __externals__ import const_v
 
     with computation(PARALLEL), interval(...):
-        if __INLINED(const_v is True):
+        if __INLINED(const_v):
             v_terminal = v_fac
         else:
             if q < constants.QFMIN:
@@ -101,7 +101,7 @@ def calc_terminal_velocity_ice(
 
     with computation(PARALLEL), interval(...):
 
-        if __INLINED(constant_v is True):
+        if __INLINED(constant_v):
             v_terminal = v_fac
         else:
             if qice < constants.QFMIN:

@@ -101,6 +101,9 @@ class NamelistDefaults:
     rh_fac = 10.0  # cloud water condensation / evaporation relative humidity factor
     sed_fac = 1.0  # coefficient for sedimentation fall,
     # Scale from 1.0 (implicit) to 0.0 (lagrangian)
+    xr_a = 0.25  # p value in Xu and Randall (1996)
+    xr_b = 100.0  # alpha_0 value in Xu and Randall (1996)
+    xr_c = 0.49  # gamma value in Xu and Randall (1996)
     rh_thres = 0.75  # minimum relative humidity for cloud fraction
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     rhc_revap = 0.85  # maximum relative humidity for rain evaporation
@@ -132,6 +135,7 @@ class NamelistDefaults:
     do_psd_ice_num = False  # Calculate cloud ice number concentration based on PSD
     do_new_acc_water = False  # Perform the new accretion for cloud water
     do_new_acc_ice = False  # Perform the new accretion for cloud water
+    cp_heating = False  # update temperature based on constant pressure
     mono_prof = False  # Perform terminal fall with mono ppm scheme
     mp_time = 225.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
@@ -405,11 +409,15 @@ class Namelist:
     do_psd_ice_num: bool = NamelistDefaults.do_psd_ice_num
     do_new_acc_water: bool = NamelistDefaults.do_new_acc_water
     do_new_acc_ice: bool = NamelistDefaults.do_new_acc_ice
+    cp_heating: bool = NamelistDefaults.cp_heating
     mono_prof: bool = NamelistDefaults.mono_prof
     mp_time: float = NamelistDefaults.mp_time
     prog_ccn: bool = NamelistDefaults.prog_ccn
     qi0_crt: float = NamelistDefaults.qi0_crt
     qs0_crt: float = NamelistDefaults.qs0_crt
+    xr_a: float = NamelistDefaults.xr_a
+    xr_b: float = NamelistDefaults.xr_b
+    xr_c: float = NamelistDefaults.xr_c
     rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap

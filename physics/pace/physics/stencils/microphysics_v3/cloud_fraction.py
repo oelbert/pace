@@ -1,7 +1,6 @@
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
-    FORWARD,
     PARALLEL,
     computation,
     exp,
@@ -9,7 +8,6 @@ from gt4py.cartesian.gtscript import (
     log,
 )
 
-import pace.fv3core.stencils.basic_operations as basic
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util.constants as constants
 
@@ -30,6 +28,9 @@ def cloud_scheme_1(
     rh,
     h_var,
 ):
+    """
+    GFDL cloud scheme
+    """
     from __externals__ import cld_min, do_cld_adj, f_dq_m, f_dq_p, icloud_f, rh_thres
 
     if (rh > rh_thres) and (qpz > constants.QCMIN):
@@ -79,6 +80,99 @@ def cloud_scheme_1(
     return qa
 
 
+@gtscript.function
+def cloud_scheme_2(
+    qstar,
+    q_cond,
+    qa,
+    rh,
+):
+    """
+    Xu and Randall (1996)
+    """
+    from __externals__ import rh_thres, xr_a, xr_b, xr_c
+
+    if rh > -1.0:
+        qa = 1.0
+    elif (rh > rh_thres) and (q_cond > constants.QCMIN):
+        qa = exp(xr_a * log(rh)) * (
+            1.0
+            - exp(
+                -xr_b
+                * max(0.0, q_cond)
+                / max(1.0e-5, exp(xr_c * log(max(1.0e-10, 1.0 - rh) * qstar)))
+            )
+        )
+        qa = max(0.0, min(1.0, qa))
+    else:
+        qa = 0.0
+
+    return qa
+
+
+@gtscript.function
+def cloud_scheme_3(
+    q_cond,
+    q_liquid,
+    q_solid,
+    qa,
+    gsize,
+):
+    """
+    Park et al. 2016
+    """
+    if q_cond > constants.QCMIN:
+        qa = (
+            1.0
+            / 50.0
+            * (
+                5.77
+                * (100.0 - gsize / 1000.0)
+                * exp(1.07 * log(max(constants.QCMIN * 1000.0, q_cond * 1000.0)))
+                + 4.82
+                * (gsize / 1000.0 - 50.0)
+                * exp(0.94 * log(max(constants.QCMIN * 1000.0, q_cond * 1000.0)))
+            )
+        )
+        qa = qa * (0.92 / 0.96 * q_liquid / q_cond + 1.0 / 0.96 * q_solid / q_cond)
+        qa = max(0.0, min(1.0, qa))
+    else:
+        qa = 0.0
+
+    return qa
+
+
+@gtscript.function
+def cloud_scheme_4(
+    q_cond,
+    qa,
+    gsize,
+):
+    """
+    Gultepe and Isaac (2007)
+    """
+    sigma = 0.28 + exp(0.49 * log(max(constants.QCMIN * 1000.0, q_cond * 1000.0)))
+    gam = max(0.0, q_cond * 1000.0) / sigma
+    if gam < 0.18:
+        qa10 = 0.0
+    elif gam > 2.0:
+        qa10 = 1.0
+    else:
+        qa10 = -0.1754 + 0.9811 * gam - 0.2223 * gam ** 2 + 0.0104 * gam ** 3
+        qa10 = max(0.0, min(1.0, qa10))
+    if gam < 0.12:
+        qa100 = 0.0
+    elif gam > 1.85:
+        qa100 = 1.0
+    else:
+        qa100 = -0.0913 + 0.7213 * gam + 0.1060 * gam ** 2 - 0.0946 * gam ** 3
+        qa100 = max(0.0, min(1.0, qa100))
+
+    qa = qa10 + ((log(gsize / 1000.0) / log(10)) - 1) * (qa100 - qa10)
+    qa = max(0.0, min(1.0, qa))
+    return qa
+
+
 def cloud_fraction(
     qvapor: FloatField,
     qliquid: FloatField,
@@ -92,6 +186,7 @@ def cloud_fraction(
     pz: FloatField,
     te: FloatField,
     h_var: FloatFieldIJ,
+    gsize: FloatFieldIJ,
 ):
 
     from __externals__ import (
@@ -123,14 +218,14 @@ def cloud_fraction(
         # Combine water species
         ice = q_solid
         q_solid = qice
-        if __INLINED(rad_snow is True):
+        if __INLINED(rad_snow):
             q_solid += qsnow
-            if __INLINED(rad_graupel is True):
+            if __INLINED(rad_graupel):
                 q_solid += qgraupel
 
         liq = q_liq
         q_liq = qliquid
-        if __INLINED(rad_rain is True):
+        if __INLINED(rad_rain):
             q_liq += qrain
 
         q_cond = q_liq + q_solid
@@ -170,12 +265,59 @@ def cloud_fraction(
                 rh,
                 h_var,
             )
-    pass
+        elif __INLINED(cfflag == 2):
+            qa = cloud_scheme_2(
+                qstar,
+                q_cond,
+                qa,
+                rh,
+            )
+        elif __INLINED(cfflag == 3):
+            qa = cloud_scheme_3(
+                q_cond,
+                q_liq,
+                q_solid,
+                qa,
+                gsize,
+            )
+        else:  # cfflag == 4:
+            qa = cloud_scheme_4(
+                q_cond,
+                qa,
+                gsize,
+            )
 
 
 class CloudFraction:
-    def __init__(self):
-        pass
+    def __init__(self, stencil_factory: StencilFactory, config: MicroPhysicsConfig):
+        self._idx: GridIndexing = stencil_factory.grid_indexing
+
+        self._cloud_fraction = stencil_factory.from_origin_domain(
+            func=cloud_fraction,
+            externals={
+                "c1_ice": config.c1_ice,
+                "c1_liq": config.c1_liq,
+                "c1_vap": config.c1_vap,
+                "cfflag": config.cfflag,
+                "li00": config.li00,
+                "lv00": config.lv00,
+                "rad_graupel": config.rad_graupel,
+                "rad_rain": config.rad_rain,
+                "rad_snow": config.rad_snow,
+                "t_wfr": config.t_wfr,
+                "cld_min": config.cld_min,
+                "do_cld_adj": config.do_cld_adj,
+                "f_dq_m": config.f_dq_m,
+                "f_dq_p": config.f_dq_p,
+                "icloud_f": config.icloud_f,
+                "rh_thres": config.rh_thres,
+                "xr_a": config.xr_a,
+                "xr_b": config.xr_b,
+                "xr_c": config.xr_c,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
 
     def __call__(
         self,
@@ -189,7 +331,38 @@ class CloudFraction:
         temperature: FloatField,
         density: FloatField,
         pz: FloatField,
+        te: FloatField,
         h_var: FloatFieldIJ,
         gsize: FloatFieldIJ,
     ):
-        pass
+        """
+        Calculates cloud fraction diagnostic.
+        Args:
+            qvapor (in):
+            qliquid (in):
+            qrain (in):
+            qice (in):
+            qsnow (in):
+            qgraupel (in):
+            qa (out):
+            temperature (in):
+            density (in):
+            pz (in):
+            h_var (in):
+            gsize (in):
+        """
+        self._cloud_fraction(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            qa,
+            temperature,
+            density,
+            pz,
+            te,
+            h_var,
+            gsize,
+        )

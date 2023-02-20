@@ -124,7 +124,7 @@ def evaporate_rain(
                 mur,
             )
             sink = min(qrain, timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
-            if (use_rhc_revap is True) and (rh_tem >= rhc_revap):
+            if (use_rhc_revap) and (rh_tem >= rhc_revap):
                 sink = 0
 
             reevap += sink * delp
@@ -194,7 +194,7 @@ def accrete_rain(
         ):
             qden = qrain * density
 
-            if __INLINED(do_new_acc_water is True):
+            if __INLINED(do_new_acc_water):
                 sink = timestep * physfun.accretion_3d(
                     qliquid,
                     qrain,
@@ -245,14 +245,14 @@ def autoconvert_water_rain(
 
     with computation(FORWARD):
         with interval(0, 1):
-            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+            if __INLINED((irain_f == 0) and (z_slope_liq)):
                 # linear_prof
                 dl = 0.0
         with interval(1, None):
-            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+            if __INLINED((irain_f == 0) and (z_slope_liq)):
                 dq = 0.5 * (qliquid - qliquid[0, 0, -1])
         with interval(1, -1):
-            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+            if __INLINED((irain_f == 0) and (z_slope_liq)):
                 # Use twice the strength of the
                 # positive definiteness limiter (lin et al 1994)
                 dl = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qliquid[0, 0, 0])
@@ -262,11 +262,11 @@ def autoconvert_water_rain(
                     else:  # Local minimum
                         dl = 0.0
         with interval(-1, None):
-            if __INLINED((irain_f == 0) and (z_slope_liq is True)):
+            if __INLINED((irain_f == 0) and (z_slope_liq)):
                 dl = 0.0
     with computation(PARALLEL), interval(...):
         if __INLINED(irain_f == 0):
-            if __INLINED(z_slope_liq is True):
+            if __INLINED(z_slope_liq):
                 # Impose a presumed background horizontal variability that is
                 # proportional to the value itself
                 dl = max(dl, 0.0, h_var * qliquid)

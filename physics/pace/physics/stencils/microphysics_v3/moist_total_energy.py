@@ -26,7 +26,7 @@ def calc_moist_total_energy(
     q_solid = qice + qsnow + qgraupel
     q_cond = q_liq + q_solid
     con = 1.0 - (qvapor + q_cond)
-    if moist_q is True:
+    if moist_q:
         cvm = con + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
     else:
         cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
@@ -47,7 +47,7 @@ def calc_total_energy(
     from __externals__ import c_air, hydrostatic
 
     with computation(PARALLEL), interval(...):
-        if __INLINED(hydrostatic is True):
+        if __INLINED(hydrostatic):
             total_energy = -c_air * temp * delp
         else:
             total_energy = (

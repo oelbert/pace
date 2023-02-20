@@ -6,15 +6,17 @@ from gt4py.cartesian.gtscript import (
     interval,
     sqrt,
 )
-from moist_total_energy import calc_total_energy
+from moist_total_energy import calc_moist_total_energy, calc_total_energy
 
 import pace.fv3core.stencils.basic_operations as basic
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import Float, FloatField, FloatFieldIJ
+from pace.physics.stencils.microphysics_v3.cloud_fraction import CloudFraction
 from pace.physics.stencils.microphysics_v3.mp_fast import FastMicrophysics
 from pace.physics.stencils.microphysics_v3.mp_full import FullMicrophysics
 from pace.physics.stencils.microphysics_v3.neg_adj import AdjustNegativeTracers
@@ -22,6 +24,23 @@ from pace.util import X_DIM, Y_DIM, Z_DIM, Timer
 from pace.util.grid import GridData
 
 from ..._config import MicroPhysicsConfig
+
+
+def convert_virtual_to_true_temperature(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    temperature: FloatField,
+):
+    """
+    The FV3 dycore uses virtual temperature, while physics uses true temperature.
+    This stencil converts them so microphysics can be called inside the dycore
+    """
+    q_cond = qliquid + qrain + qice + qsnow + qgraupel
+    temperature = temperature / (1 + constants.ZVIR * qvapor * (1.0 - q_cond))
 
 
 def calc_sedimentation_energy_loss(
@@ -42,7 +61,7 @@ def moist_total_energy_and_water(
     qice: FloatField,
     qsnow: FloatField,
     qgraupel: FloatField,
-    temp: FloatField,
+    temperature: FloatField,
     ua: FloatField,
     va: FloatField,
     wa: FloatField,
@@ -81,13 +100,13 @@ def moist_total_energy_and_water(
         q_liq = qliquid + qrain
         q_solid = qice + qsnow + qgraupel
         q_cond = q_liq + q_solid
-        if __INLINED(moist_q is True):
+        if __INLINED(moist_q):
             con = 1.0 - (qvapor + q_cond)
             cvm = con + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
         else:
             cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
-        tot_energy = (cvm * temp + lv00 * qvapor - li00 * q_solid) * c_air
-        if __INLINED(hydrostatic is True):
+        tot_energy = (cvm * temperature + lv00 * qvapor - li00 * q_solid) * c_air
+        if __INLINED(hydrostatic):
             tot_energy = tot_energy + 0.5 * (ua ** 2 + va ** 2)
         else:
             tot_energy = tot_energy + 0.5 * (ua ** 2 + va ** 2 + wa ** 2)
@@ -112,49 +131,39 @@ def moist_total_energy_and_water(
 
 
 def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
-    qzvapor: FloatField,
-    qzliquid: FloatField,
-    qzrain: FloatField,
-    qzice: FloatField,
-    qzsnow: FloatField,
-    qzgraupel: FloatField,
-    qza: FloatField,
-    delp_specific: FloatField,
-    density: FloatField,
-    pz: FloatField,
-    bottom_density: FloatFieldIJ,
     qvapor: FloatField,
     qliquid: FloatField,
     qrain: FloatField,
     qice: FloatField,
     qsnow: FloatField,
     qgraupel: FloatField,
-    qa: FloatField,
     delp: FloatField,
     delz: FloatField,
-    temp: FloatField,
+    temperature: FloatField,
+    density: FloatField,
+    pz: FloatField,
+    bottom_density: FloatFieldIJ,
 ):
-    from __externals__ import inline_mp
+    from __externals__ import do_inline_mp
 
     with computation(PARALLEL):
         with interval(...):
-            if __INLINED(inline_mp is True):
+            if __INLINED(do_inline_mp):
                 con_r8 = 1.0 - (qvapor + qliquid + qrain + qice + qsnow + qgraupel)
             else:
                 con_r8 = 1.0 - qvapor
-            delp_specific = delp * con_r8
+            delp = delp * con_r8
             rcon_r8 = 1.0 / con_r8
-            qzvapor = qvapor * rcon_r8
-            qzliquid = qliquid * rcon_r8
-            qzrain = qrain * rcon_r8
-            qzice = qice * rcon_r8
-            qzsnow = qsnow * rcon_r8
-            qzgraupel = qgraupel * rcon_r8
-            qza = qa
+            qvapor = qvapor * rcon_r8
+            qliquid = qliquid * rcon_r8
+            qrain = qrain * rcon_r8
+            qice = qice * rcon_r8
+            qsnow = qsnow * rcon_r8
+            qgraupel = qgraupel * rcon_r8
 
             # Dry air density and layer-mean pressure thickness
-            density = -delp_specific * (constants.GRAV * delz)
-            pz = density * constants.RDGAS * temp
+            density = -delp * (constants.GRAV * delz)
+            pz = density * constants.RDGAS * temperature
         with interval(-1, None):
             bottom_density = density
 
@@ -179,7 +188,7 @@ def cloud_nuclei(
     from __externals__ import ccn_l, ccn_o, prog_ccn
 
     with computation(PARALLEL), interval(...):
-        if __INLINED(prog_ccn is True):
+        if __INLINED(prog_ccn):
             # boucher and lohmann (1995)
             nl = min(1.0, abs(geopotential_height / (10.0 * constants.GRAV))) * (
                 10.0 ** 2.24 * (qnl * density * 1.0e9) ** 0.257
@@ -225,6 +234,468 @@ def subgrid_deviation_and_relative_humidity(
         rh_rain = max(0.35, rh_adj - rh_inr)
 
 
+def calculate_particle_properties(
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    density: FloatField,
+    pc_liquid: FloatField,
+    pc_rain: FloatField,
+    pc_ice: FloatField,
+    pc_snow: FloatField,
+    pc_graupel: FloatField,
+    ed_liquid: FloatField,
+    ed_rain: FloatField,
+    ed_ice: FloatField,
+    ed_snow: FloatField,
+    ed_graupel: FloatField,
+    oe_liquid: FloatField,
+    oe_rain: FloatField,
+    oe_ice: FloatField,
+    oe_snow: FloatField,
+    oe_graupel: FloatField,
+    rr_liquid: FloatField,
+    rr_rain: FloatField,
+    rr_ice: FloatField,
+    rr_snow: FloatField,
+    rr_graupel: FloatField,
+    tv_liquid: FloatField,
+    tv_rain: FloatField,
+    tv_ice: FloatField,
+    tv_snow: FloatField,
+    tv_graupel: FloatField,
+):
+    """
+    calculation of particle concentration (pc), effective diameter (ed),
+    optical extinction (oe), radar reflectivity factor (rr), and
+    mass-weighted terminal velocity (tv)
+    """
+    from __externals__ import (
+        bling,
+        blini,
+        blinr,
+        blins,
+        blinw,
+        edag,
+        edai,
+        edar,
+        edas,
+        edaw,
+        edbg,
+        edbi,
+        edbr,
+        edbs,
+        edbw,
+        mug,
+        mui,
+        mur,
+        mus,
+        muw,
+        oeag,
+        oeai,
+        oear,
+        oeas,
+        oeaw,
+        oebg,
+        oebi,
+        oebr,
+        oebs,
+        oebw,
+        pcag,
+        pcai,
+        pcar,
+        pcas,
+        pcaw,
+        pcbg,
+        pcbi,
+        pcbr,
+        pcbs,
+        pcbw,
+        rrag,
+        rrai,
+        rrar,
+        rras,
+        rraw,
+        rrbg,
+        rrbi,
+        rrbr,
+        rrbs,
+        rrbw,
+        tvag,
+        tvai,
+        tvar,
+        tvas,
+        tvaw,
+        tvbg,
+        tvbi,
+        tvbr,
+        tvbs,
+        tvbw,
+    )
+
+    with computation(PARALLEL), interval(...):
+        if qliquid > constants.QCMIN:
+            pc_liquid = physfun.calc_particle_concentration(
+                qliquid, density, pcaw, pcbw, muw
+            )
+            ed_liquid = physfun.calc_effective_diameter(
+                qliquid, density, edaw, edbw, muw
+            )
+            oe_liquid = physfun.calc_optical_extinction(
+                qliquid, density, oeaw, oebw, muw
+            )
+            rr_liquid = physfun.calc_radar_reflectivity(
+                qliquid, density, rraw, rrbw, muw
+            )
+            tv_liquid = physfun.calc_terminal_velocity(
+                qliquid, density, tvaw, tvbw, muw, blinw
+            )
+
+        if qice > constants.QCMIN:
+            pc_ice = physfun.calc_particle_concentration(qice, density, pcai, pcbi, mui)
+            ed_ice = physfun.calc_effective_diameter(qice, density, edai, edbi, mui)
+            oe_ice = physfun.calc_optical_extinction(qice, density, oeai, oebi, mui)
+            rr_ice = physfun.calc_radar_reflectivity(qice, density, rrai, rrbi, mui)
+            tv_ice = physfun.calc_terminal_velocity(
+                qice, density, tvai, tvbi, mui, blini
+            )
+
+        if qrain > constants.QCMIN:
+            pc_rain = physfun.calc_particle_concentration(
+                qrain, density, pcar, pcbr, mur
+            )
+            ed_rain = physfun.calc_effective_diameter(qrain, density, edar, edbr, mur)
+            oe_rain = physfun.calc_optical_extinction(qrain, density, oear, oebr, mur)
+            rr_rain = physfun.calc_radar_reflectivity(qrain, density, rrar, rrbr, mur)
+            tv_rain = physfun.calc_terminal_velocity(
+                qrain, density, tvar, tvbr, mur, blinr
+            )
+
+        if qsnow > constants.QCMIN:
+            pc_snow = physfun.calc_particle_concentration(
+                qsnow, density, pcas, pcbs, mus
+            )
+            ed_snow = physfun.calc_effective_diameter(qsnow, density, edas, edbs, mus)
+            oe_snow = physfun.calc_optical_extinction(qsnow, density, oeas, oebs, mus)
+            rr_snow = physfun.calc_radar_reflectivity(qsnow, density, rras, rrbs, mus)
+            tv_snow = physfun.calc_terminal_velocity(
+                qsnow, density, tvas, tvbs, mus, blins
+            )
+
+        if qgraupel > constants.QCMIN:
+            pc_graupel = physfun.calc_particle_concentration(
+                qgraupel, density, pcag, pcbg, mug
+            )
+            ed_graupel = physfun.calc_effective_diameter(
+                qgraupel, density, edag, edbg, mug
+            )
+            oe_graupel = physfun.calc_optical_extinction(
+                qgraupel, density, oeag, oebg, mug
+            )
+            rr_graupel = physfun.calc_radar_reflectivity(
+                qgraupel, density, rrag, rrbg, mug
+            )
+            tv_graupel = physfun.calc_terminal_velocity(
+                qgraupel, density, tvag, tvbg, mug, bling
+            )
+
+
+def update_temperature_pre_delp_q(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    ua: FloatField,
+    va: FloatField,
+    wa: FloatField,
+    u0: FloatField,
+    v0: FloatField,
+    w0: FloatField,
+    temperature: FloatField,
+    tzuv: FloatField,
+    tzw: FloatField,
+):
+    """
+    momentum transportation during sedimentation
+    update temperature before delp and q update
+    """
+
+    from __externals__ import c1_ice, c1_liq, c1_vap, c_air, do_sedi_uv, do_sedi_w
+
+    with computation(PARALLEL), interval(...):
+        if __INLINED(do_sedi_uv):
+            c8 = (
+                1.0
+                + qvapor * c1_vap
+                + (qliquid + qrain) * c1_liq
+                + (qice + qsnow + qgraupel) * c1_ice
+            ) * c_air
+            tzuv = 0.5 * (ua ** 2 + va ** 2 - (u0 ** 2 + v0 ** 2)) / c8
+            temperature += tzuv
+
+        if __INLINED(do_sedi_w):
+            c8 = (
+                1.0
+                + qvapor * c1_vap
+                + (qliquid + qrain) * c1_liq
+                + (qice + qsnow + qgraupel) * c1_ice
+            ) * c_air
+            tzw = 0.5 * (wa ** 2 - w0 ** 2) / c8
+            temperature += tzw
+
+
+def convert_mass_mixing_to_specific_ratios_and_update_temperatures(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    ua: FloatField,
+    va: FloatField,
+    wa: FloatField,
+    delp: FloatField,
+    qvapor0: FloatField,
+    qliquid0: FloatField,
+    qrain0: FloatField,
+    qice0: FloatField,
+    qsnow0: FloatField,
+    qgraupel0: FloatField,
+    u0: FloatField,
+    v0: FloatField,
+    w0: FloatField,
+    dp0: FloatField,
+    temperature: FloatField,
+    tzuv: FloatField,
+    tzw: FloatField,
+    adj_vmr: FloatField,
+):
+    """
+    Convert back from mass mixing ratios to specific ratios at the end of
+    the microphysics call, calculate some other quantities to save, and
+    update temperatures from sedimentation momentum after the delp and q
+    conversions
+    """
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vap,
+        c_air,
+        do_inline_mp,
+        do_sedi_uv,
+        do_sedi_w,
+    )
+
+    with computation(PARALLEL), interval(...):
+        # convert mass mixing ratios back to specific ratios
+        if __INLINED(do_inline_mp):
+            q_cond = qliquid + qrain + qice + qsnow + qgraupel
+            con = 1.0 + qvapor + q_cond
+        else:
+            con = 1.0 + qvapor
+
+        delp = delp * con
+        con = 1.0 / con
+        qvapor = qvapor * con
+        qliquid = qliquid * con
+        qrain = qrain * con
+        qice = qice * con
+        qsnow = qsnow * con
+        qgraupel = qgraupel * con
+
+        q1 = qvapor + qliquid + qrain + qice + qsnow + qgraupel
+        q2 = qvapor0 + qliquid0 + qrain0 + qice0 + qsnow0 + qgraupel0
+        adj_vmr = ((1.0 - q1) / (1.0 - q2)) / (1.0 + q2 - q1)
+
+        # calculate some more variables needed outside
+        q_liq = qliquid + qrain
+        q_sol = qice + qsnow + qgraupel
+        q_cond = q_liq + q_sol
+        con_r8 = 1.0 - (qvapor + q_cond)
+        c8 = (con_r8 + qvapor * c1_vap + q_liq * c1_liq + q_sol * c1_ice) * c_air
+
+        # ifdef USE_COND
+        q_con = q_cond
+        # endif
+        # ifdef MOIST_CAPPA
+        tmp = constants.RDGAS * (1.0 + constants.ZVIR * qvapor)
+        cappa = tmp / (tmp + c8)
+        # endif
+
+        # momentum transportation during sedimentation
+        # update temperature after delp and q update
+        if __INLINED(do_sedi_uv):
+            temperature = temperature - tzuv
+            tzuv = (
+                (0.5 * (u0 ** 2 + v0 ** 2) * dp0 - 0.5 * (ua ** 2 + va ** 2) * delp)
+                / c8
+                / delp
+            )
+            temperature = temperature + tzuv
+
+        if __INLINED(do_sedi_w):
+            temperature = temperature - tzw
+            tzw = (0.5 * (w0 ** 2) * dp0 - 0.5 * (wa ** 2) * delp) / c8 / delp
+            temperature = temperature + tzw
+
+
+def calculate_total_energy_change_and_convert_temp(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    te: FloatField,
+    temperature: FloatField,
+    temperature0: FloatField,
+    delp: FloatField,
+    delz: FloatField,
+):
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vap,
+        c_air,
+        cp_heating,
+        do_inline_mp,
+        hydrostatic,
+    )
+
+    with computation(PARALLEL), interval(...):
+        if __INLINED(hydrostatic):
+            te = te + c_air * temperature * delp
+        else:
+            te = (
+                te
+                + calc_moist_total_energy(
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    temperature,
+                    delp,
+                    True,
+                )
+                * constants.GRAV
+            )
+
+        # If microphysics is inlined in the dycore convert to virtual temperature,
+        # otherwise update temp based on heat capacities
+        if __INLINED(do_inline_mp):
+            q_cond = qliquid + qrain + qice + qsnow + qgraupel
+            if __INLINED(cp_heating):
+                con_r8 = 1.0 - (qvapor + q_cond)
+                c8 = (
+                    con_r8
+                    + qvapor * c1_vap
+                    + (qliquid + qrain) * c1_liq
+                    + (qice + qsnow + qgraupel) * c1_ice
+                ) * c_air
+                cp8 = (
+                    con_r8 * constants.CP_AIR
+                    + qvapor * constants.CP_VAP
+                    + (qliquid + qrain) * constants.C_LIQ
+                    + (qice + qsnow + qgraupel) * constants.C_ICE
+                )
+                delz = delz / temperature0
+                temperature = (
+                    temperature0
+                    + (
+                        temperature * ((1.0 + constants.ZVIR * qvapor) * (1.0 - q_cond))
+                        - temperature0
+                    )
+                    * c8
+                    / cp8
+                )
+                delz = delz * temperature
+            else:
+                temperature = temperature * (
+                    (1.0 + constants.ZVIR * qvapor) * (1.0 - q_cond)
+                )
+        else:
+            q_cond = qliquid + qrain + qice + qsnow + qgraupel
+            con_r8 = 1.0 - (qvapor + q_cond)
+            c8 = (
+                con_r8
+                + qvapor * c1_vap
+                + (qliquid + qrain) * c1_liq
+                + (qice + qsnow + qgraupel) * c1_ice
+            ) * c_air
+            temperature = (
+                temperature0 + (temperature - temperature0) * c8 / constants.CP_AIR
+            )
+
+
+def total_energy_check(
+    total_energy_dry_end,
+    total_energy_wet_end,
+    total_water_dry_end,
+    total_water_wet_end,
+    total_energy_dry_begin,
+    total_energy_wet_begin,
+    total_water_dry_begin,
+    total_water_wet_begin,
+    total_energy_bot_dry_end,
+    total_energy_bot_wet_end,
+    total_water_bot_dry_end,
+    total_water_bot_wet_end,
+    total_energy_bot_dry_begin,
+    total_energy_bot_wet_begin,
+    total_water_bot_dry_begin,
+    total_water_bot_wet_begin,
+    i_start,
+    i_end,
+    j_start,
+    j_end,
+    te_err,
+):
+    """
+    Checks the change in energy and water in a column at the end
+    of the microphysics call
+    """
+    for i in range(i_start, i_end + 1):
+        for j in range(j_start, j_end + 1):
+            dry_energy_change = abs(
+                sum(total_energy_dry_end[i, j, :])
+                + total_energy_bot_dry_end[i, j]
+                - sum(total_energy_dry_begin[i, j, :])
+                - total_energy_bot_dry_begin
+            ) / (sum(total_energy_dry_begin[i, j, :]) + total_energy_bot_dry_begin)
+            if dry_energy_change > te_err:
+                print(f"GFDL-MP-DRY TE: {dry_energy_change}")
+            wet_energy_change = abs(
+                sum(total_energy_wet_end[i, j, :])
+                + total_energy_bot_wet_end[i, j]
+                - sum(total_energy_wet_begin[i, j, :])
+                - total_energy_bot_wet_begin
+            ) / (sum(total_energy_wet_begin[i, j, :]) + total_energy_bot_wet_begin)
+            if wet_energy_change > te_err:
+                print(f"GFDL-MP-WET TE: {wet_energy_change}")
+            dry_water_change = abs(
+                sum(total_water_dry_end[i, j, :])
+                + total_water_bot_dry_end[i, j]
+                - sum(total_water_dry_begin[i, j, :])
+                - total_water_bot_dry_begin
+            ) / (sum(total_water_dry_begin[i, j, :]) + total_water_bot_dry_begin)
+            if dry_water_change > te_err:
+                print(f"GFDL-MP-DRY TW: {dry_water_change}")
+            wet_water_change = abs(
+                sum(total_water_wet_end[i, j, :])
+                + total_water_bot_wet_end[i, j]
+                - sum(total_water_wet_begin[i, j, :])
+                - total_water_bot_wet_begin
+            ) / (sum(total_water_wet_begin[i, j, :]) + total_water_bot_wet_begin)
+            if wet_water_change > te_err:
+                print(f"GFDL-MP-WET TW: {wet_water_change}")
+
+
 class MicrophysicsState:
     def __init__(
         self,
@@ -250,18 +721,78 @@ class Microphysics:
         self._ntimes = self.config.ntimes
         self.do_mp_fast = do_mp_fast
         self.do_mp_full = do_mp_fast
+        self.do_qa = config.do_qa
+        self.hydrostatic = config.hydrostatic
+        self.do_sedi_uv = config.do_sedi_uv
+        self.do_sedi_w = config.do_sedi_w
+        self.consv_checker = config.consv_checker
+
+        if config.do_hail:
+            pcag = config.pcah
+            pcbg = config.pcbh
+            edag = config.edah
+            edbg = config.edbh
+            oeag = config.oeah
+            oebg = config.oebh
+            rrag = config.rrah
+            rrbg = config.rrbh
+            tvag = config.tvah
+            tvbg = config.tvbh
+            mug = config.muh
+            bling = config.blinh
+        else:
+            pcag = config.pcag
+            pcbg = config.pcbg
+            edag = config.edag
+            edbg = config.edbg
+            oeag = config.oeag
+            oebg = config.oebg
+            rrag = config.rrag
+            rrbg = config.rrbg
+            tvag = config.tvag
+            tvbg = config.tvbg
+            mug = config.mug
+            bling = config.bling
 
         # allocate memory, compile stencils, etc.
         def make_quantity(**kwargs):
             return quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
-        self._tot_energy_change = quantity_factory.zeros(
-            dims=[X_DIM, Y_DIM], units="unknown"
-        )
+        def make_quantity2d(**kwargs):
+            return quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
+
+        self._tot_energy_change = make_quantity2d()
+
         self._adj_vmr = quantity_factory.ones(
             dims=[X_DIM, Y_DIM, Z_DIM], units="unknown"
         )
         self._rain = make_quantity()
+        self._u = make_quantity()
+        self._v = make_quantity()
+        if self.hydrostatic:
+            assert (
+                not config.do_sedi_w
+            ), "Cannot do_sedi_w in a hydrostatic configuration"
+        else:
+            self._w = make_quantity()
+
+        if self.consv_checker:
+            self.total_energy_dry_end = make_quantity()
+            self.total_energy_wet_end = make_quantity()
+            self.total_water_dry_end = make_quantity()
+            self.total_water_wet_end = make_quantity()
+            self.total_energy_dry_begin = make_quantity()
+            self.total_energy_wet_begin = make_quantity()
+            self.total_water_dry_begin = make_quantity()
+            self.total_water_wet_begin = make_quantity()
+            self.total_energy_bot_dry_end = make_quantity()
+            self.total_energy_bot_wet_end = make_quantity()
+            self.total_water_bot_dry_end = make_quantity()
+            self.total_water_bot_wet_end = make_quantity()
+            self.total_energy_bot_dry_begin = make_quantity()
+            self.total_energy_bot_wet_begin = make_quantity()
+            self.total_water_bot_dry_begin = make_quantity()
+            self.total_water_bot_wet_begin = make_quantity()
 
         self._rh_adj = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
         self._rh_rain = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
@@ -290,7 +821,7 @@ class Microphysics:
             domain=self._idx.domain_compute(),
         )
 
-        if self.config.consv_checker is True:
+        if self.config.consv_checker:
             self._moist_total_energy_and_water_mq = stencil_factory.from_origin_domain(
                 func=moist_total_energy_and_water,
                 externals={
@@ -335,7 +866,7 @@ class Microphysics:
             stencil_factory.from_origin_domain(
                 func=convert_specific_to_mass_mixing_ratios_and_calculate_densities,
                 externals={
-                    "inline_mp": self.config.do_inline_mp,
+                    "do_inline_mp": self.config.do_inline_mp,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -398,6 +929,126 @@ class Microphysics:
                 self._convert_mm_day,
             )
 
+        if self.do_qa:
+            self._cloud_fraction = CloudFraction(stencil_factory, config)
+
+        self._calculate_particle_properties = stencil_factory.from_origin_domain(
+            func=calculate_particle_properties,
+            externals={
+                "pcaw": config.pcaw,
+                "pcbw": config.pcbw,
+                "pcai": config.pcai,
+                "pcbi": config.pcbi,
+                "pcar": config.pcar,
+                "pcbr": config.pcbr,
+                "pcas": config.pcas,
+                "pcbs": config.pcbs,
+                "pcag": pcag,
+                "pcbg": pcbg,
+                "edaw": config.edaw,
+                "edbw": config.edbw,
+                "edai": config.edai,
+                "edbi": config.edbi,
+                "edar": config.edar,
+                "edbr": config.edbr,
+                "edas": config.edas,
+                "edbs": config.edbs,
+                "edag": edag,
+                "edbg": edbg,
+                "oeaw": config.oeaw,
+                "oebw": config.oebw,
+                "oeai": config.oeai,
+                "oebi": config.oebi,
+                "oear": config.oear,
+                "oebr": config.oebr,
+                "oeas": config.oeas,
+                "oebs": config.oebs,
+                "oeag": oeag,
+                "oebg": oebg,
+                "rraw": config.rraw,
+                "rrbw": config.rrbw,
+                "rrai": config.rrai,
+                "rrbi": config.rrbi,
+                "rrar": config.rrar,
+                "rrbr": config.rrbr,
+                "rras": config.rras,
+                "rrbs": config.rrbs,
+                "rrag": rrag,
+                "rrbg": rrbg,
+                "tvaw": config.tvaw,
+                "tvbw": config.tvbw,
+                "tvai": config.tvai,
+                "tvbi": config.tvbi,
+                "tvar": config.tvar,
+                "tvbr": config.tvbr,
+                "tvas": config.tvas,
+                "tvbs": config.tvbs,
+                "tvag": tvag,
+                "tvbg": tvbg,
+                "muw": config.muw,
+                "mui": config.mui,
+                "mur": config.mur,
+                "mus": config.mus,
+                "mug": mug,
+                "blinw": config.blinw,
+                "blini": config.blini,
+                "blinr": config.blinr,
+                "blins": config.blins,
+                "bling": bling,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+        if (self.do_sedi_uv) or (self.do_sedi_w):
+            self._update_temperature_pre_delp_q = stencil_factory.from_origin_domain(
+                func=update_temperature_pre_delp_q,
+                externals={
+                    "do_sedi_uv": self.do_sedi_uv,
+                    "do_sedi_w": self.do_sedi_w,
+                    "c_air": config.c_air,
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+        self._convert_mass_mixing_to_specific_ratios_and_update_temperatures = (
+            stencil_factory.from_origin_domain(
+                func=convert_mass_mixing_to_specific_ratios_and_update_temperatures,
+                externals={
+                    "do_inline_mp": config.do_inline_mp,
+                    "c_air": config.c_air,
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                    "do_sedi_uv": config.do_sedi_uv,
+                    "do_sedi_w": config.do_sedi_w,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+        )
+
+        self._calculate_total_energy_change_and_convert_temp = (
+            stencil_factory.from_origin_domain(
+                func=calculate_total_energy_change_and_convert_temp,
+                externals={
+                    "hydrostatic": self.hydrostatic,
+                    "c_air": config.c_air,
+                    "do_inline_mp": config.do_inline_mp,
+                    "cp_heating": config.cp_heating,
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+        )
+
         pass
 
     def _update_timestep_if_needed(self, timestep: float):
@@ -419,6 +1070,7 @@ class Microphysics:
     def __call__(
         self,
         state: MicrophysicsState,
+        last_step: bool,
         timer: Timer = pace.util.NullTimer(),
     ):
         pass

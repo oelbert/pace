@@ -182,7 +182,7 @@ def cloud_condensation_evaporation(
     if dq > 0.0:
         fac = min(1.0, fac_l2v * (rh_fac * dq / qsw))
         sink = min(qliquid, fac * dq / (1 + tcp3 * dqdt))
-        if (use_rhc_cevap is True) and (rh_tem > rhc_cevap):
+        if (use_rhc_cevap) and (rh_tem > rhc_cevap):
             sink = 0.0
         reevaporation += sink * delp
     elif do_cond_timescale:
@@ -421,7 +421,7 @@ def freeze_bigg(
 
     tc = tice - temperature
     if (tc > 0.0) and (qliquid > constants.QCMIN):
-        if do_psd_water_num is True:
+        if do_psd_water_num:
             cloud_condensation_nuclei = physfun.calc_particle_concentration(
                 qliquid, density, pcaw, pcbw, muw
             )

@@ -301,17 +301,17 @@ def update_energy_wind_heat_post_fall(
             column_energy_change = column_energy_change + post_energy - initial_energy
 
     with computation(FORWARD), interval(1, None):
-        if __INLINED(do_sedi_uv is True):
+        if __INLINED(do_sedi_uv):
             if no_fall > 0.0:
                 ua, va = sedi_uv(ua, va, delp, flux)
 
     with computation(FORWARD), interval(0, 1):
-        if __INLINED(do_sedi_w is True):
+        if __INLINED(do_sedi_w):
             if no_fall > 0.0:
                 wa = wa + flux * v_terminal / dm
 
     with computation(FORWARD), interval(1, None):
-        if __INLINED(do_sedi_w is True):
+        if __INLINED(do_sedi_w):
             if no_fall > 0.0:
                 wa = sedi_w(wa, dm, flux, v_terminal)
 
@@ -332,7 +332,7 @@ def update_energy_wind_heat_post_fall(
 
     # sedi_heat
     with computation(FORWARD), interval(1, None):
-        if __INLINED(do_sedi_heat is True):
+        if __INLINED(do_sedi_heat):
             if no_fall > 0.0:
                 dgz = -0.5 * constants.GRAV * (delz[0, 0, -1] + delz)
                 cv0 = dm * (
@@ -343,7 +343,7 @@ def update_energy_wind_heat_post_fall(
                 ) + cw * (flux - flux[0, 0, -1])
 
     with computation(FORWARD), interval(1, None):
-        if __INLINED(do_sedi_heat is True):
+        if __INLINED(do_sedi_heat):
             if no_fall > 0.0:
                 temperature = (
                     cv0 * temperature

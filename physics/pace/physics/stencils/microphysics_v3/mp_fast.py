@@ -6,7 +6,6 @@ from gt4py.cartesian.gtscript import (
     computation,
     exp,
     interval,
-    log,
 )
 
 import pace.fv3core.stencils.basic_operations as basic
@@ -378,7 +377,7 @@ def fast_microphysics(
                 tcpk,
                 tcp3,
             )
-            if __INLINED(do_wbf is True):
+            if __INLINED(do_wbf):
                 (
                     qvapor,
                     qliquid,
