@@ -1,3 +1,4 @@
+import numpy as np
 from gt4py.cartesian.gtscript import (
     __INLINED,
     FORWARD,
@@ -710,12 +711,15 @@ class MicrophysicsState:
         qsnow: pace.util.Quantity,
         qgraupel: pace.util.Quantity,
         qcld: pace.util.Quantity,
+        qcloud_cond_nuclei: pace.util.Quantity,
+        qcloud_ice_nuclei: pace.util.Quantity,
         ua: pace.util.Quantity,
         va: pace.util.Quantity,
         wa: pace.util.Quantity,
         delp: pace.util.Quantity,
         delz: pace.util.Quantity,
         pt: pace.util.Quantity,
+        geopotential_height: pace.util.Quantity,
         preflux_w: pace.util.Quantity,
         preflux_r: pace.util.Quantity,
         preflux_i: pace.util.Quantity,
@@ -766,12 +770,15 @@ class MicrophysicsState:
         self.qsnow = qsnow
         self.qgraupel = qgraupel
         self.qcld = qcld
+        self.qcloud_cond_nuclei = qcloud_cond_nuclei
+        self.qcloud_ice_nuclei = qcloud_ice_nuclei
         self.ua = ua
         self.va = va
         self.wa = wa
         self.delp = delp
         self.delz = delz
         self.pt = pt
+        self.geopotential_height = geopotential_height
         self.preflux_w = preflux_w
         self.preflux_r = preflux_r
         self.preflux_i = preflux_i
@@ -912,8 +919,12 @@ class Microphysics:
             self.total_water_bot_dry_begin = make_quantity()
             self.total_water_bot_wet_begin = make_quantity()
 
-        self._rh_adj = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
-        self._rh_rain = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
+        self._rh_adj = make_quantity2d()
+        self._rh_rain = make_quantity2d()
+
+        self._gsize = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m")
+
+        self._gsize.data = np.sqrt(grid_data.area.data)
 
         self._set_timestepping(self.config.dt_atmos)  # will change from dt_atmos
         # when we inline microphysics
