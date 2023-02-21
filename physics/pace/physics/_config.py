@@ -174,6 +174,8 @@ class MicroPhysicsConfig:
     xr_a: float
     xr_b: float
     xr_c: float
+    te_err: float
+    tw_err: float
     rh_thres: float
     rhc_cevap: float
     rhc_revap: float
@@ -1496,6 +1498,8 @@ class PhysicsConfig:
     xr_a: float = NamelistDefaults.xr_a
     xr_b: float = NamelistDefaults.xr_b
     xr_c: float = NamelistDefaults.xr_c
+    te_err: float = NamelistDefaults.te_err
+    tw_err: float = NamelistDefaults.tw_err
     rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap
@@ -1674,6 +1678,8 @@ class PhysicsConfig:
             xr_a=namelist.xr_a,
             xr_b=namelist.xr_b,
             xr_c=namelist.xr_c,
+            te_err=namelist.te_err,
+            tw_err=namelist.tw_err,
             rh_thres=namelist.rh_thres,
             rhc_cevap=namelist.rhc_cevap,
             rhc_revap=namelist.rhc_revap,
@@ -1838,6 +1844,8 @@ class PhysicsConfig:
             xr_a=self.xr_a,
             xr_b=self.xr_b,
             xr_c=self.xr_c,
+            te_err=self.te_err,
+            tw_err=self.tw_err,
             rh_thres=self.rh_thres,
             rhc_cevap=self.rhc_cevap,
             rhc_revap=self.rhc_revap,

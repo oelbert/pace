@@ -7,7 +7,6 @@ from gt4py.cartesian.gtscript import (
     interval,
     sqrt,
 )
-from moist_total_energy import calc_moist_total_energy, calc_total_energy
 
 import pace.fv3core.stencils.basic_operations as basic
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
@@ -18,6 +17,7 @@ import pace.util.constants as constants
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.physics.stencils.microphysics_v3.cloud_fraction import CloudFraction
+from pace.physics.stencils.microphysics_v3.microphysics_state import MicrophysicsState
 from pace.physics.stencils.microphysics_v3.mp_fast import FastMicrophysics
 from pace.physics.stencils.microphysics_v3.mp_full import FullMicrophysics
 from pace.physics.stencils.microphysics_v3.neg_adj import AdjustNegativeTracers
@@ -27,20 +27,50 @@ from pace.util.grid import GridData
 from ..._config import MicroPhysicsConfig
 
 
-def reset_initial_values(
+def reset_initial_values_and_make_copies(
     adj_vmr: FloatField,
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    delp: FloatField,
+    temperature: FloatField,
+    ua: FloatField,
+    va: FloatField,
+    qvapor0: FloatField,
+    qliquid0: FloatField,
+    qrain0: FloatField,
+    qice0: FloatField,
+    qsnow0: FloatField,
+    qgraupel0: FloatField,
+    dp0: FloatField,
+    temperature0: FloatField,
+    u0: FloatField,
+    v0: FloatField,
     column_energy_change: FloatFieldIJ,
     cond: FloatFieldIJ,
 ):
     with computation(PARALLEL):
         with interval(...):
             adj_vmr = 1.0
+            qvapor0 = qvapor
+            qliquid0 = qliquid
+            qrain0 = qrain
+            qice0 = qice
+            qsnow0 = qsnow
+            qgraupel0 = qgraupel
+            dp0 = delp
+            temperature0 = temperature
+            u0 = ua
+            v0 = va
         with interval(-1, None):
             column_energy_change = 0.0
             cond = 0.0
 
 
-def convert_virtual_to_true_temperature(
+def convert_virtual_to_true_temperature_and_calc_total_energy(
     qvapor: FloatField,
     qliquid: FloatField,
     qrain: FloatField,
@@ -48,13 +78,38 @@ def convert_virtual_to_true_temperature(
     qsnow: FloatField,
     qgraupel: FloatField,
     temperature: FloatField,
+    delp: FloatField,
+    total_energy: FloatField,
 ):
     """
     The FV3 dycore uses virtual temperature, while physics uses true temperature.
     This stencil converts them so microphysics can be called inside the dycore
     """
-    q_cond = qliquid + qrain + qice + qsnow + qgraupel
-    temperature = temperature / (1 + constants.ZVIR * qvapor * (1.0 - q_cond))
+    from __externals__ import c_air, consv_te, do_inline_mp, hydrostatic
+
+    with computation(PARALLEL), interval(...):
+        if __INLINED(do_inline_mp):
+            q_cond = qliquid + qrain + qice + qsnow + qgraupel
+            temperature = temperature / (1 + constants.ZVIR * qvapor * (1.0 - q_cond))
+
+        if __INLINED(consv_te):
+            if __INLINED(hydrostatic):
+                total_energy = -c_air * temperature * delp
+            else:
+                total_energy = (
+                    -physfun.calc_moist_total_energy(
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        delp,
+                        True,
+                    )
+                    * constants.GRAV
+                )
 
 
 def calc_sedimentation_energy_loss(
@@ -82,7 +137,7 @@ def moist_total_energy_and_water(
     delp: FloatField,
     gsize: FloatFieldIJ,
     column_energy_change: FloatFieldIJ,
-    vapor: FloatField,
+    vapor: FloatFieldIJ,
     water: FloatFieldIJ,
     rain: FloatFieldIJ,
     ice: FloatFieldIJ,
@@ -156,7 +211,7 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
     temperature: FloatField,
     density: FloatField,
     pz: FloatField,
-    bottom_density: FloatFieldIJ,
+    density_factor: FloatField,
 ):
     from __externals__ import do_inline_mp
 
@@ -181,18 +236,12 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
         with interval(-1, None):
             bottom_density = density
 
-
-def calc_density_factor(
-    den_fac: FloatField,
-    density: FloatField,
-    bottom_density: FloatFieldIJ,
-):
-    with computation(PARALLEL), interval(...):
-        den_fac = sqrt(bottom_density / density)
+        with computation(PARALLEL), interval(...):
+            density_factor = sqrt(bottom_density / density)
 
 
 def cloud_nuclei(
-    geopotential_height: FloatFieldIJ,
+    geopotential_surface_height: FloatFieldIJ,
     qnl: FloatField,
     qni: FloatField,
     density: FloatField,
@@ -204,9 +253,11 @@ def cloud_nuclei(
     with computation(PARALLEL), interval(...):
         if __INLINED(prog_ccn):
             # boucher and lohmann (1995)
-            nl = min(1.0, abs(geopotential_height / (10.0 * constants.GRAV))) * (
-                10.0 ** 2.24 * (qnl * density * 1.0e9) ** 0.257
-            ) + (1.0 - min(1.0, abs(geopotential_height) / (10 * constants.GRAV))) * (
+            nl = min(
+                1.0, abs(geopotential_surface_height / (10.0 * constants.GRAV))
+            ) * (10.0 ** 2.24 * (qnl * density * 1.0e9) ** 0.257) + (
+                1.0 - min(1.0, abs(geopotential_surface_height) / (10 * constants.GRAV))
+            ) * (
                 10.0 ** 2.06 * (qnl * density * 1.0e9) ** 0.48
             )
             ni = qni
@@ -215,11 +266,17 @@ def cloud_nuclei(
         else:
             cloud_condensation_nuclei = (
                 (
-                    ccn_l * min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+                    ccn_l
+                    * min(
+                        1.0, abs(geopotential_surface_height) / (10.0 * constants.GRAV)
+                    )
                     + ccn_o
                     * (
                         1.0
-                        - min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+                        - min(
+                            1.0,
+                            abs(geopotential_surface_height) / (10.0 * constants.GRAV),
+                        )
                     )
                 )
                 * 1.0e6
@@ -230,7 +287,7 @@ def cloud_nuclei(
 
 def subgrid_deviation_and_relative_humidity(
     gsize: FloatFieldIJ,
-    geopotential_height: FloatFieldIJ,
+    geopotential_surface_height: FloatFieldIJ,
     h_var: FloatFieldIJ,
     rh_adj: FloatFieldIJ,
     rh_rain: FloatFieldIJ,
@@ -240,7 +297,7 @@ def subgrid_deviation_and_relative_humidity(
     with computation(PARALLEL), interval(-1, None):
         t_lnd = dw_land * sqrt(gsize / 1.0e5)
         t_ocn = dw_ocean * sqrt(gsize / 1.0e5)
-        tmp = min(1.0, abs(geopotential_height) / (10.0 * constants.GRAV))
+        tmp = min(1.0, abs(geopotential_surface_height) / (10.0 * constants.GRAV))
         hvar = t_lnd * tmp + t_ocn * (1.0 - tmp)
         h_var = min(0.20, max(0.01, hvar))
 
@@ -575,30 +632,32 @@ def calculate_total_energy_change_and_convert_temp(
         c1_liq,
         c1_vap,
         c_air,
+        consv_te,
         cp_heating,
         do_inline_mp,
         hydrostatic,
     )
 
     with computation(PARALLEL), interval(...):
-        if __INLINED(hydrostatic):
-            te = te + c_air * temperature * delp
-        else:
-            te = (
-                te
-                + calc_moist_total_energy(
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temperature,
-                    delp,
-                    True,
+        if __INLINED(consv_te):
+            if __INLINED(hydrostatic):
+                te = te + c_air * temperature * delp
+            else:
+                te = (
+                    te
+                    + physfun.calc_moist_total_energy(
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        delp,
+                        True,
+                    )
+                    * constants.GRAV
                 )
-                * constants.GRAV
-            )
 
         # If microphysics is inlined in the dycore convert to virtual temperature,
         # otherwise update temp based on heat capacities
@@ -669,6 +728,7 @@ def total_energy_check(
     j_start,
     j_end,
     te_err,
+    tw_err,
 ):
     """
     Checks the change in energy and water in a column at the end
@@ -698,7 +758,7 @@ def total_energy_check(
                 - sum(total_water_dry_begin[i, j, :])
                 - total_water_bot_dry_begin
             ) / (sum(total_water_dry_begin[i, j, :]) + total_water_bot_dry_begin)
-            if dry_water_change > te_err:
+            if dry_water_change > tw_err:
                 print(f"GFDL-MP-DRY TW: {dry_water_change}")
             wet_water_change = abs(
                 sum(total_water_wet_end[i, j, :])
@@ -706,134 +766,8 @@ def total_energy_check(
                 - sum(total_water_wet_begin[i, j, :])
                 - total_water_bot_wet_begin
             ) / (sum(total_water_wet_begin[i, j, :]) + total_water_bot_wet_begin)
-            if wet_water_change > te_err:
+            if wet_water_change > tw_err:
                 print(f"GFDL-MP-WET TW: {wet_water_change}")
-
-
-class MicrophysicsState:
-    """
-    A state that contains everything that goes into or comes out of microphysics
-    """
-
-    def __init__(
-        self,
-        qvapor: pace.util.Quantity,
-        qliquid: pace.util.Quantity,
-        qrain: pace.util.Quantity,
-        qice: pace.util.Quantity,
-        qsnow: pace.util.Quantity,
-        qgraupel: pace.util.Quantity,
-        qcld: pace.util.Quantity,
-        qcloud_cond_nuclei: pace.util.Quantity,
-        qcloud_ice_nuclei: pace.util.Quantity,
-        ua: pace.util.Quantity,
-        va: pace.util.Quantity,
-        wa: pace.util.Quantity,
-        delp: pace.util.Quantity,
-        delz: pace.util.Quantity,
-        pt: pace.util.Quantity,
-        geopotential_height: pace.util.Quantity,
-        preflux_w: pace.util.Quantity,
-        preflux_r: pace.util.Quantity,
-        preflux_i: pace.util.Quantity,
-        preflux_s: pace.util.Quantity,
-        preflux_g: pace.util.Quantity,
-        column_water: pace.util.Quantity,
-        column_rain: pace.util.Quantity,
-        column_ice: pace.util.Quantity,
-        column_snow: pace.util.Quantity,
-        column_graupel: pace.util.Quantity,
-        condensation: pace.util.Quantity,
-        deposition: pace.util.Quantity,
-        evaporation: pace.util.Quantity,
-        sublimation: pace.util.Quantity,
-        total_energy: pace.util.Quantity,
-        column_energy_change: pace.util.Quantity,
-        adj_vmr: pace.util.Quantity,
-        particle_concentration_w: pace.util.Quantity,
-        effective_diameter_w: pace.util.Quantity,
-        optical_extinction_w: pace.util.Quantity,
-        radar_reflectivity_w: pace.util.Quantity,
-        terminal_velocity_w: pace.util.Quantity,
-        particle_concentration_r: pace.util.Quantity,
-        effective_diameter_r: pace.util.Quantity,
-        optical_extinction_r: pace.util.Quantity,
-        radar_reflectivity_r: pace.util.Quantity,
-        terminal_velocity_r: pace.util.Quantity,
-        particle_concentration_i: pace.util.Quantity,
-        effective_diameter_i: pace.util.Quantity,
-        optical_extinction_i: pace.util.Quantity,
-        radar_reflectivity_i: pace.util.Quantity,
-        terminal_velocity_i: pace.util.Quantity,
-        particle_concentration_s: pace.util.Quantity,
-        effective_diameter_s: pace.util.Quantity,
-        optical_extinction_s: pace.util.Quantity,
-        radar_reflectivity_s: pace.util.Quantity,
-        terminal_velocity_s: pace.util.Quantity,
-        particle_concentration_g: pace.util.Quantity,
-        effective_diameter_g: pace.util.Quantity,
-        optical_extinction_g: pace.util.Quantity,
-        radar_reflectivity_g: pace.util.Quantity,
-        terminal_velocity_g: pace.util.Quantity,
-    ):
-        self.qvapor = qvapor
-        self.qliquid = qliquid
-        self.qrain = qrain
-        self.qice = qice
-        self.qsnow = qsnow
-        self.qgraupel = qgraupel
-        self.qcld = qcld
-        self.qcloud_cond_nuclei = qcloud_cond_nuclei
-        self.qcloud_ice_nuclei = qcloud_ice_nuclei
-        self.ua = ua
-        self.va = va
-        self.wa = wa
-        self.delp = delp
-        self.delz = delz
-        self.pt = pt
-        self.geopotential_height = geopotential_height
-        self.preflux_w = preflux_w
-        self.preflux_r = preflux_r
-        self.preflux_i = preflux_i
-        self.preflux_s = preflux_s
-        self.preflux_g = preflux_g
-        self.column_water = column_water
-        self.column_rain = column_rain
-        self.column_ice = column_ice
-        self.column_snow = column_snow
-        self.column_graupel = column_graupel
-        self.condensation = condensation
-        self.deposition = deposition
-        self.evaporation = evaporation
-        self.sublimation = sublimation
-        self.total_energy = total_energy
-        self.column_energy_change = column_energy_change
-        self.adj_vmr = adj_vmr
-        self.particle_concentration_w = particle_concentration_w
-        self.effective_diameter_w = effective_diameter_w
-        self.optical_extinction_w = optical_extinction_w
-        self.radar_reflectivity_w = radar_reflectivity_w
-        self.terminal_velocity_w = terminal_velocity_w
-        self.particle_concentration_r = particle_concentration_r
-        self.effective_diameter_r = effective_diameter_r
-        self.optical_extinction_r = optical_extinction_r
-        self.radar_reflectivity_r = radar_reflectivity_r
-        self.terminal_velocity_r = terminal_velocity_r
-        self.particle_concentration_i = particle_concentration_i
-        self.effective_diameter_i = effective_diameter_i
-        self.optical_extinction_i = optical_extinction_i
-        self.radar_reflectivity_i = radar_reflectivity_i
-        self.terminal_velocity_i = terminal_velocity_i
-        self.particle_concentration_s = particle_concentration_s
-        self.effective_diameter_s = effective_diameter_s
-        self.optical_extinction_s = optical_extinction_s
-        self.radar_reflectivity_s = radar_reflectivity_s
-        self.terminal_velocity_s = terminal_velocity_s
-        self.particle_concentration_g = particle_concentration_g
-        self.effective_diameter_g = effective_diameter_g
-        self.optical_extinction_g = optical_extinction_g
-        self.radar_reflectivity_g = radar_reflectivity_g
-        self.terminal_velocity_g = terminal_velocity_g
 
 
 class Microphysics:
@@ -845,18 +779,24 @@ class Microphysics:
         config: MicroPhysicsConfig,
         do_mp_fast: bool = False,
         do_mp_full: bool = True,
+        consv_te: bool = False,
     ):
         self.config = config
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._max_timestep = self.config.mp_time
         self._ntimes = self.config.ntimes
         self.do_mp_fast = do_mp_fast
-        self.do_mp_full = do_mp_fast
+        self.do_mp_full = do_mp_full
+        self.consv_te = consv_te
         self.do_qa = config.do_qa
         self.hydrostatic = config.hydrostatic
         self.do_sedi_uv = config.do_sedi_uv
         self.do_sedi_w = config.do_sedi_w
         self.consv_checker = config.consv_checker
+        self.do_inline_mp = config.do_inline_mp
+        self.fix_negative = config.fix_negative
+        self._te_err = config.te_err
+        self._tw_err = config.tw_err
 
         if config.do_hail:
             pcag = config.pcah
@@ -907,6 +847,14 @@ class Microphysics:
         self._temperature0 = make_quantity()
         self._u0 = make_quantity()
         self._v0 = make_quantity()
+        self._density = make_quantity()
+        self._density_factor = make_quantity()
+        self._pz = make_quantity()
+        self._cloud_condensation_nuclei = make_quantity()
+        self._cloud_ice_nuclei = make_quantity()
+        self._tzuv = make_quantity()
+        self._tzw = make_quantity()
+
         if self.hydrostatic:
             assert (
                 not config.do_sedi_w
@@ -915,25 +863,29 @@ class Microphysics:
             self._w0 = make_quantity()
 
         if self.consv_checker:
-            self.total_energy_dry_end = make_quantity()
-            self.total_energy_wet_end = make_quantity()
-            self.total_water_dry_end = make_quantity()
-            self.total_water_wet_end = make_quantity()
-            self.total_energy_dry_begin = make_quantity()
-            self.total_energy_wet_begin = make_quantity()
-            self.total_water_dry_begin = make_quantity()
-            self.total_water_wet_begin = make_quantity()
-            self.total_energy_bot_dry_end = make_quantity()
-            self.total_energy_bot_wet_end = make_quantity()
-            self.total_water_bot_dry_end = make_quantity()
-            self.total_water_bot_wet_end = make_quantity()
-            self.total_energy_bot_dry_begin = make_quantity()
-            self.total_energy_bot_wet_begin = make_quantity()
-            self.total_water_bot_dry_begin = make_quantity()
-            self.total_water_bot_wet_begin = make_quantity()
+            self._column_vapor = make_quantity2d()  # Needed for mtetw
+            self._column_energy_loss = make_quantity2d()
+            self._total_energy_dry_end = make_quantity()
+            self._total_energy_wet_end = make_quantity()
+            self._total_water_dry_end = make_quantity()
+            self._total_water_wet_end = make_quantity()
+            self._total_energy_dry_begin = make_quantity()
+            self._total_energy_wet_begin = make_quantity()
+            self._total_water_dry_begin = make_quantity()
+            self._total_water_wet_begin = make_quantity()
+            self._total_energy_bot_dry_end = make_quantity()
+            self._total_energy_bot_wet_end = make_quantity()
+            self._total_water_bot_dry_end = make_quantity()
+            self._total_water_bot_wet_end = make_quantity()
+            self._total_energy_bot_dry_begin = make_quantity()
+            self._total_energy_bot_wet_begin = make_quantity()
+            self._total_water_bot_dry_begin = make_quantity()
+            self._total_water_bot_wet_begin = make_quantity()
 
+        self._h_var = make_quantity2d
         self._rh_adj = make_quantity2d()
         self._rh_rain = make_quantity2d()
+        self._cond = make_quantity2d()
 
         self._gsize = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m")
 
@@ -950,23 +902,27 @@ class Microphysics:
             domain=self._idx.domain_compute(),
         )
 
-        self._reset_initial_values = stencil_factory.from_origin_domain(
-            func=reset_initial_values,
+        self._reset_initial_values_and_make_copies = stencil_factory.from_origin_domain(
+            func=reset_initial_values_and_make_copies,
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
 
-        self._calc_total_energy = stencil_factory.from_origin_domain(
-            func=calc_total_energy,
-            externals={
-                "hydrostatic": self.config.hydrostatic,
-                "c_air": self.config.c_air,
-                "c1_vap": self.config.c1_vap,
-                "c1_liq": self.config.c1_liq,
-                "c1_ice": self.config.c1_ice,
-            },
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
+        self._convert_virtual_to_true_temperature_and_calc_total_energy = (
+            stencil_factory.from_origin_domain(
+                func=convert_virtual_to_true_temperature_and_calc_total_energy,
+                externals={
+                    "consv_te": consv_te,
+                    "do_inline_mp": self.do_inline_mp,
+                    "hydrostatic": self.config.hydrostatic,
+                    "c_air": self.config.c_air,
+                    "c1_vap": self.config.c1_vap,
+                    "c1_liq": self.config.c1_liq,
+                    "c1_ice": self.config.c1_ice,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
         )
 
         if self.config.consv_checker:
@@ -1021,12 +977,6 @@ class Microphysics:
             )
         )
 
-        self._calc_density_factor = stencil_factory.from_origin_domain(
-            func=calc_density_factor,
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
-        )
-
         self._cloud_nuclei = stencil_factory.from_origin_domain(
             func=cloud_nuclei,
             externals={
@@ -1052,12 +1002,13 @@ class Microphysics:
             )
         )
 
-        self._neg_adj = AdjustNegativeTracers(
-            stencil_factory,
-            self.config.adjustnegative,
-            self._ntimes,
-            self._convert_mm_day,
-        )
+        if self.fix_negative:
+            self._neg_adj = AdjustNegativeTracers(
+                stencil_factory,
+                self.config.adjustnegative,
+                self._ntimes,
+                self._convert_mm_day,
+            )
 
         if self.do_mp_fast:
             self._mp_fast = FastMicrophysics(
@@ -1078,7 +1029,9 @@ class Microphysics:
             )
 
         if self.do_qa:
-            self._cloud_fraction = CloudFraction(stencil_factory, config)
+            self._cloud_fraction = CloudFraction(
+                stencil_factory, quantity_factory, config
+            )
 
         self._calculate_particle_properties = stencil_factory.from_origin_domain(
             func=calculate_particle_properties,
@@ -1184,6 +1137,7 @@ class Microphysics:
             stencil_factory.from_origin_domain(
                 func=calculate_total_energy_change_and_convert_temp,
                 externals={
+                    "consv_te": consv_te,
                     "hydrostatic": self.hydrostatic,
                     "c_air": config.c_air,
                     "do_inline_mp": config.do_inline_mp,
@@ -1196,8 +1150,6 @@ class Microphysics:
                 domain=self._idx.domain_compute(),
             )
         )
-
-        pass
 
     def _update_timestep_if_needed(self, timestep: float):
         if timestep != self.full_timestep:
@@ -1223,4 +1175,400 @@ class Microphysics:
         timer: Timer = pace.util.NullTimer(),
     ):
         self._update_timestep_if_needed(timestep)
+
+        self._reset_initial_values_and_make_copies(
+            state.adj_vmr,
+            state.qvapor,
+            state.qliquid,
+            state.qrain,
+            state.qice,
+            state.qsnow,
+            state.qgraupel,
+            state.delp,
+            state.pt,
+            state.ua,
+            state.va,
+            self._qvapor0,
+            self._qliquid0,
+            self._qrain0,
+            self._qice0,
+            self._qsnow0,
+            self._qgraupel0,
+            self._dp0,
+            self._temperature0,
+            self._u0,
+            self._v0,
+            state.column_energy_change,
+            self._cond,
+        )
+
+        if not self.hydrostatic:
+            self._copy_stencil(state.wa, self._w0)
+
+        if self.do_inline_mp or self.consv_te:
+            self._convert_virtual_to_true_temperature_and_calc_total_energy(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+            )
+
+        if self.consv_checker:
+            self._moist_total_energy_and_water_mq(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.ua,
+                state.va,
+                state.wa,
+                state.delp,
+                self._gsize,
+                state.column_energy_change,
+                self._column_vapor,
+                state.column_water,
+                state.column_rain,
+                state.column_ice,
+                state.column_snow,
+                state.column_graupel,
+                0.0,
+                0.0,
+                self._total_energy_wet_begin,
+                self._total_water_wet_begin,
+                self._total_energy_bot_wet_begin,
+                self._total_water_bot_wet_begin,
+            )
+
+        self._convert_specific_to_mass_mixing_ratios_and_calculate_densities(
+            state.qvapor,
+            state.qliquid,
+            state.qrain,
+            state.qice,
+            state.qsnow,
+            state.qgraupel,
+            state.delp,
+            state.delz,
+            state.pt,
+            self._density,
+            self._pz,
+            self._density_factor,
+        )
+
+        if self.consv_checker:
+            self._moist_total_energy_and_water(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.ua,
+                state.va,
+                state.wa,
+                state.delp,
+                self._gsize,
+                state.column_energy_change,
+                self._column_vapor,
+                state.column_water,
+                state.column_rain,
+                state.column_ice,
+                state.column_snow,
+                state.column_graupel,
+                0.0,
+                0.0,
+                self._total_energy_dry_begin,
+                self._total_water_dry_begin,
+                self._total_energy_bot_dry_begin,
+                self._total_water_bot_dry_begin,
+            )
+
+        self._cloud_nuclei(
+            state.geopotential_surface_height,
+            state.qcloud_cond_nuclei,
+            state.qcloud_ice_nuclei,
+            self._density,
+            self._cloud_condensation_nuclei,
+            self._cloud_ice_nuclei,
+        )
+
+        self._subgrid_deviation_and_relative_humidity(
+            self._gsize,
+            state.geopotential_surface_height,
+            self._h_var,
+            self._rh_adj,
+            self._rh_rain,
+        )
+
+        if self.fix_negative:
+            self._neg_adj(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.delp,
+                state.condensation,
+            )
+
+        if self.do_mp_fast:
+            self._mp_fast(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.delp,
+                self._density,
+                self._cloud_condensation_nuclei,
+                self._cloud_ice_nuclei,
+                state.condensation,
+                state.deposition,
+                state.evaporation,
+                state.sublimation,
+            )
+
+        if self.do_mp_full:
+            self._mp_full(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.ua,
+                state.va,
+                state.wa,
+                state.pt,
+                state.delp,
+                state.delz,
+                self._density,
+                self._density_factor,
+                self._cloud_condensation_nuclei,
+                self._cloud_ice_nuclei,
+                state.preflux_water,
+                state.preflux_rain,
+                state.preflux_ice,
+                state.preflux_snow,
+                state.preflux_graupel,
+                self._h_var,
+                self._rh_adj,
+                state.column_energy_change,
+                state.column_water,
+                state.column_rain,
+                state.column_ice,
+                state.column_snow,
+                state.column_graupel,
+                state.condensation,
+                state.deposition,
+                state.evaporation,
+                state.sublimation,
+            )
+
+        if (self.do_qa) and last_step:
+            self._cloud_fraction(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.qcld,
+                state.pt,
+                self._density,
+                self._pz,
+                self._h_var,
+                self._gsize,
+            )
+
+        self._calculate_particle_properties(
+            state.qliquid,
+            state.qrain,
+            state.qice,
+            state.qsnow,
+            state.qgraupel,
+            self._density,
+            state.particle_concentration_w,
+            state.particle_concentration_r,
+            state.particle_concentration_i,
+            state.particle_concentration_s,
+            state.particle_concentration_g,
+            state.effective_diameter_w,
+            state.effective_diameter_r,
+            state.effective_diameter_i,
+            state.effective_diameter_s,
+            state.effective_diameter_g,
+            state.optical_extinction_w,
+            state.optical_extinction_r,
+            state.optical_extinction_i,
+            state.optical_extinction_s,
+            state.optical_extinction_g,
+            state.radar_reflectivity_w,
+            state.radar_reflectivity_r,
+            state.radar_reflectivity_i,
+            state.radar_reflectivity_s,
+            state.radar_reflectivity_g,
+            state.terminal_velocity_w,
+            state.terminal_velocity_r,
+            state.terminal_velocity_i,
+            state.terminal_velocity_s,
+            state.terminal_velocity_g,
+        )
+
+        if (self.do_sedi_uv) or (self.do_sedi_w):
+            self._update_temperature_pre_delp_q(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.ua,
+                state.va,
+                state.wa,
+                self._u0,
+                self._v0,
+                self._w0,
+                state.pt,
+                self._tzuv,
+                self._tzw,
+            )
+        if self.consv_checker:
+            self._moist_total_energy_and_water(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.ua,
+                state.va,
+                state.wa,
+                state.delp,
+                self._gsize,
+                state.column_energy_change,
+                self._column_vapor,
+                state.column_water,
+                state.column_rain,
+                state.column_ice,
+                state.column_snow,
+                state.column_graupel,
+                0.0,
+                0.0,
+                self._total_energy_dry_end,
+                self._total_water_dry_end,
+                self._total_energy_bot_dry_end,
+                self._total_water_bot_dry_end,
+            )
+
+            self._calc_sedimentation_energy_loss(
+                self._column_energy_loss, state.column_energy_change, self._gsize
+            )
+
+        self._convert_mass_mixing_to_specific_ratios_and_update_temperatures(
+            state.qvapor,
+            state.qliquid,
+            state.qrain,
+            state.qice,
+            state.qsnow,
+            state.qgraupel,
+            state.ua,
+            state.va,
+            state.wa,
+            state.delp,
+            self._qvapor0,
+            self._qliquid0,
+            self._qrain0,
+            self._qice0,
+            self._qsnow0,
+            self._qgraupel0,
+            self._u0,
+            self._v0,
+            self._w0,
+            self._dp0,
+            state.pt,
+            self._tzuv,
+            self._tzw,
+            state.adj_vmr,
+        )
+
+        if self.consv_checker:
+            self._moist_total_energy_and_water_mq(
+                state.qvapor,
+                state.qliquid,
+                state.qrain,
+                state.qice,
+                state.qsnow,
+                state.qgraupel,
+                state.pt,
+                state.ua,
+                state.va,
+                state.wa,
+                state.delp,
+                self._gsize,
+                state.column_energy_change,
+                self._column_vapor,
+                state.column_water,
+                state.column_rain,
+                state.column_ice,
+                state.column_snow,
+                state.column_graupel,
+                0.0,
+                0.0,
+                self._total_energy_wet_end,
+                self._total_water_wet_end,
+                self._total_energy_bot_wet_end,
+                self._total_water_bot_wet_end,
+            )
+
+        self._calculate_total_energy_change_and_convert_temp(
+            state.qvapor,
+            state.qliquid,
+            state.qrain,
+            state.qice,
+            state.qsnow,
+            state.qgraupel,
+            state.te,
+            state.pt,
+            self._temperature0,
+            state.delp,
+            state.delz,
+        )
+
+        if self.consv_checker:
+            total_energy_check(
+                self._total_energy_dry_end,
+                self._total_energy_wet_end,
+                self._total_water_dry_end,
+                self._total_water_wet_end,
+                self._total_energy_dry_begin,
+                self._total_energy_wet_begin,
+                self._total_water_dry_begin,
+                self._total_water_wet_begin,
+                self._total_energy_bot_dry_end,
+                self._total_energy_bot_wet_end,
+                self._total_water_bot_dry_end,
+                self._total_water_bot_wet_end,
+                self._total_energy_bot_dry_begin,
+                self._total_energy_bot_wet_begin,
+                self._total_water_bot_dry_begin,
+                self._total_water_bot_wet_begin,
+                self._idx.isc,
+                self._idx.iec,
+                self._idx.jsc,
+                self._idx.jec,
+                self._te_err,
+                self._tw_err,
+            )
         pass

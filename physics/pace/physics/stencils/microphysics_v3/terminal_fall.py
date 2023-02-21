@@ -10,6 +10,7 @@ from gt4py.cartesian.gtscript import (
     interval,
 )
 
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 
@@ -18,9 +19,6 @@ from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ, IntFieldIJ
 from pace.fv3core.stencils.basic_operations import copy_defn
 from pace.fv3core.stencils.remap_profile import RemapProfile
-from pace.physics.stencils.microphysics_v3.moist_total_energy import (
-    calc_moist_total_energy,
-)
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
@@ -49,7 +47,7 @@ def prep_terminal_fall(
         if no_fall > 0.0:
             if __INLINED(do_sedi_w):
                 dm = delp * (1.0 + qvapor + qliquid + qrain + qice + qsnow + qgraupel)
-            tot_e_initial = calc_moist_total_energy(
+            tot_e_initial = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -286,7 +284,7 @@ def update_energy_wind_heat_post_fall(
 
     with computation(PARALLEL), interval(...):
         if no_fall > 0.0:
-            post_energy = calc_moist_total_energy(
+            post_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -318,7 +316,7 @@ def update_energy_wind_heat_post_fall(
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
         if no_fall > 0.0:
-            initial_energy = calc_moist_total_energy(
+            initial_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -353,7 +351,7 @@ def update_energy_wind_heat_post_fall(
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
         if no_fall > 0.0:
-            post_energy = calc_moist_total_energy(
+            post_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,

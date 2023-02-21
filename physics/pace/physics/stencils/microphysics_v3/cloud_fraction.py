@@ -9,11 +9,13 @@ from gt4py.cartesian.gtscript import (
 )
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
+from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
 
@@ -289,8 +291,15 @@ def cloud_fraction(
 
 
 class CloudFraction:
-    def __init__(self, stencil_factory: StencilFactory, config: MicroPhysicsConfig):
+    def __init__(
+        self,
+        stencil_factory: StencilFactory,
+        quantity_factory: pace.util.QuantityFactory,
+        config: MicroPhysicsConfig,
+    ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
+
+        self._te = quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
         self._cloud_fraction = stencil_factory.from_origin_domain(
             func=cloud_fraction,
@@ -331,7 +340,6 @@ class CloudFraction:
         temperature: FloatField,
         density: FloatField,
         pz: FloatField,
-        te: FloatField,
         h_var: FloatFieldIJ,
         gsize: FloatFieldIJ,
     ):
@@ -362,7 +370,7 @@ class CloudFraction:
             temperature,
             density,
             pz,
-            te,
+            self._te,
             h_var,
             gsize,
         )

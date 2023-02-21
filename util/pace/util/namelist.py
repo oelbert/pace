@@ -104,6 +104,8 @@ class NamelistDefaults:
     xr_a = 0.25  # p value in Xu and Randall (1996)
     xr_b = 100.0  # alpha_0 value in Xu and Randall (1996)
     xr_c = 0.49  # gamma value in Xu and Randall (1996)
+    te_err = 1.0e-5  # 64bit: 1.e-14, 32bit: 1.e-7; turn off to save computer time
+    tw_err = 1.0e-8  # 64bit: 1.e-14, 32bit: 1.e-7; turn off to save computer time
     rh_thres = 0.75  # minimum relative humidity for cloud fraction
     rhc_cevap = 0.85  # maximum relative humidity for cloud water evaporation
     rhc_revap = 0.85  # maximum relative humidity for rain evaporation
@@ -418,6 +420,8 @@ class Namelist:
     xr_a: float = NamelistDefaults.xr_a
     xr_b: float = NamelistDefaults.xr_b
     xr_c: float = NamelistDefaults.xr_c
+    te_err: float = NamelistDefaults.te_err
+    tw_err: float = NamelistDefaults.tw_err
     rh_thres: float = NamelistDefaults.rh_thres
     rhc_cevap: float = NamelistDefaults.rhc_cevap
     rhc_revap: float = NamelistDefaults.rhc_revap

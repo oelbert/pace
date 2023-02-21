@@ -326,3 +326,31 @@ def vent_coeff(qden, density_factor, c1, c2, blin, mu):
     return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
         density_factor
     ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
+
+
+@gtscript.function
+def calc_moist_total_energy(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temp,
+    delp,
+    moist_q,
+):
+    """
+    Fortran name is mte
+    """
+    from __externals__ import c1_ice, c1_liq, c1_vap, c_air
+
+    q_liq = qrain + qliquid
+    q_solid = qice + qsnow + qgraupel
+    q_cond = q_liq + q_solid
+    con = 1.0 - (qvapor + q_cond)
+    if moist_q:
+        cvm = con + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
+    else:
+        cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
+    return constants.RGRAV * cvm * c_air * temp * delp
