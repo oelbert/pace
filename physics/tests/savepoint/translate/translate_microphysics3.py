@@ -54,13 +54,11 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
             "evaporation": {"serialname": "mp_reevap"},
             "sublimation": {"serialname": "mp_sub"},
         }
-        self.in_vars["parameters"] = {
-            "timestep": {"serialname": "mp_dt"},
-            "hydrostatic": {"serialname": "mp_hydro"},
-            "consv_te": {"serialname": "mp_consv_te"},
-            "last_step": {"serialname": "mp_last_step"},
-            "do_inline_mp": {"serialname": "mp_inline"},
-        }
+        self.in_vars["parameters"] = [
+            "timestep",
+            "consv_te",
+            "last_step",
+        ]
 
         self.out_vars = {
             "qvapor": {"serialname": "mp_qv"},
