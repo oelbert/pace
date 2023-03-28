@@ -266,6 +266,16 @@ def moist_heat_capacity(qvapor, qliquid, qrain, qice, qsnow, qgraupel):
 
 
 @gtscript.function
+def vent_coeff(qden, density_factor, c1, c2, blin, mu):
+    """
+    Ventilation coefficient, Lin et al. (1983)
+    """
+
+    return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
+        density_factor
+    ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
+
+@gtscript.function
 def melting_function(
     tc,
     dq,
@@ -315,17 +325,6 @@ def sublimation_function(
         * vent_coeff(qden, density_factor, c2, c3, blin, mu)
         / (c4 * t2 + c5 * (cpk * cvm) ** 2 * qsat * density)
     )
-
-
-@gtscript.function
-def vent_coeff(qden, density_factor, c1, c2, blin, mu):
-    """
-    Ventilation coefficient, Lin et al. (1983)
-    """
-
-    return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
-        density_factor
-    ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
 
 
 @gtscript.function
