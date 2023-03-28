@@ -576,12 +576,8 @@ def deposit_and_sublimate_ice(
                 qi_crt = qi_gen * min(qi_lim, 0.1 * tc) / density
             elif igflag == 3:
                 qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
-            elif igflag == 4:
+            else:# igflag == 4:
                 qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
-            else:
-                raise ValueError(
-                    f"Ice Generation Flag must be an integer from 1 to 4 not {igflag}"
-                )
             sink = min(tmp, max(qi_crt - qice, pidep), tc / tcpk)
             dep += sink * delp
         else:
@@ -1212,6 +1208,11 @@ class VerticalSubgridProcesses:
                         f"Ice Nucleation Flag must be an integer from 1 to 5"
                         f"not {config.inflag}"
                     )
+        
+        if config.igflag not in [1,2,3,4]:
+            raise ValueError(
+                f"Ice Generation Flag must be an integer from 1 to 4 not {config.igflag}"
+            )
 
         self._vertical_subgrid_processes = stencil_factory.from_origin_domain(
             func=vertical_subgrid_processes,
