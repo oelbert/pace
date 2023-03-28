@@ -10,7 +10,7 @@ from pace.physics.stencils.physics import PhysicsState  # noqa
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
-class TranslateMicrophisics3(TranslatePhysicsFortranData2Py):
+class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
     def __init__(
         self,
         grid,
