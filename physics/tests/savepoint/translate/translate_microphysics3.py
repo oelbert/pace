@@ -56,10 +56,10 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
         }
         self.in_vars["parameters"] = {
             "timestep": {"serialname": "mp_dt"},
-            "hydrostatic": False,
-            "consv_te": False,
-            "last_step": True,
-            "do_inline_mp": False,
+            "hydrostatic": {"serialname": "mp_hydro"},
+            "consv_te": {"serialname": "mp_consv_te"},
+            "last_step": {"serialname": "mp_last_step"},
+            "do_inline_mp": {"serialname": "mp_inline"},
         }
 
         self.out_vars = {
@@ -83,6 +83,7 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
             "column_graupel": {"serialname": "mp_graupel"},
             "q_cond": {"serialname": "mp_q_con"},
             "cappa": {"serialname": "mp_cappa"},
+            "adj_vmr": {"serialname": "mp_adj_vmr"},
             "total_energy": {"serialname": "mp_te"},
             "column_energy_change": {"serialname": "mp_dte"},
             "preflux_water": {"serialname": "mp_prefluxw"},
@@ -94,7 +95,6 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
             "deposition": {"serialname": "mp_dep"},
             "evaporation": {"serialname": "mp_reevap"},
             "sublimation": {"serialname": "mp_sub"},
-            "adj_vmr": {"serialname": "mp_adj_vmr"},
             "particle_concentration_w": {"serialname": "mp_pcw"},
             "effective_diameter_w": {"serialname": "mp_edw"},
             "optical_extinction_w": {"serialname": "mp_oew"},
