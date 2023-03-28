@@ -545,13 +545,8 @@ def deposit_and_sublimate_ice(
                     cloud_ice_nuclei = (
                         5.0e-3 * exp(0.304 * (tice - temperature)) * 1000.0
                     )
-                elif inflag == 5:
+                else:# inflag == 5:
                     cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temperature)) * 1000.0
-                else:
-                    raise ValueError(
-                        f"Ice Nucleation Flag must be an integer from 1 to 5"
-                        f"not {inflag}"
-                    )
             if do_psd_ice_num:
                 cloud_ice_nuclei = physfun.calc_particle_concentration(
                     qice, density, pcai, pcbi, mui
@@ -1211,6 +1206,12 @@ class VerticalSubgridProcesses:
         else:
             mu_g = config.mug
             blin_g = config.bling
+
+        if config.inflag not in [1,2,3,4,5]:
+            raise ValueError(
+                        f"Ice Nucleation Flag must be an integer from 1 to 5"
+                        f"not {config.inflag}"
+                    )
 
         self._vertical_subgrid_processes = stencil_factory.from_origin_domain(
             func=vertical_subgrid_processes,
