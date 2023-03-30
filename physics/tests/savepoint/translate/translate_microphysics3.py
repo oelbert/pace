@@ -207,3 +207,4 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
         inputs["terminal_velocity_g"] = microphysics_state.terminal_velocity_g
 
         out = self.slice_output(inputs)
+        return out
