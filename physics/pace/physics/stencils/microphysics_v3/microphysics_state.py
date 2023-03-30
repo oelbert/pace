@@ -11,6 +11,7 @@ class MicrophysicsState:
             "name": "specific_humidity",
             "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
             "units": "kg/kg",
+            "intent": "inout",
         }
     )
     qliquid: pace.util.Quantity = field(

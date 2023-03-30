@@ -169,6 +169,41 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
         )
 
         # copy microphysics state back to inputs
-        inputs["qvapor"] = microphysics_state.qvapor
+        inputs["column_water"] = microphysics_state.column_water
+        inputs["column_rain"] = microphysics_state.column_rain
+        inputs["column_ice"] = microphysics_state.column_ice
+        inputs["column_snow"] = microphysics_state.column_snow
+        inputs["column_graupel"] = microphysics_state.column_graupel
+        inputs["condensation"] = microphysics_state.condensation
+        inputs["deposition"] = microphysics_state.deposition
+        inputs["sublimation"] = microphysics_state.sublimation
+        inputs["evaporation"] = microphysics_state.evaporation
+        inputs["column_energy_change"] = microphysics_state.column_energy_change
+        inputs["adj_vmr"] = microphysics_state.adj_vmr
+        inputs["particle_concentration_w"] = microphysics_state.particle_concentration_w
+        inputs["effective_diameter_w"] = microphysics_state.effective_diameter_w
+        inputs["optical_extinction_w"] = microphysics_state.optical_extinction_w
+        inputs["radar_reflectivity_w"] = microphysics_state.radar_reflectivity_w
+        inputs["terminal_velocity_w"] = microphysics_state.terminal_velocity_w
+        inputs["particle_concentration_r"] = microphysics_state.particle_concentration_r
+        inputs["effective_diameter_r"] = microphysics_state.effective_diameter_r
+        inputs["optical_extinction_r"] = microphysics_state.optical_extinction_r
+        inputs["radar_reflectivity_r"] = microphysics_state.radar_reflectivity_r
+        inputs["terminal_velocity_r"] = microphysics_state.terminal_velocity_r
+        inputs["particle_concentration_i"] = microphysics_state.particle_concentration_i
+        inputs["effective_diameter_i"] = microphysics_state.effective_diameter_i
+        inputs["optical_extinction_i"] = microphysics_state.optical_extinction_i
+        inputs["radar_reflectivity_i"] = microphysics_state.radar_reflectivity_i
+        inputs["terminal_velocity_i"] = microphysics_state.terminal_velocity_i
+        inputs["particle_concentration_s"] = microphysics_state.particle_concentration_s
+        inputs["effective_diameter_s"] = microphysics_state.effective_diameter_s
+        inputs["optical_extinction_s"] = microphysics_state.optical_extinction_s
+        inputs["radar_reflectivity_s"] = microphysics_state.radar_reflectivity_s
+        inputs["terminal_velocity_s"] = microphysics_state.terminal_velocity_s
+        inputs["particle_concentration_g"] = microphysics_state.particle_concentration_g
+        inputs["effective_diameter_g"] = microphysics_state.effective_diameter_g
+        inputs["optical_extinction_g"] = microphysics_state.optical_extinction_g
+        inputs["radar_reflectivity_g"] = microphysics_state.radar_reflectivity_g
+        inputs["terminal_velocity_g"] = microphysics_state.terminal_velocity_g
 
         out = self.slice_output(inputs)
