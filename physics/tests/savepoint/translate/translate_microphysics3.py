@@ -3,10 +3,11 @@ import copy  # noqa
 import numpy as np  # noqa
 
 import pace.dsl
-import pace.dsl.gt4py_utils as utils  # noqa
+import pace.dsl.gt4py_utils as utils
 import pace.util
-from pace.physics.stencils.microphysics_v3.microphysics_v3 import Microphysics  # noqa
-from pace.physics.stencils.physics import PhysicsState  # noqa
+from pace.physics._config import PhysicsConfig
+from pace.physics.stencils.microphysics_v3.microphysics_state import MicrophysicsState
+from pace.physics.stencils.microphysics_v3.microphysics_v3 import Microphysics
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
@@ -122,6 +123,52 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
 
         self.stencil_factory = stencil_factory
         self.grid_indexing = self.stencil_factory.grid_indexing
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
 
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
+
+        storage = utils.make_storage_from_shape(
+            self.grid_indexing.domain_full(add=(1, 1, 1)),
+            origin=self.grid_indexing.origin_compute(),
+            backend=self.stencil_factory.backend,
+        )
+
+        sizer = pace.util.SubtileGridSizer.from_tile_params(
+            nx_tile=self.namelist.npx - 1,
+            ny_tile=self.namelist.npy - 1,
+            nz=self.namelist.npz,
+            n_halo=3,
+            extra_dim_lengths={},
+            layout=self.namelist.layout,
+        )
+
+        quantity_factory = pace.util.QuantityFactory.from_backend(
+            sizer, self.stencil_factory.backend
+        )
+
+        microphysics_state = MicrophysicsState.init_from_storages(
+            inputs,
+            sizer=sizer,
+            quantity_factory=quantity_factory,
+        )
+
+        microphysics = Microphysics(
+            self.stencil_factory,
+            quantity_factory,
+            self.grid.grid_data,
+            self.config,
+            consv_te=inputs["consv_te"],
+        )
+
+        microphysics(
+            microphysics_state,
+            timestep=inputs["timestep"],
+            last_step=inputs["last_step"],
+        )
+
+        # copy microphysics state back to inputs
+        inputs["qvapor"] = microphysics_state.qvapor
+
+        out = self.slice_output(inputs)

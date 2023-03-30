@@ -1,127 +1,516 @@
+from dataclasses import InitVar, dataclass, field, fields
+from typing import Any, Dict, Mapping
+
 import pace.util
 
 
+@dataclass()
 class MicrophysicsState:
-    """
-    A state that contains everything that goes into or comes out of microphysics
-    """
+    qvapor: pace.util.Quantity = field(
+        metadata={
+            "name": "specific_humidity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+        }
+    )
+    qliquid: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qice: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qrain: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qsnow: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qgraupel: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qcld: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_fraction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "",
+            "intent": "inout",
+        }
+    )
+    qcon: pace.util.Quantity = field(
+        metadata={
+            "name": "condensate_mixing_ratio",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "kg/kg",
+            "intent": "inout",
+        }
+    )
+    qcloud_cond_nuclei: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_condensate_nuclei_fraction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "",
+            "intent": "inout",
+        }
+    )
+    qcloud_ice_nuclei: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_nuclei_fraction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "",
+            "intent": "inout",
+        }
+    )
+    ua: pace.util.Quantity = field(
+        metadata={
+            "name": "eastward_wind",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "m/s",
+            "intent": "inout",
+        }
+    )
+    va: pace.util.Quantity = field(
+        metadata={
+            "name": "northward_wind",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "m/s",
+        }
+    )
+    wa: pace.util.Quantity = field(
+        metadata={
+            "name": "vertical_wind",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "m/s",
+            "intent": "inout",
+        }
+    )
+    pt: pace.util.Quantity = field(
+        metadata={
+            "name": "air_temperature",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "degK",
+            "intent": "inout",
+        }
+    )
+    delp: pace.util.Quantity = field(
+        metadata={
+            "name": "pressure_thickness_of_atmospheric_layer",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "Pa",
+            "intent": "inout",
+        }
+    )
+    delz: pace.util.Quantity = field(
+        metadata={
+            "name": "vertical_thickness_of_atmospheric_layer",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "m",
+            "intent": "inout",
+        }
+    )
+    geopotential_surface_height: pace.util.Quantity = field(
+        metadata={
+            "name": "geopotential_surface_height",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "m",
+            "intent": "in",
+        }
+    )
+    preflux_water: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_flux",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    preflux_ice: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_flux",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    preflux_rain: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_flux",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    preflux_snow: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_flux",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    preflux_graupel: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_flux",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    column_water: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_precipitated_to_ground",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    column_ice: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_precipitated_to_ground",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    column_rain: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_precipitated_to_ground",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    column_snow: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_precipitated_to_ground",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    column_graupel: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_precipitated_to_ground",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    condensation: pace.util.Quantity = field(
+        metadata={
+            "name": "total_column_condensation",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    deposition: pace.util.Quantity = field(
+        metadata={
+            "name": "total_column_deposition",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    sublimation: pace.util.Quantity = field(
+        metadata={
+            "name": "total_column_sublimation",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    evaporation: pace.util.Quantity = field(
+        metadata={
+            "name": "total_column_evaporation",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    total_energy: pace.util.Quantity = field(
+        metadata={
+            "name": "total_energy",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
+    column_energy_change: pace.util.Quantity = field(
+        metadata={
+            "name": "energy_change_in_column",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    adj_vmr: pace.util.Quantity = field(
+        metadata={
+            "name": "mixing_ratio_adjustment",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "",
+            "intent": "out",
+        }
+    )
+    particle_concentration_w: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_particle_concentration",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    effective_diameter_w: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_effective_diameter",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    optical_extinction_w: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_optical_extinction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    radar_reflectivity_w: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_radar_reflectivity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    terminal_velocity_w: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_water_terminal_velocity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    particle_concentration_r: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_particle_concentration",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    effective_diameter_r: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_effective_diameter",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    optical_extinction_r: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_optical_extinction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    radar_reflectivity_r: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_radar_reflectivity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    terminal_velocity_r: pace.util.Quantity = field(
+        metadata={
+            "name": "rain_terminal_velocity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    particle_concentration_i: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_particle_concentration",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    effective_diameter_i: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_effective_diameter",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    optical_extinction_i: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_optical_extinction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    radar_reflectivity_i: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_radar_reflectivity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    terminal_velocity_i: pace.util.Quantity = field(
+        metadata={
+            "name": "cloud_ice_terminal_velocity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    particle_concentration_s: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_particle_concentration",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    effective_diameter_s: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_effective_diameter",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    optical_extinction_s: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_optical_extinction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    radar_reflectivity_s: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_radar_reflectivity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    terminal_velocity_s: pace.util.Quantity = field(
+        metadata={
+            "name": "snow_terminal_velocity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    particle_concentration_g: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_particle_concentration",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    effective_diameter_g: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_effective_diameter",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    optical_extinction_g: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_optical_extinction",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    radar_reflectivity_g: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_radar_reflectivity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    terminal_velocity_g: pace.util.Quantity = field(
+        metadata={
+            "name": "graupel_terminal_velocity",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "out",
+        }
+    )
+    quantity_factory: InitVar[pace.util.QuantityFactory]
 
-    def __init__(
-        self,
-        qvapor: pace.util.Quantity,
-        qliquid: pace.util.Quantity,
-        qrain: pace.util.Quantity,
-        qice: pace.util.Quantity,
-        qsnow: pace.util.Quantity,
-        qgraupel: pace.util.Quantity,
-        qcld: pace.util.Quantity,
-        qcloud_cond_nuclei: pace.util.Quantity,
-        qcloud_ice_nuclei: pace.util.Quantity,
-        ua: pace.util.Quantity,
-        va: pace.util.Quantity,
-        wa: pace.util.Quantity,
-        delp: pace.util.Quantity,
-        delz: pace.util.Quantity,
-        pt: pace.util.Quantity,
-        geopotential_surface_height: pace.util.Quantity,
-        preflux_water: pace.util.Quantity,
-        preflux_rain: pace.util.Quantity,
-        preflux_ice: pace.util.Quantity,
-        preflux_snow: pace.util.Quantity,
-        preflux_graupel: pace.util.Quantity,
-        column_water: pace.util.Quantity,
-        column_rain: pace.util.Quantity,
-        column_ice: pace.util.Quantity,
-        column_snow: pace.util.Quantity,
-        column_graupel: pace.util.Quantity,
-        condensation: pace.util.Quantity,
-        deposition: pace.util.Quantity,
-        evaporation: pace.util.Quantity,
-        sublimation: pace.util.Quantity,
-        total_energy: pace.util.Quantity,
-        column_energy_change: pace.util.Quantity,
-        adj_vmr: pace.util.Quantity,
-        particle_concentration_w: pace.util.Quantity,
-        effective_diameter_w: pace.util.Quantity,
-        optical_extinction_w: pace.util.Quantity,
-        radar_reflectivity_w: pace.util.Quantity,
-        terminal_velocity_w: pace.util.Quantity,
-        particle_concentration_r: pace.util.Quantity,
-        effective_diameter_r: pace.util.Quantity,
-        optical_extinction_r: pace.util.Quantity,
-        radar_reflectivity_r: pace.util.Quantity,
-        terminal_velocity_r: pace.util.Quantity,
-        particle_concentration_i: pace.util.Quantity,
-        effective_diameter_i: pace.util.Quantity,
-        optical_extinction_i: pace.util.Quantity,
-        radar_reflectivity_i: pace.util.Quantity,
-        terminal_velocity_i: pace.util.Quantity,
-        particle_concentration_s: pace.util.Quantity,
-        effective_diameter_s: pace.util.Quantity,
-        optical_extinction_s: pace.util.Quantity,
-        radar_reflectivity_s: pace.util.Quantity,
-        terminal_velocity_s: pace.util.Quantity,
-        particle_concentration_g: pace.util.Quantity,
-        effective_diameter_g: pace.util.Quantity,
-        optical_extinction_g: pace.util.Quantity,
-        radar_reflectivity_g: pace.util.Quantity,
-        terminal_velocity_g: pace.util.Quantity,
-    ):
-        self.qvapor = qvapor
-        self.qliquid = qliquid
-        self.qrain = qrain
-        self.qice = qice
-        self.qsnow = qsnow
-        self.qgraupel = qgraupel
-        self.qcld = qcld
-        self.qcloud_cond_nuclei = qcloud_cond_nuclei
-        self.qcloud_ice_nuclei = qcloud_ice_nuclei
-        self.ua = ua
-        self.va = va
-        self.wa = wa
-        self.delp = delp
-        self.delz = delz
-        self.pt = pt
-        self.geopotential_surface_height = geopotential_surface_height
-        self.preflux_water = preflux_water
-        self.preflux_rain = preflux_rain
-        self.preflux_ice = preflux_ice
-        self.preflux_snow = preflux_snow
-        self.preflux_graupel = preflux_graupel
-        self.column_water = column_water
-        self.column_rain = column_rain
-        self.column_ice = column_ice
-        self.column_snow = column_snow
-        self.column_graupel = column_graupel
-        self.condensation = condensation
-        self.deposition = deposition
-        self.evaporation = evaporation
-        self.sublimation = sublimation
-        self.total_energy = total_energy
-        self.column_energy_change = column_energy_change
-        self.adj_vmr = adj_vmr
-        self.particle_concentration_w = particle_concentration_w
-        self.effective_diameter_w = effective_diameter_w
-        self.optical_extinction_w = optical_extinction_w
-        self.radar_reflectivity_w = radar_reflectivity_w
-        self.terminal_velocity_w = terminal_velocity_w
-        self.particle_concentration_r = particle_concentration_r
-        self.effective_diameter_r = effective_diameter_r
-        self.optical_extinction_r = optical_extinction_r
-        self.radar_reflectivity_r = radar_reflectivity_r
-        self.terminal_velocity_r = terminal_velocity_r
-        self.particle_concentration_i = particle_concentration_i
-        self.effective_diameter_i = effective_diameter_i
-        self.optical_extinction_i = optical_extinction_i
-        self.radar_reflectivity_i = radar_reflectivity_i
-        self.terminal_velocity_i = terminal_velocity_i
-        self.particle_concentration_s = particle_concentration_s
-        self.effective_diameter_s = effective_diameter_s
-        self.optical_extinction_s = optical_extinction_s
-        self.radar_reflectivity_s = radar_reflectivity_s
-        self.terminal_velocity_s = terminal_velocity_s
-        self.particle_concentration_g = particle_concentration_g
-        self.effective_diameter_g = effective_diameter_g
-        self.optical_extinction_g = optical_extinction_g
-        self.radar_reflectivity_g = radar_reflectivity_g
-        self.terminal_velocity_g = terminal_velocity_g
+    @classmethod
+    def init_zeros(cls, quantity_factory) -> "MicrophysicsState":
+        initial_arrays = {}
+        for _field in fields(cls):
+            if "dims" in _field.metadata.keys():
+                initial_arrays[_field.name] = quantity_factory.zeros(
+                    _field.metadata["dims"], _field.metadata["units"], dtype=float
+                ).data
+        return cls(**initial_arrays, quantity_factory=quantity_factory)
+
+    @classmethod
+    def init_from_storages(
+        cls,
+        storages: Mapping[str, Any],
+        sizer: pace.util.GridSizer,
+        quantity_factory: pace.util.QuantityFactory,
+    ) -> "MicrophysicsState":
+        inputs: Dict[str, pace.util.Quantity] = {}
+        for _field in fields(cls):
+            if "dims" in _field.metadata.keys():
+                if _field.metadata["intent"] == "out":
+                    inputs[_field.name] = quantity_factory.zeros(
+                        _field.metadata["dims"], _field.metadata["units"], dtype=float
+                    ).data
+                else:  # intent is in or inout
+                    inputs[_field.name] = pace.util.Quantity(
+                        storages[_field.name],
+                        _field.metadata["dims"],
+                        _field.metadata["units"],
+                        origin=sizer.get_origin(_field.metadata["dims"]),
+                        extent=sizer.get_extent(_field.metadata["dims"]),
+                    )
+        return cls(**inputs, quantity_factory=quantity_factory)
+
+    # TODO Will we want "from physics" and "from dycore" methods?
+    # Or do init_zero and then populate?
