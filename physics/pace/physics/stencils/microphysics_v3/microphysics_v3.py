@@ -3,6 +3,7 @@ from gt4py.cartesian.gtscript import (
     __INLINED,
     FORWARD,
     PARALLEL,
+    BACKWARD,
     computation,
     interval,
     sqrt,
@@ -214,7 +215,7 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
 ):
     from __externals__ import do_inline_mp
 
-    with computation(PARALLEL):
+    with computation(FORWARD):
         with interval(...):
             if __INLINED(do_inline_mp):
                 con_r8 = 1.0 - (qvapor + qliquid + qrain + qice + qsnow + qgraupel)
@@ -234,9 +235,11 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
             pz = density * constants.RDGAS * temperature
         with interval(-1, None):
             bottom_density = density
-
-        with computation(PARALLEL), interval(...):
             density_factor = sqrt(bottom_density / density)
+
+    with computation(BACKWARD), interval(0,-1):
+        bottom_density = bottom_density[0, 0, -1]
+        density_factor = sqrt(bottom_density / density)
 
 
 def cloud_nuclei(
