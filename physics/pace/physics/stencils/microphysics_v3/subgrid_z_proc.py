@@ -1,7 +1,7 @@
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
-    PARALLEL,
+    FORWARD,
     computation,
     exp,
     interval,
@@ -896,7 +896,7 @@ def vertical_subgrid_processes(
     """"""
     from __externals__ import do_warm_rain_mp
 
-    with computation(PARALLEL):
+    with computation(FORWARD):
         with interval(-1, None):
             cond = 0
             dep = 0

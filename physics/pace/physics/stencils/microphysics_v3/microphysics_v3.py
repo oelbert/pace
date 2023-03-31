@@ -52,22 +52,21 @@ def reset_initial_values_and_make_copies(
     column_energy_change: FloatFieldIJ,
     cond: FloatFieldIJ,
 ):
-    with computation(PARALLEL):
-        with interval(...):
-            adj_vmr = 1.0
-            qvapor0 = qvapor
-            qliquid0 = qliquid
-            qrain0 = qrain
-            qice0 = qice
-            qsnow0 = qsnow
-            qgraupel0 = qgraupel
-            dp0 = delp
-            temperature0 = temperature
-            u0 = ua
-            v0 = va
-        with interval(-1, None):
-            column_energy_change = 0.0
-            cond = 0.0
+    with computation(PARALLEL), interval(...):
+        adj_vmr = 1.0
+        qvapor0 = qvapor
+        qliquid0 = qliquid
+        qrain0 = qrain
+        qice0 = qice
+        qsnow0 = qsnow
+        qgraupel0 = qgraupel
+        dp0 = delp
+        temperature0 = temperature
+        u0 = ua
+        v0 = va
+    with computation(FORWARD), interval(-1, None):
+        column_energy_change = 0.0
+        cond = 0.0
 
 
 def convert_virtual_to_true_temperature_and_calc_total_energy(
@@ -294,7 +293,7 @@ def subgrid_deviation_and_relative_humidity(
 ):
     from __externals__ import dw_land, dw_ocean, rh_inc, rh_inr
 
-    with computation(PARALLEL), interval(-1, None):
+    with computation(FORWARD), interval(-1, None):
         t_lnd = dw_land * sqrt(gsize / 1.0e5)
         t_ocn = dw_ocean * sqrt(gsize / 1.0e5)
         tmp = min(1.0, abs(geopotential_surface_height) / (10.0 * constants.GRAV))
@@ -889,7 +888,7 @@ class Microphysics:
 
         self._gsize = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m")
 
-        self._gsize.data = np.sqrt(grid_data.area.data)
+        self._gsize.data[:] = np.sqrt(grid_data.area.data)
 
         self._set_timestepping(self.config.dt_atmos)  # will change from dt_atmos
         # when we inline microphysics

@@ -57,7 +57,7 @@ def evaporate_rain(
         use_rhc_revap,
     )
 
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         (
             q_liq,
             q_solid,

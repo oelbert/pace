@@ -229,7 +229,7 @@ def finish_implicit_lagrangian(
         if no_fall > 0.0:
             q = q_post_implicit * sed_fac + q_post_lagrangian * (1.0 - sed_fac)
             flux = m_post_implicit * sed_fac + m_post_lagrangian * (1.0 - sed_fac)
-    with computation(PARALLEL), interval(-1, None):
+    with computation(FORWARD), interval(-1, None):
         if no_fall > 0.0:
             precipitation = (
                 precipitation_post_implicit * sed_fac
@@ -282,7 +282,7 @@ def update_energy_wind_heat_post_fall(
 
     from __externals__ import cw, do_sedi_heat, do_sedi_uv, do_sedi_w
 
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         if no_fall > 0.0:
             post_energy = physfun.calc_moist_total_energy(
                 qvapor,
