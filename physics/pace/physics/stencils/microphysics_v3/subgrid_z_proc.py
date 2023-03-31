@@ -903,6 +903,7 @@ def vertical_subgrid_processes(
             reevap = 0
             sub = 0
 
+    with computation(FORWARD):
         with interval(...):
             (
                 q_liq,

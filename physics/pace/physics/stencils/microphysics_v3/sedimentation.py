@@ -260,6 +260,7 @@ def calc_edge_and_terminal_height(
             z_terminal = z_edge - (0.5 * timestep * (v_terminal[0, 0, -1] - v_terminal))
         with interval(-1, None):
             z_terminal = z_surface - timestep * v_terminal[0, 0, -1]
+    with computation(FORWARD):
         with interval(1, None):
             if z_terminal > z_terminal[0, 0, -1]:
                 z_terminal = z_terminal[0, 0, -1] - constants.DZ_MIN_FLIP

@@ -78,6 +78,7 @@ def fall_implicit(
                 dd = timestep * v_terminal
                 q_fall = q_fall * delp
 
+    with computation(FORWARD):
         with interval(0, 1):
             if no_fall > 0.0:
                 qm = q_fall / (delz + dd)
@@ -86,10 +87,12 @@ def fall_implicit(
             if no_fall > 0.0:
                 qm = (q_fall + qm[0, 0, -1] * dd[0, 0, -1]) / (delz + dd)
 
+    with computation(FORWARD):
         with interval(...):
             if no_fall > 0.0:
                 qm = qm * delz
 
+    with computation(FORWARD):
         with interval(0, 1):
             if no_fall > 0.0:
                 flux = q_fall - qm
@@ -98,10 +101,12 @@ def fall_implicit(
             if no_fall > 0.0:
                 flux = flux[0, 0, -1] + q_fall - qm
 
+    with computation(FORWARD):
         with interval(-1, None):
             if no_fall > 0.0:
                 precip += flux
 
+    with computation(FORWARD):
         with interval(...):
             if no_fall > 0.0:
                 q_fall = qm / delp

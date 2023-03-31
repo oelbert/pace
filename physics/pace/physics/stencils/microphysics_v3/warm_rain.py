@@ -251,6 +251,7 @@ def autoconvert_water_rain(
         with interval(1, None):
             if __INLINED((irain_f == 0) and (z_slope_liq)):
                 dq = 0.5 * (qliquid - qliquid[0, 0, -1])
+    with computation(FORWARD):
         with interval(1, -1):
             if __INLINED((irain_f == 0) and (z_slope_liq)):
                 # Use twice the strength of the

@@ -1099,6 +1099,7 @@ def ice_cloud(
         with interval(1, None):
             if __INLINED(z_slope_ice):
                 dq = 0.5 * (qice - qice[0, 0, -1])
+    with computation(FORWARD):
         with interval(1, -1):
             if __INLINED(z_slope_ice):
                 # Use twice the strength of the

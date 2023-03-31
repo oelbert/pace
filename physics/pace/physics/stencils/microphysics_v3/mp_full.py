@@ -42,20 +42,19 @@ def add_fluxes_and_surface_tracers(
 ):
     from __externals__ import convt
 
-    with computation(FORWARD):
-        with interval(...):
-            prefluxw += pfw * convt
-            prefluxr += pfr * convt
-            prefluxi += pfi * convt
-            prefluxs += pfs * convt
-            prefluxg += pfg * convt
-        with interval(-1, None):
-            water += w1 * convt
-            rain += r1 * convt
-            ice += i1 * convt
-            snow += s1 * convt
-            graupel += g1 * convt
-            evaporation += reevap * convt
+    with computation(FORWARD), interval(...):
+        prefluxw += pfw * convt
+        prefluxr += pfr * convt
+        prefluxi += pfi * convt
+        prefluxs += pfs * convt
+        prefluxg += pfg * convt
+    with computation(FORWARD), interval(-1, None):
+        water += w1 * convt
+        rain += r1 * convt
+        ice += i1 * convt
+        snow += s1 * convt
+        graupel += g1 * convt
+        evaporation += reevap * convt
 
 
 def accumulate_state_changes(

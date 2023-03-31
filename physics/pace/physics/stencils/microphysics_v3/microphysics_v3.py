@@ -215,30 +215,28 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
 ):
     from __externals__ import do_inline_mp
 
-    with computation(FORWARD):
-        with interval(...):
-            if __INLINED(do_inline_mp):
-                con_r8 = 1.0 - (qvapor + qliquid + qrain + qice + qsnow + qgraupel)
-            else:
-                con_r8 = 1.0 - qvapor
-            delp = delp * con_r8
-            rcon_r8 = 1.0 / con_r8
-            qvapor = qvapor * rcon_r8
-            qliquid = qliquid * rcon_r8
-            qrain = qrain * rcon_r8
-            qice = qice * rcon_r8
-            qsnow = qsnow * rcon_r8
-            qgraupel = qgraupel * rcon_r8
+    with computation(PARALLEL), interval(...):
+        if __INLINED(do_inline_mp):
+            con_r8 = 1.0 - (qvapor + qliquid + qrain + qice + qsnow + qgraupel)
+        else:
+            con_r8 = 1.0 - qvapor
+        delp = delp * con_r8
+        rcon_r8 = 1.0 / con_r8
+        qvapor = qvapor * rcon_r8
+        qliquid = qliquid * rcon_r8
+        qrain = qrain * rcon_r8
+        qice = qice * rcon_r8
+        qsnow = qsnow * rcon_r8
+        qgraupel = qgraupel * rcon_r8
 
-            # Dry air density and layer-mean pressure thickness
-            density = -delp * (constants.GRAV * delz)
-            pz = density * constants.RDGAS * temperature
-        with interval(-1, None):
-            bottom_density = density
-            density_factor = sqrt(bottom_density / density)
+        # Dry air density and layer-mean pressure thickness
+        density = -delp * (constants.GRAV * delz)
+        pz = density * constants.RDGAS * temperature
+    with computation(FORWARD), interval(-1, None):
+        bottom_density = density
+        density_factor = sqrt(bottom_density / density)
 
     with computation(BACKWARD), interval(0,-1):
-        bottom_density = bottom_density[0, 0, -1]
         density_factor = sqrt(bottom_density / density)
 
 
