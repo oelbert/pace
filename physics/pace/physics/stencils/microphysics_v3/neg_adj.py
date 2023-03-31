@@ -1,9 +1,6 @@
 from gt4py.cartesian.gtscript import BACKWARD, FORWARD, PARALLEL, computation, interval
 
-from pace.physics.stencils.microphysics_v3.physical_functions import (
-    calc_heat_cap_and_latent_heat_coeff,
-    update_hydrometeors_and_temperatures
-)
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
@@ -39,7 +36,7 @@ def adjust_negative_tracers(
             icpk,
             tcpk,
             tcp3,
-        ) = calc_heat_cap_and_latent_heat_coeff
+        ) = physfun.calc_heat_cap_and_latent_heat_coeff
         (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature)
 
         # if cloud ice < 0, borrow from snow
@@ -70,7 +67,7 @@ def adjust_negative_tracers(
                 icpk,
                 tcpk,
                 tcp3,
-            ) = update_hydrometeors_and_temperatures(
+            ) = physfun.update_hydrometeors_and_temperatures(
                 qvapor,
                 qliquid,
                 qrain,
@@ -109,7 +106,7 @@ def adjust_negative_tracers(
                 icpk,
                 tcpk,
                 tcp3,
-            ) = update_hydrometeors_and_temperatures(
+            ) = physfun.update_hydrometeors_and_temperatures(
                 qvapor,
                 qliquid,
                 qrain,
