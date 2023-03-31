@@ -99,6 +99,7 @@ class MicrophysicsState:
             "name": "northward_wind",
             "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
             "units": "m/s",
+            "intent": "inout",
         }
     )
     wa: pace.util.Quantity = field(
