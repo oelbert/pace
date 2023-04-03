@@ -265,7 +265,8 @@ def complete_freeze(
     tc = t_wfr - temperature
     if (tc > 0.0) and (qliquid > constants.QCMIN):
         sink = qliquid * tc / constants.DT_FR
-        sink = min(qliquid, sink, tc / icpk)
+        sink = min(sink, tc / icpk)
+        sink = min(qliquid, sink)
         (
             qvapor,
             qliquid,
@@ -434,7 +435,8 @@ def freeze_bigg(
             * (exp(0.66 * tc) - 1.0)
             * qliquid ** 2.0
         )
-        sink = min(qliquid, sink, tc / icpk)
+        sink = min(sink, tc / icpk)
+        sink = min(qliquid, sink)
 
         (
             qvapor,
@@ -530,7 +532,7 @@ def deposit_and_sublimate_ice(
         tmp = dq / (1.0 + tcpk * dqdt)
 
         if qice > constants.QCMIN:
-            if prog_ccn is False:
+            if not prog_ccn:
                 if inflag == 1:
                     cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
                 elif inflag == 2:
@@ -578,7 +580,8 @@ def deposit_and_sublimate_ice(
                 qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
             else:# igflag == 4:
                 qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
-            sink = min(tmp, max(qi_crt - qice, pidep), tc / tcpk)
+            sink = min(max(qi_crt - qice, pidep), tc / tcpk)
+            sink = min(tmp, sink)
             dep += sink * delp
         else:
             pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)
@@ -702,7 +705,8 @@ def deposit_and_sublimate_snow(
         else:
             sink = 0.0
             if temperature <= constants.TICE0:
-                sink = max(pssub, dq, (temperature - constants.TICE0) / tcpk)
+                sink = max(dq, (temperature - constants.TICE0) / tcpk)
+                sink = max(pssub, sink)
             dep -= sink * delp
 
         (
@@ -824,7 +828,8 @@ def deposit_and_sublimate_graupel(
         else:
             sink = 0.0
             if temperature <= constants.TICE0:
-                sink = max(pgsub, dq, (temperature - constants.TICE0) / tcpk)
+                sink = max(dq, (temperature - constants.TICE0) / tcpk)
+                sink = max(pgsub, sink)
             dep -= sink * delp
 
         (
@@ -914,10 +919,17 @@ def vertical_subgrid_processes(
                 icpk,
                 tcpk,
                 tcp3,
-            ) = physfun.calc_heat_cap_and_latent_heat_coeff
-            (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature)
+            ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature
+            )
 
-            if __INLINED(do_warm_rain_mp is False):
+            if __INLINED(not do_warm_rain_mp):
                 (
                     qvapor,
                     qliquid,
@@ -982,7 +994,7 @@ def vertical_subgrid_processes(
                 reevap,
             )
 
-            if __INLINED(do_warm_rain_mp is False):
+            if __INLINED(not do_warm_rain_mp):
                 (
                     qvapor,
                     qliquid,

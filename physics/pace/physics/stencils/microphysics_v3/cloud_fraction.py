@@ -214,8 +214,15 @@ def cloud_fraction(
             icpk,
             tcpk,
             tcp3,
-        ) = physfun.calc_heat_cap_and_latent_heat_coeff
-        (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature)
+        ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature
+        )
 
         # Combine water species
         ice = q_solid
@@ -242,12 +249,12 @@ def cloud_fraction(
         )
 
         if tin <= t_wfr:
-            qstar = physfun.sat_spec_hum_water_ice(tin, density)
+            qstar, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         elif tin >= constants.TICE0:
-            qstar = physfun.sat_spec_hum_water(tin, density)
+            qstar, dqdt = physfun.sat_spec_hum_water(tin, density)
         else:
-            qsi = physfun.sat_spec_hum_water_ice(tin, density)
-            qsw = physfun.sat_spec_hum_water(tin, density)
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+            qsw, dqdt = physfun.sat_spec_hum_water(tin, density)
             if q_cond > constants.QCMIN:
                 rqi = q_solid / q_cond
             else:
@@ -310,10 +317,14 @@ class CloudFraction:
                 "cfflag": config.cfflag,
                 "li00": config.li00,
                 "lv00": config.lv00,
+                "li20": config.li20,
+                "d1_vap": config.d1_vap,
+                "d1_ice": config.d1_ice,
                 "rad_graupel": config.rad_graupel,
                 "rad_rain": config.rad_rain,
                 "rad_snow": config.rad_snow,
                 "t_wfr": config.t_wfr,
+                "tice": config.tice,
                 "cld_min": config.cld_min,
                 "do_cld_adj": config.do_cld_adj,
                 "f_dq_m": config.f_dq_m,

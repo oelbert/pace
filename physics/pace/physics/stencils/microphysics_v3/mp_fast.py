@@ -254,7 +254,7 @@ def fast_microphysics(
         ) = physfun.calc_heat_cap_and_latent_heat_coeff
         (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temp)
 
-        if __INLINED(do_warm_rain_mp is False):
+        if __INLINED(not do_warm_rain_mp):
             cond = 0.0
             dep = 0.0
             reevap = 0.0
@@ -347,7 +347,7 @@ def fast_microphysics(
             tcp3,
         )
 
-        if __INLINED(do_warm_rain_mp is False):
+        if __INLINED(not do_warm_rain_mp):
             (
                 qvapor,
                 qliquid,
@@ -499,7 +499,7 @@ def fast_microphysics(
 
         qliquid, qrain = autoconvert_water_to_rain_simple(qliquid, qrain, temp)
 
-        if __INLINED(do_warm_rain_mp is False):
+        if __INLINED(not do_warm_rain_mp):
             (
                 qvapor,
                 qliquid,
@@ -540,7 +540,7 @@ def fast_microphysics(
             qice, qsnow = autoconvert_ice_to_snow_simple(qice, qsnow, temp, density)
 
     with computation(FORWARD), interval(...):
-        if __INLINED(do_warm_rain_mp is False):
+        if __INLINED(not do_warm_rain_mp):
             condensation += cond * convt
             evaporation += reevap * convt
             deposition += dep * convt
