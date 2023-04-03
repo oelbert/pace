@@ -242,28 +242,6 @@ def finish_implicit_lagrangian(
             )
 
 
-@gtscript.function
-def sedi_uv(
-    ua,
-    va,
-    delp,
-    flux,
-):
-    ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (delp + flux[0, 0, -1])
-    va = (delp * va + flux[0, 0, -1] * va[0, 0, -1]) / (delp + flux[0, 0, -1])
-    return ua, va
-
-
-@gtscript.function
-def sedi_w(wa, dm, flux, v_terminal):
-    wa = (
-        dm * wa
-        + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
-        + flux * v_terminal
-    ) / (dm + flux[0, 0, -1])
-    return wa
-
-
 def update_energy_wind_heat_post_fall(
     qvapor: FloatField,
     qliquid: FloatField,
@@ -306,7 +284,8 @@ def update_energy_wind_heat_post_fall(
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv):
             if no_fall > 0.0:
-                ua, va = sedi_uv(ua, va, delp, flux)
+                ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (delp + flux[0, 0, -1])
+                va = (delp * va + flux[0, 0, -1] * va[0, 0, -1]) / (delp + flux[0, 0, -1])
 
     with computation(FORWARD), interval(0, 1):
         if __INLINED(do_sedi_w):
@@ -316,7 +295,11 @@ def update_energy_wind_heat_post_fall(
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_w):
             if no_fall > 0.0:
-                wa = sedi_w(wa, dm, flux, v_terminal)
+                wa = (
+                    dm * wa
+                    + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
+                    + flux * v_terminal
+                ) / (dm + flux[0, 0, -1])
 
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
@@ -354,7 +337,7 @@ def update_energy_wind_heat_post_fall(
                 ) / (cv0 + cw * flux[0, 0, -1])
 
     # energy change during sedimentation heating
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         if no_fall > 0.0:
             post_energy = physfun.calc_moist_total_energy(
                 qvapor,

@@ -123,7 +123,8 @@ def evaporate_rain(
                 blinr,
                 mur,
             )
-            sink = min(qrain, timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
+            sink = min(timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
+            sink = min(qrain, sink)
             if (use_rhc_revap) and (rh_tem >= rhc_revap):
                 sink = 0
 
@@ -270,7 +271,8 @@ def autoconvert_water_rain(
             if __INLINED(z_slope_liq):
                 # Impose a presumed background horizontal variability that is
                 # proportional to the value itself
-                dl = max(dl, 0.0, h_var * qliquid)
+                dl = max(dl, h_var * qliquid)
+                dl = max(dl, 0.0)
             else:
                 dl = max(0.0, h_var * qliquid)
 
@@ -317,7 +319,7 @@ def autoconvert_water_rain(
                     )
                     sink = min(
                         dq,
-                        timestep * c_praut * density * exp((7.0 / 3.0) * log(qliquid)),
+                        timestep * c_praut * density * exp((7.0 / 3.0) * log(qliquid))
                     )
                     sink = min(sink, qliquid)
 
@@ -385,6 +387,7 @@ class WarmRain:
                 "acc9": config.acc[9],
                 "blinr": config.blinr,
                 "mur": config.mur,
+                "vdiffflag": config.vdiffflag,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

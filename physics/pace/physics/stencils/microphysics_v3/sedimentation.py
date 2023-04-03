@@ -115,7 +115,7 @@ def calc_terminal_velocity_ice(
                         + dd * tc
                         + ee
                     )
-                    v_terminal + 0.01 * v_fac * exp(v_terminal * log(10.0))
+                    v_terminal = 0.01 * v_fac * exp(v_terminal * log(10.0))
                 else:  # ifflag == 2:
                     v_terminal = v_fac * 3.29 * exp(0.16 * log(qice * density))
                 v_terminal = min(v_max, max(0.0, v_terminal))

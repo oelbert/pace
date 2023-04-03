@@ -219,7 +219,7 @@ def table0(temp):
 def table2(temp):
     if temp < constants.TICE:
         # Over ice between -160 degrees Celsius and 0 degrees Celsius
-        return constants.E00 * exp(
+        return_val = constants.E00 * exp(
             (
                 constants.D2ICE * log(temp / constants.TICE)
                 + constants.LI2 * (temp - constants.TICE) / (temp * constants.TICE)
@@ -229,7 +229,9 @@ def table2(temp):
 
     else:
         # Over water between 0 degrees Celsius and 102 degrees Celsius
-        return table0(temp)
+        return_val = table0(temp)
+
+    return return_val
 
 
 @gtscript.function
