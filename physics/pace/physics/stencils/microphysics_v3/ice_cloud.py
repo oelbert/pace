@@ -1029,8 +1029,9 @@ def ice_cloud(
             icpk,
             tcpk,
             tcp3,
-        ) = physfun.calc_heat_cap_and_latent_heat_coeff
-        (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature)
+        ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+            qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
+        )
 
         (
             qvapor,

@@ -251,8 +251,9 @@ def fast_microphysics(
             icpk,
             tcpk,
             tcp3,
-        ) = physfun.calc_heat_cap_and_latent_heat_coeff
-        (qvapor, qliquid, qrain, qice, qsnow, qgraupel, temp)
+        ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+            qvapor, qliquid, qrain, qice, qsnow, qgraupel, temp
+        )
 
         if __INLINED(not do_warm_rain_mp):
             cond = 0.0
