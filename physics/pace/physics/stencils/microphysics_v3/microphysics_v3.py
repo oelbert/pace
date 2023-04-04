@@ -1,9 +1,9 @@
 import numpy as np
 from gt4py.cartesian.gtscript import (
     __INLINED,
+    BACKWARD,
     FORWARD,
     PARALLEL,
-    BACKWARD,
     computation,
     interval,
     sqrt,
@@ -236,19 +236,23 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
         bottom_density = density
         density_factor = sqrt(bottom_density / density)
 
-    with computation(BACKWARD), interval(0,-1):
+    with computation(BACKWARD), interval(0, -1):
         density_factor = sqrt(bottom_density / density)
 
 
-def cloud_nuclei(
+def cloud_nuclei_subgrid_and_relative_humidity(
     geopotential_surface_height: FloatFieldIJ,
     qnl: FloatField,
     qni: FloatField,
     density: FloatField,
     cloud_condensation_nuclei: FloatField,
     cloud_ice_nuclei: FloatField,
+    gsize: FloatFieldIJ,
+    h_var: FloatFieldIJ,
+    rh_adj: FloatFieldIJ,
+    rh_rain: FloatFieldIJ,
 ):
-    from __externals__ import ccn_l, ccn_o, prog_ccn
+    from __externals__ import ccn_l, ccn_o, dw_land, dw_ocean, prog_ccn, rh_inc, rh_inr
 
     with computation(PARALLEL), interval(...):
         if __INLINED(prog_ccn):
@@ -284,22 +288,12 @@ def cloud_nuclei(
             )
             cloud_ice_nuclei = 0.0 / density
 
-
-def subgrid_deviation_and_relative_humidity(
-    gsize: FloatFieldIJ,
-    geopotential_surface_height: FloatFieldIJ,
-    h_var: FloatFieldIJ,
-    rh_adj: FloatFieldIJ,
-    rh_rain: FloatFieldIJ,
-):
-    from __externals__ import dw_land, dw_ocean, rh_inc, rh_inr
-
     with computation(FORWARD), interval(-1, None):
         t_lnd = dw_land * sqrt(gsize / 1.0e5)
         t_ocn = dw_ocean * sqrt(gsize / 1.0e5)
         tmp = min(1.0, abs(geopotential_surface_height) / (10.0 * constants.GRAV))
-        hvar = t_lnd * tmp + t_ocn * (1.0 - tmp)
-        h_var = min(0.20, max(0.01, hvar))
+        h_var = t_lnd * tmp + t_ocn * (1.0 - tmp)
+        h_var = min(0.20, max(0.01, h_var))
 
         rh_adj = 1.0 - h_var - rh_inc
         rh_rain = max(0.35, rh_adj - rh_inr)
@@ -882,7 +876,7 @@ class Microphysics:
             self._total_water_bot_dry_begin = make_quantity()
             self._total_water_bot_wet_begin = make_quantity()
 
-        self._h_var = make_quantity2d
+        self._h_var = make_quantity2d()
         self._rh_adj = make_quantity2d()
         self._rh_rain = make_quantity2d()
         self._cond = make_quantity2d()
@@ -977,21 +971,13 @@ class Microphysics:
             )
         )
 
-        self._cloud_nuclei = stencil_factory.from_origin_domain(
-            func=cloud_nuclei,
-            externals={
-                "prog_ccn": self.config.prog_ccn,
-                "ccn_l": self.config.ccn_l,
-                "ccn_o": self.config.ccn_o,
-            },
-            origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(),
-        )
-
-        self._subgrid_deviation_and_relative_humidity = (
+        self._cloud_nuclei_subgrid_and_relative_humidity = (
             stencil_factory.from_origin_domain(
-                func=subgrid_deviation_and_relative_humidity,
+                func=cloud_nuclei_subgrid_and_relative_humidity,
                 externals={
+                    "prog_ccn": self.config.prog_ccn,
+                    "ccn_l": self.config.ccn_l,
+                    "ccn_o": self.config.ccn_o,
                     "dw_land": self.config.dw_land,
                     "dw_ocean": self.config.dw_ocean,
                     "rh_inc": self.config.rh_inc,
@@ -1289,18 +1275,14 @@ class Microphysics:
                 self._total_water_bot_dry_begin,
             )
 
-        self._cloud_nuclei(
+        self._cloud_nuclei_subgrid_and_relative_humidity(
             state.geopotential_surface_height,
             state.qcloud_cond_nuclei,
             state.qcloud_ice_nuclei,
             self._density,
             self._cloud_condensation_nuclei,
             self._cloud_ice_nuclei,
-        )
-
-        self._subgrid_deviation_and_relative_humidity(
             self._gsize,
-            state.geopotential_surface_height,
             self._h_var,
             self._rh_adj,
             self._rh_rain,
@@ -1539,7 +1521,7 @@ class Microphysics:
             state.qice,
             state.qsnow,
             state.qgraupel,
-            state.te,
+            state.total_energy,
             state.pt,
             self._temperature0,
             state.delp,

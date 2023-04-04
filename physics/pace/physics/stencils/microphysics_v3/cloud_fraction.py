@@ -215,13 +215,7 @@ def cloud_fraction(
             tcpk,
             tcp3,
         ) = physfun.calc_heat_cap_and_latent_heat_coeff(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature
+            qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
         )
 
         # Combine water species
@@ -258,7 +252,7 @@ def cloud_fraction(
             if q_cond > constants.QCMIN:
                 rqi = q_solid / q_cond
             else:
-                (constants.TICE0 - tin) / (constants.TICE0 - t_wfr)
+                rqi = (constants.TICE0 - tin) / (constants.TICE0 - t_wfr)
             qstar = rqi * qsi + (1.0 - rqi) * qsw
 
         # Cloud schemes

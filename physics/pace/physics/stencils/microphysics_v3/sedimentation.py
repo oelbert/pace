@@ -252,7 +252,7 @@ def calc_edge_and_terminal_height(
         z_surface = 0.0
         z_edge = z_surface
     with computation(BACKWARD), interval(0, -1):
-        z_edge = z_edge[0, 0, -1] - delz
+        z_edge = z_edge[0, 0, 1] - delz
     with computation(FORWARD):
         with interval(0, 1):
             z_terminal = z_edge
@@ -267,9 +267,10 @@ def calc_edge_and_terminal_height(
 
 
 def adjust_fluxes(flux: FloatField):
-    with computation(BACKWARD):
+    with computation(FORWARD):
         with interval(0, 1):
             flux = max(0.0, flux)
+    with computation(BACKWARD):
         with interval(1, None):
             flux = max(0.0, flux - flux[0, 0, -1])
 
@@ -377,6 +378,12 @@ class Sedimentation:
 
         self._terminal_fall = TerminalFall(
             stencil_factory, quantity_factory, config, timestep
+        )
+
+        self._adjust_fluxes = stencil_factory.from_origin_domain(
+            func=adjust_fluxes,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
         )
 
     def __call__(
@@ -498,24 +505,30 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            qice, qrain, column_rain, temperature, self._cvm = sedi_melt(
-                qvapor,
-                qliquid,
-                qrain,
-                qice,
-                qsnow,
-                qgraupel,
+            (
+                qice.data[:],
+                qrain.data[:],
+                column_rain.data[:],
+                temperature.data[:],
                 self._cvm,
-                temperature,
-                delp,
-                self._z_edge,
-                self._z_terminal,
-                self._z_surface,
+            ) = sedi_melt(
+                qvapor.data[:],
+                qliquid.data[:],
+                qrain.data[:],
+                qice.data[:],
+                qsnow.data[:],
+                qgraupel.data[:],
+                self._cvm,
+                temperature.data[:],
+                delp.data[:],
+                self._z_edge.data[:],
+                self._z_terminal.data[:],
+                self._z_surface.data[:],
                 self._timestep,
-                vterminal_ice,
-                column_rain,
+                vterminal_ice.data[:],
+                column_rain.data[:],
                 self.config.tau_imlt,
-                self._icpk,
+                self._icpk.data[:],
                 self._ks,
                 self._ke,
                 self._is_,
@@ -547,7 +560,7 @@ class Sedimentation:
             "ice",
         )
 
-        adjust_fluxes(preflux_ice)
+        self._adjust_fluxes(preflux_ice)
 
         # Terminal fall and melting of falling snow into rain
         if self.config.const_vs is False:
@@ -586,24 +599,30 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            qsnow, qrain, column_rain, temperature, self._cvm = sedi_melt(
-                qvapor,
-                qliquid,
-                qrain,
-                qice,
-                qsnow,
-                qgraupel,
+            (
+                qsnow.data[:],
+                qrain.data[:],
+                column_rain.data[:],
+                temperature.data[:],
                 self._cvm,
-                temperature,
-                delp,
-                self._z_edge,
-                self._z_terminal,
-                self._z_surface,
+            ) = sedi_melt(
+                qvapor.data[:],
+                qliquid.data[:],
+                qrain.data[:],
+                qice.data[:],
+                qsnow.data[:],
+                qgraupel.data[:],
+                self._cvm,
+                temperature.data[:],
+                delp.data[:],
+                self._z_edge.data[:],
+                self._z_terminal.data[:],
+                self._z_surface.data[:],
                 self._timestep,
-                vterminal_snow,
-                column_rain,
+                vterminal_snow.data[:],
+                column_rain.data[:],
                 self.config.tau_smlt,
-                self._icpk,
+                self._icpk.data[:],
                 self._ks,
                 self._ke,
                 self._is_,
@@ -635,7 +654,7 @@ class Sedimentation:
             "snow",
         )
 
-        adjust_fluxes(preflux_snow)
+        self._adjust_fluxes(preflux_snow)
 
         # Terminal fall and melting of falling graupel into rain
         if self.config.do_hail:
@@ -703,24 +722,30 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            qgraupel, qrain, column_rain, temperature, self._cvm = sedi_melt(
-                qvapor,
-                qliquid,
-                qrain,
-                qice,
-                qsnow,
-                qgraupel,
+            (
+                qgraupel.data[:],
+                qrain.data[:],
+                column_rain.data[:],
+                temperature.data[:],
                 self._cvm,
-                temperature,
-                delp,
-                self._z_edge,
-                self._z_terminal,
-                self._z_surface,
+            ) = sedi_melt(
+                qvapor.data[:],
+                qliquid.data[:],
+                qrain.data[:],
+                qice.data[:],
+                qsnow.data[:],
+                qgraupel.data[:],
+                self._cvm,
+                temperature.data[:],
+                delp.data[:],
+                self._z_edge.data[:],
+                self._z_terminal.data[:],
+                self._z_surface.data[:],
                 self._timestep,
-                vterminal_graupel,
-                column_rain,
+                vterminal_graupel.data[:],
+                column_rain.data[:],
                 self.config.tau_gmlt,
-                self._icpk,
+                self._icpk.data[:],
                 self._ks,
                 self._ke,
                 self._is_,
@@ -752,7 +777,7 @@ class Sedimentation:
             "graupel",
         )
 
-        adjust_fluxes(preflux_graupel)
+        self._adjust_fluxes(preflux_graupel)
 
         # Terminal fall of cloud water
         if self.config.do_psd_water_fall:
@@ -813,7 +838,7 @@ class Sedimentation:
                 "liquid",
             )
 
-            adjust_fluxes(preflux_water)
+            self._adjust_fluxes(preflux_water)
 
         # terminal fall of rain
         if self.config.const_vs is False:
@@ -873,4 +898,4 @@ class Sedimentation:
             "rain",
         )
 
-        adjust_fluxes(preflux_rain)
+        self._adjust_fluxes(preflux_rain)
