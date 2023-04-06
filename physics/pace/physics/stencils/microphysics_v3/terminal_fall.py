@@ -1,6 +1,5 @@
 from typing import Literal
 
-from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (
     __INLINED,
     BACKWARD,
@@ -284,8 +283,12 @@ def update_energy_wind_heat_post_fall(
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv):
             if no_fall > 0.0:
-                ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (delp + flux[0, 0, -1])
-                va = (delp * va + flux[0, 0, -1] * va[0, 0, -1]) / (delp + flux[0, 0, -1])
+                ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (
+                    delp + flux[0, 0, -1]
+                )
+                va = (delp * va + flux[0, 0, -1] * va[0, 0, -1]) / (
+                    delp + flux[0, 0, -1]
+                )
 
     with computation(FORWARD), interval(0, 1):
         if __INLINED(do_sedi_w):

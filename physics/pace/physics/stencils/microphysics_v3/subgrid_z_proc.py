@@ -1,12 +1,5 @@
 from gt4py.cartesian import gtscript
-from gt4py.cartesian.gtscript import (
-    __INLINED,
-    FORWARD,
-    computation,
-    exp,
-    interval,
-    log,
-)
+from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, exp, interval, log
 
 import pace.fv3core.stencils.basic_operations as basic
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
@@ -547,7 +540,7 @@ def deposit_and_sublimate_ice(
                     cloud_ice_nuclei = (
                         5.0e-3 * exp(0.304 * (tice - temperature)) * 1000.0
                     )
-                else:# inflag == 5:
+                else:  # inflag == 5:
                     cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temperature)) * 1000.0
             if do_psd_ice_num:
                 cloud_ice_nuclei = physfun.calc_particle_concentration(
@@ -578,7 +571,7 @@ def deposit_and_sublimate_ice(
                 qi_crt = qi_gen * min(qi_lim, 0.1 * tc) / density
             elif igflag == 3:
                 qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
-            else:# igflag == 4:
+            else:  # igflag == 4:
                 qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
             sink = min(max(qi_crt - qice, pidep), tc / tcpk)
             sink = min(tmp, sink)
@@ -920,13 +913,7 @@ def vertical_subgrid_processes(
                 tcpk,
                 tcp3,
             ) = physfun.calc_heat_cap_and_latent_heat_coeff(
-                qvapor,
-                qliquid,
-                qrain,
-                qice,
-                qsnow,
-                qgraupel,
-                temperature
+                qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
             )
 
             if __INLINED(not do_warm_rain_mp):
@@ -1216,15 +1203,15 @@ class VerticalSubgridProcesses:
             mu_g = config.mug
             blin_g = config.bling
 
-        if config.inflag not in [1,2,3,4,5]:
+        if config.inflag not in [1, 2, 3, 4, 5]:
             raise ValueError(
-                        f"Ice Nucleation Flag must be an integer from 1 to 5"
-                        f"not {config.inflag}"
-                    )
-        
-        if config.igflag not in [1,2,3,4]:
+                f"Ice Nucleation Flag must be an integer from 1 to 5"
+                f"not {config.inflag}"
+            )
+
+        if config.igflag not in [1, 2, 3, 4]:
             raise ValueError(
-                f"Ice Generation Flag must be an integer from 1 to 4 not {config.igflag}"
+                f"Ice Generation Flag must be an int from 1 to 4, got {config.igflag}"
             )
 
         self._vertical_subgrid_processes = stencil_factory.from_origin_domain(
