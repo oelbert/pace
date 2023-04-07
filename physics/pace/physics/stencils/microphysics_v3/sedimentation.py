@@ -290,7 +290,7 @@ class Sedimentation:
         self._js = self._idx.jsc
         self._je = self._idx.jec
         self._ks = 0
-        self._ke = config.npz
+        self._ke = config.npz - 1
 
         assert config.ifflag in [
             1,

@@ -883,7 +883,7 @@ class Microphysics:
 
         self._gsize = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="m")
 
-        self._gsize.data[:] = np.sqrt(grid_data.area.data)
+        self._gsize.data[:] = np.sqrt(grid_data.area.data[:])
 
         self._set_timestepping(self.config.dt_atmos)  # will change from dt_atmos
         # when we inline microphysics
