@@ -37,13 +37,7 @@ def adjust_negative_tracers(
             tcpk,
             tcp3,
         ) = physfun.calc_heat_cap_and_latent_heat_coeff(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature
+            qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
         )
 
         # if cloud ice < 0, borrow from snow

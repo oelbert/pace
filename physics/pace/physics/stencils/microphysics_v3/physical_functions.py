@@ -277,6 +277,7 @@ def vent_coeff(qden, density_factor, c1, c2, blin, mu):
         density_factor
     ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
 
+
 @gtscript.function
 def melting_function(
     tc,

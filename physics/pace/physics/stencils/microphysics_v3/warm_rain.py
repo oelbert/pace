@@ -319,7 +319,7 @@ def autoconvert_water_rain(
                     )
                     sink = min(
                         dq,
-                        timestep * c_praut * density * exp((7.0 / 3.0) * log(qliquid))
+                        timestep * c_praut * density * exp((7.0 / 3.0) * log(qliquid)),
                     )
                     sink = min(sink, qliquid)
 
