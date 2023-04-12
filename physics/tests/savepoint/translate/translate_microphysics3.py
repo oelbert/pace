@@ -1,7 +1,3 @@
-import copy  # noqa
-
-import numpy as np  # noqa
-
 import pace.dsl
 import pace.dsl.gt4py_utils as utils
 import pace.util
@@ -20,40 +16,40 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "mp_qv"},
-            "qliquid": {"serialname": "mp_ql"},
-            "qrain": {"serialname": "mp_qr"},
-            "qice": {"serialname": "mp_qi"},
-            "qsnow": {"serialname": "mp_qs"},
-            "qgraupel": {"serialname": "mp_qg"},
-            "qcld": {"serialname": "mp_qa"},
-            "qcloud_cond_nuclei": {"serialname": "mp_qnl"},
-            "qcloud_ice_nuclei": {"serialname": "mp_qni"},
-            "pt": {"serialname": "mp_pt"},
-            "ua": {"serialname": "mp_ua"},
-            "va": {"serialname": "mp_va"},
-            "wa": {"serialname": "mp_wa"},
-            "delz": {"serialname": "mp_delz"},
-            "delp": {"serialname": "mp_delp"},
-            "gsize": {"serialname": "mp_gsize"},
-            "geopotential_surface_height": {"serialname": "mp_hs"},
-            "column_water": {"serialname": "mp_water"},
-            "column_rain": {"serialname": "mp_rain"},
-            "column_ice": {"serialname": "mp_ice"},
-            "column_snow": {"serialname": "mp_snow"},
-            "column_graupel": {"serialname": "mp_graupel"},
-            "qcon": {"serialname": "mp_q_con"},
-            "cappa": {"serialname": "mp_cappa"},
-            "total_energy": {"serialname": "mp_te"},
-            "preflux_water": {"serialname": "mp_prefluxw"},
-            "preflux_rain": {"serialname": "mp_prefluxr"},
-            "preflux_ice": {"serialname": "mp_prefluxi"},
-            "preflux_snow": {"serialname": "mp_prefluxs"},
-            "preflux_graupel": {"serialname": "mp_prefluxg"},
-            "condensation": {"serialname": "mp_cond"},
-            "deposition": {"serialname": "mp_dep"},
-            "evaporation": {"serialname": "mp_reevap"},
-            "sublimation": {"serialname": "mp_sub"},
+            "qvapor": {"serialname": "mp_qv", "microph": True},
+            "qliquid": {"serialname": "mp_ql", "microph": True},
+            "qrain": {"serialname": "mp_qr", "microph": True},
+            "qice": {"serialname": "mp_qi", "microph": True},
+            "qsnow": {"serialname": "mp_qs", "microph": True},
+            "qgraupel": {"serialname": "mp_qg", "microph": True},
+            "qcld": {"serialname": "mp_qa", "microph": True},
+            "qcloud_cond_nuclei": {"serialname": "mp_qnl", "microph": True},
+            "qcloud_ice_nuclei": {"serialname": "mp_qni", "microph": True},
+            "pt": {"serialname": "mp_pt", "microph": True},
+            "ua": {"serialname": "mp_ua", "microph": True},
+            "va": {"serialname": "mp_va", "microph": True},
+            "wa": {"serialname": "mp_wa", "microph": True},
+            "delz": {"serialname": "mp_delz", "microph": True},
+            "delp": {"serialname": "mp_delp", "microph": True},
+            "gsize": {"serialname": "mp_gsize", "microph": True},
+            "geopotential_surface_height": {"serialname": "mp_hs", "microph": True},
+            "column_water": {"serialname": "mp_water", "microph": True},
+            "column_rain": {"serialname": "mp_rain", "microph": True},
+            "column_ice": {"serialname": "mp_ice", "microph": True},
+            "column_snow": {"serialname": "mp_snow", "microph": True},
+            "column_graupel": {"serialname": "mp_graupel", "microph": True},
+            "qcon": {"serialname": "mp_q_con", "microph": True},
+            "cappa": {"serialname": "mp_cappa", "microph": True},
+            "total_energy": {"serialname": "mp_te", "microph": True},
+            "preflux_water": {"serialname": "mp_prefluxw", "microph": True},
+            "preflux_rain": {"serialname": "mp_prefluxr", "microph": True},
+            "preflux_ice": {"serialname": "mp_prefluxi", "microph": True},
+            "preflux_snow": {"serialname": "mp_prefluxs", "microph": True},
+            "preflux_graupel": {"serialname": "mp_prefluxg", "microph": True},
+            "condensation": {"serialname": "mp_cond", "microph": True},
+            "deposition": {"serialname": "mp_dep", "microph": True},
+            "evaporation": {"serialname": "mp_reevap", "microph": True},
+            "sublimation": {"serialname": "mp_sub", "microph": True},
         }
         self.in_vars["parameters"] = [
             "timestep",
@@ -141,16 +137,7 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics
 
-    def compute(self, inputs):
-        self.make_storage_data_input_vars(inputs)
-
-        storage = utils.make_storage_from_shape(
-            self.grid_indexing.domain_full(add=(1, 1, 1)),
-            origin=self.grid_indexing.origin_compute(),
-            backend=self.stencil_factory.backend,
-        )
-
-        sizer = pace.util.SubtileGridSizer.from_tile_params(
+        self.sizer = pace.util.SubtileGridSizer.from_tile_params(
             nx_tile=self.namelist.npx - 1,
             ny_tile=self.namelist.npy - 1,
             nz=self.namelist.npz,
@@ -159,19 +146,22 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
             layout=self.namelist.layout,
         )
 
-        quantity_factory = pace.util.QuantityFactory.from_backend(
-            sizer, self.stencil_factory.backend
+        self.quantity_factory = pace.util.QuantityFactory.from_backend(
+            self.sizer, self.stencil_factory.backend
         )
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
 
         microphysics_state = MicrophysicsState.init_from_storages(
             inputs,
-            sizer=sizer,
-            quantity_factory=quantity_factory,
+            sizer=self.sizer,
+            quantity_factory=self.quantity_factory,
         )
 
         microphysics = Microphysics(
             self.stencil_factory,
-            quantity_factory,
+            self.quantity_factory,
             self.grid.grid_data,
             self.config,
             consv_te=inputs["consv_te"],
@@ -221,5 +211,4 @@ class TranslateMicrophysics3(TranslatePhysicsFortranData2Py):
         inputs["radar_reflectivity_g"] = microphysics_state.radar_reflectivity_g
         inputs["terminal_velocity_g"] = microphysics_state.terminal_velocity_g
 
-        out = self.slice_output(inputs)
-        return out
+        return self.slice_output(inputs)
