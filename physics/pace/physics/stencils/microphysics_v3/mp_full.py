@@ -226,24 +226,6 @@ class FullMicrophysics:
                 self._g1,
             )
 
-            self._warm_rain(
-                qvapor,
-                qliquid,
-                qrain,
-                qice,
-                qsnow,
-                qgraupel,
-                temperature,
-                delp,
-                density,
-                density_factor,
-                self._vtw,
-                self._vtr,
-                cloud_condensation_nuclei,
-                self._reevap,
-                h_var,
-            )
-
             self._add_fluxes_and_surface_tracers(
                 preflux_water,
                 preflux_rain,
@@ -269,7 +251,25 @@ class FullMicrophysics:
                 self._reevap,
             )
 
-            if self._do_warm_rain:
+            self._warm_rain(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                delp,
+                density,
+                density_factor,
+                self._vtw,
+                self._vtr,
+                cloud_condensation_nuclei,
+                self._reevap,
+                h_var,
+            )
+
+            if not self._do_warm_rain:
                 self._ice_cloud(
                     qvapor,
                     qliquid,

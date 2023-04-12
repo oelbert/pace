@@ -577,7 +577,7 @@ class TerminalFall:
                 self._lev,
                 self._no_fall,
             )
-        else:  # self._sedflag == 4:
+        elif self._sedflag == 4:
             self._copy_stencil(self._q_fall, self._q0)
             self._copy_stencil(precipitation, self._precip0)
 
@@ -621,6 +621,11 @@ class TerminalFall:
                 self._precip0,
                 self._precip1,
                 self._no_fall,
+            )
+
+        else:
+            raise ValueError(
+                f"Sedimentation flag must be 1, 2, 3 or 4, got {self._sedflag}"
             )
 
         if tracer == "liquid":
