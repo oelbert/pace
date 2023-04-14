@@ -5,7 +5,7 @@ from pace.physics.stencils.microphysics_v3.cloud_fraction import CloudFraction
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
-class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
+class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
     def __init__(
         self,
         grid,
@@ -36,7 +36,7 @@ class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
         self.grid_indexing = self.stencil_factory.grid_indexing
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics
-        
+
         sizer = pace.util.SubtileGridSizer.from_tile_params(
             nx_tile=self.namelist.npx - 1,
             ny_tile=self.namelist.npy - 1,

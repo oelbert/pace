@@ -22,7 +22,7 @@ from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
 from ..._config import MicroPhysicsConfig
 
 
-def init_heat_cap_latent_heat(
+def init_heat_cap_latent_heat_precip(
     qvapor: FloatField,
     qliquid: FloatField,
     qrain: FloatField,
@@ -31,6 +31,11 @@ def init_heat_cap_latent_heat(
     qgraupel: FloatField,
     temperature: FloatField,
     icpk: FloatField,
+    column_water: FloatFieldIJ,
+    column_rain: FloatFieldIJ,
+    column_ice: FloatFieldIJ,
+    column_snow: FloatFieldIJ,
+    column_graupel: FloatFieldIJ,
 ):
 
     with computation(PARALLEL), interval(...):
@@ -52,6 +57,12 @@ def init_heat_cap_latent_heat(
             qgraupel,
             temperature,
         )
+    with computation(FORWARD), interval(-1, None):
+        column_water = 0.0
+        column_rain = 0.0
+        column_ice = 0.0
+        column_snow = 0.0
+        column_graupel = 0.0
 
 
 def calc_terminal_velocity_rsg(
@@ -312,8 +323,8 @@ class Sedimentation:
         self._cvm = make_quantity()
 
         # compile stencils
-        self._init_heat_cap_latent_heat = stencil_factory.from_origin_domain(
-            func=init_heat_cap_latent_heat,
+        self._init_heat_cap_latent_heat_precip = stencil_factory.from_origin_domain(
+            func=init_heat_cap_latent_heat_precip,
             externals={
                 "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
@@ -454,7 +465,7 @@ class Sedimentation:
             column_graupel (inout):
         """
 
-        self._init_heat_cap_latent_heat(
+        self._init_heat_cap_latent_heat_precip(
             qvapor,
             qliquid,
             qrain,
@@ -463,6 +474,11 @@ class Sedimentation:
             qgraupel,
             temperature,
             self._icpk,
+            column_water,
+            column_rain,
+            column_ice,
+            column_snow,
+            column_graupel,
         )
 
         # Terminal fall and melting of falling cloud ice into rain:
