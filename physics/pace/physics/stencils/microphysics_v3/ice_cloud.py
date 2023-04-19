@@ -1293,8 +1293,6 @@ def ice_cloud(
             tcp3,
         )
 
-    pass
-
 
 class IceCloud:
     def __init__(

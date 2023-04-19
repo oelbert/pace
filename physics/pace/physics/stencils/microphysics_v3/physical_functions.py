@@ -82,7 +82,7 @@ def accretion_3d(
     if vdiffflag == 1:
         vdiff = abs(v1 - v2)
     elif vdiffflag == 2:
-        sqrt((1.20 * v1 - 0.95 * v2) ** 2.0 + 0.08 * v1 * v2)
+        vdiff = sqrt((1.20 * v1 - 0.95 * v2) ** 2.0 + 0.08 * v1 * v2)
     else:  # vdiffflag == 3:
         vdiff = sqrt((1.00 * v1 - 1.00 * v2) ** 2.0 + 0.04 * v1 * v2)
 
