@@ -90,6 +90,23 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
         else:
             return data
         return rearranged
+    
+    def transform_mp3_serialized_data(self, data):
+        if isinstance(data, np.ndarray):
+            n_dim = len(data.shape)
+            cn = int(np.sqrt(data.shape[0]))
+            npz = data.shape[-1]
+            if len(data.flatten()) == 1:
+                rearranged = data[0]
+            elif n_dim == 2:
+                rearranged = np.reshape(data[:, :], (cn, cn, npz))
+            elif n_dim == 1:
+                rearranged = np.reshape(data[:, :], (cn, cn))
+            else:
+                raise NotImplementedError("Data dimension not supported")
+        else:
+            return data
+        return rearranged
 
     def transform_dwind_serialized_data(self, data):
         return transform_dwind_serialized_data(
@@ -106,12 +123,17 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
                 serialname = varname
             dycore_format = info["dycore"] if "dycore" in info else False
             microph_format = info["microph"] if "microph" in info else False
+            mp3_format = info["mp3"] if "mp3" in info else False
             dwind_format = info["dwind"] if "dwind" in info else False
             index_order = info["order"] if "order" in info else "C"
             if dycore_format:
                 pass
             elif microph_format:
                 inputs[serialname] = self.transform_microphysics_serialized_data(
+                    inputs[serialname]
+                )
+            elif mp3_format:
+                inputs[serialname] = self.transform_mp3_serialized_data(
                     inputs[serialname]
                 )
             elif dwind_format:

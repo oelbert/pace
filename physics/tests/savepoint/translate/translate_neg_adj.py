@@ -14,15 +14,15 @@ class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "ne_qv", "microph": True},
-            "qliquid": {"serialname": "ne_ql", "microph": True},
-            "qrain": {"serialname": "ne_qr", "microph": True},
-            "qice": {"serialname": "ne_qi", "microph": True},
-            "qsnow": {"serialname": "ne_qs", "microph": True},
-            "qgraupel": {"serialname": "ne_qg", "microph": True},
-            "temperature": {"serialname": "ne_pt", "microph": True},
-            "delp": {"serialname": "ne_delp", "microph": True},
-            "condensation": {"serialname": "ne_cond", "microph": True},
+            "qvapor": {"serialname": "ne_qv", "mp3": True},
+            "qliquid": {"serialname": "ne_ql", "mp3": True},
+            "qrain": {"serialname": "ne_qr", "mp3": True},
+            "qice": {"serialname": "ne_qi", "mp3": True},
+            "qsnow": {"serialname": "ne_qs", "mp3": True},
+            "qgraupel": {"serialname": "ne_qg", "mp3": True},
+            "temperature": {"serialname": "ne_pt", "mp3": True},
+            "delp": {"serialname": "ne_delp", "mp3": True},
+            "condensation": {"serialname": "ne_cond", "mp3": True},
         }
 
         self.in_vars["parameters"] = ["convt"]
