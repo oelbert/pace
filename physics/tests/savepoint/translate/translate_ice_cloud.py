@@ -14,21 +14,21 @@ class TranslateIceCloud(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "ic_qv", "microph": True},
-            "qliquid": {"serialname": "ic_ql", "microph": True},
-            "qrain": {"serialname": "ic_qr", "microph": True},
-            "qice": {"serialname": "ic_qi", "microph": True},
-            "qsnow": {"serialname": "ic_qs", "microph": True},
-            "qgraupel": {"serialname": "ic_qg", "microph": True},
-            "temperature": {"serialname": "ic_pt", "microph": True},
-            "density": {"serialname": "ic_den", "microph": True},
-            "density_factor": {"serialname": "ic_denfac", "microph": True},
-            "vterminal_water": {"serialname": "ic_vtw", "microph": True},
-            "vterminal_rain": {"serialname": "ic_vtr", "microph": True},
-            "vterminal_ice": {"serialname": "ic_vti", "microph": True},
-            "vterminal_snow": {"serialname": "ic_vts", "microph": True},
-            "vterminal_graupel": {"serialname": "ic_vtg", "microph": True},
-            "h_var": {"serialname": "ic_h_var", "microph": True},
+            "qvapor": {"serialname": "ic_qv"},
+            "qliquid": {"serialname": "ic_ql"},
+            "qrain": {"serialname": "ic_qr"},
+            "qice": {"serialname": "ic_qi"},
+            "qsnow": {"serialname": "ic_qs"},
+            "qgraupel": {"serialname": "ic_qg"},
+            "temperature": {"serialname": "ic_pt"},
+            "density": {"serialname": "ic_den"},
+            "density_factor": {"serialname": "ic_denfac"},
+            "vterminal_water": {"serialname": "ic_vtw"},
+            "vterminal_rain": {"serialname": "ic_vtr"},
+            "vterminal_ice": {"serialname": "ic_vti"},
+            "vterminal_snow": {"serialname": "ic_vts"},
+            "vterminal_graupel": {"serialname": "ic_vtg"},
+            "h_var": {"serialname": "ic_h_var"},
         }
 
         self.in_vars["parameters"] = [

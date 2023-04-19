@@ -14,22 +14,22 @@ class TranslateWarmRain(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "wr_qv", "microph": True},
-            "qliquid": {"serialname": "wr_ql", "microph": True},
-            "qrain": {"serialname": "wr_qr", "microph": True},
-            "qice": {"serialname": "wr_qi", "microph": True},
-            "qsnow": {"serialname": "wr_qs", "microph": True},
-            "qgraupel": {"serialname": "wr_qg", "microph": True},
-            "temperature": {"serialname": "wr_pt", "microph": True},
-            "delp": {"serialname": "wr_delp", "microph": True},
-            "delz": {"serialname": "wr_delz", "microph": True},
-            "density": {"serialname": "wr_den", "microph": True},
-            "density_factor": {"serialname": "wr_denfac", "microph": True},
-            "vterminal_water": {"serialname": "wr_vtw", "microph": True},
-            "vterminal_rain": {"serialname": "wr_vtr", "microph": True},
-            "cloud_condensation_nuclei": {"serialname": "wr_ccn", "microph": True},
-            "reevap": {"serialname": "wr_reevap", "microph": True},
-            "h_var": {"serialname": "wr_h_var", "microph": True},
+            "qvapor": {"serialname": "wr_qv"},
+            "qliquid": {"serialname": "wr_ql"},
+            "qrain": {"serialname": "wr_qr"},
+            "qice": {"serialname": "wr_qi"},
+            "qsnow": {"serialname": "wr_qs"},
+            "qgraupel": {"serialname": "wr_qg"},
+            "temperature": {"serialname": "wr_pt"},
+            "delp": {"serialname": "wr_delp"},
+            "delz": {"serialname": "wr_delz"},
+            "density": {"serialname": "wr_den"},
+            "density_factor": {"serialname": "wr_denfac"},
+            "vterminal_water": {"serialname": "wr_vtw"},
+            "vterminal_rain": {"serialname": "wr_vtr"},
+            "cloud_condensation_nuclei": {"serialname": "wr_ccn"},
+            "reevap": {"serialname": "wr_reevap"},
+            "h_var": {"serialname": "wr_h_var"},
         }
 
         self.in_vars["parameters"] = [

@@ -14,15 +14,15 @@ class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "ne_qv", "microph": True},
-            "qliquid": {"serialname": "ne_ql", "microph": True},
-            "qrain": {"serialname": "ne_qr", "microph": True},
-            "qice": {"serialname": "ne_qi", "microph": True},
-            "qsnow": {"serialname": "ne_qs", "microph": True},
-            "qgraupel": {"serialname": "ne_qg", "microph": True},
-            "temperature": {"serialname": "ne_pt", "microph": True},
-            "delp": {"serialname": "ne_delp", "microph": True},
-            "condensation": {"serialname": "ne_cond", "microph": True},
+            "qvapor": {"serialname": "ne_qv"},
+            "qliquid": {"serialname": "ne_ql"},
+            "qrain": {"serialname": "ne_qr"},
+            "qice": {"serialname": "ne_qi"},
+            "qsnow": {"serialname": "ne_qs"},
+            "qgraupel": {"serialname": "ne_qg"},
+            "temperature": {"serialname": "ne_pt"},
+            "delp": {"serialname": "ne_delp"},
+            "condensation": {"serialname": "ne_cond"},
         }
 
         self.in_vars["parameters"] = ["convt"]
