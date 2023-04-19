@@ -136,7 +136,7 @@ class FullMicrophysics:
 
         self._warm_rain = WarmRain(stencil_factory, config, timestep)
 
-        if self._do_warm_rain:
+        if not self._do_warm_rain:
             self._ice_cloud = IceCloud(stencil_factory, config, timestep)
 
         self._subgrid_z_proc = VerticalSubgridProcesses(
