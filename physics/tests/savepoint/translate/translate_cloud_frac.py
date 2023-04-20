@@ -14,22 +14,22 @@ class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "cf_qv", "microph": True},
-            "qliquid": {"serialname": "cf_ql", "microph": True},
-            "qrain": {"serialname": "cf_qr", "microph": True},
-            "qice": {"serialname": "cf_qi", "microph": True},
-            "qsnow": {"serialname": "cf_qs", "microph": True},
-            "qgraupel": {"serialname": "cf_qg", "microph": True},
-            "qa": {"serialname": "cf_qa", "microph": True},
-            "temperature": {"serialname": "cf_pt", "microph": True},
-            "density": {"serialname": "cf_den", "microph": True},
-            "pz": {"serialname": "cf_pz", "microph": True},
-            "h_var": {"serialname": "cf_h_var", "microph": True},
-            "gsize": {"serialname": "cf_gsize", "microph": True},
+            "qvapor": {"serialname": "cf_qv", "mp3": True},
+            "qliquid": {"serialname": "cf_ql", "mp3": True},
+            "qrain": {"serialname": "cf_qr", "mp3": True},
+            "qice": {"serialname": "cf_qi", "mp3": True},
+            "qsnow": {"serialname": "cf_qs", "mp3": True},
+            "qgraupel": {"serialname": "cf_qg", "mp3": True},
+            "qa": {"serialname": "cf_qa", "mp3": True},
+            "temperature": {"serialname": "cf_pt", "mp3": True},
+            "density": {"serialname": "cf_den", "mp3": True},
+            "pz": {"serialname": "cf_pz", "mp3": True},
+            "h_var": {"serialname": "cf_h_var", "mp3": True},
+            "gsize": {"serialname": "cf_gsize", "mp3": True},
         }
 
         self.out_vars = {
-            "qa": {"serialname": "ne_qa", "kend": namelist.npz - 1},
+            "qa": {"serialname": "ne_qa", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

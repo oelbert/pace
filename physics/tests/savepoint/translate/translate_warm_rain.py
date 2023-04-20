@@ -14,22 +14,22 @@ class TranslateWarmRain(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "wr_qv"},
-            "qliquid": {"serialname": "wr_ql"},
-            "qrain": {"serialname": "wr_qr"},
-            "qice": {"serialname": "wr_qi"},
-            "qsnow": {"serialname": "wr_qs"},
-            "qgraupel": {"serialname": "wr_qg"},
-            "temperature": {"serialname": "wr_pt"},
-            "delp": {"serialname": "wr_delp"},
-            "delz": {"serialname": "wr_delz"},
-            "density": {"serialname": "wr_den"},
-            "density_factor": {"serialname": "wr_denfac"},
-            "vterminal_water": {"serialname": "wr_vtw"},
-            "vterminal_rain": {"serialname": "wr_vtr"},
-            "cloud_condensation_nuclei": {"serialname": "wr_ccn"},
-            "reevap": {"serialname": "wr_reevap"},
-            "h_var": {"serialname": "wr_h_var"},
+            "qvapor": {"serialname": "wr_qv", "mp3": True},
+            "qliquid": {"serialname": "wr_ql", "mp3": True},
+            "qrain": {"serialname": "wr_qr", "mp3": True},
+            "qice": {"serialname": "wr_qi", "mp3": True},
+            "qsnow": {"serialname": "wr_qs", "mp3": True},
+            "qgraupel": {"serialname": "wr_qg", "mp3": True},
+            "temperature": {"serialname": "wr_pt", "mp3": True},
+            "delp": {"serialname": "wr_delp", "mp3": True},
+            "delz": {"serialname": "wr_delz", "mp3": True},
+            "density": {"serialname": "wr_den", "mp3": True},
+            "density_factor": {"serialname": "wr_denfac", "mp3": True},
+            "vterminal_water": {"serialname": "wr_vtw", "mp3": True},
+            "vterminal_rain": {"serialname": "wr_vtr", "mp3": True},
+            "cloud_condensation_nuclei": {"serialname": "wr_ccn", "mp3": True},
+            "reevap": {"serialname": "wr_reevap", "mp3": True},
+            "h_var": {"serialname": "wr_h_var", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -37,18 +37,19 @@ class TranslateWarmRain(TranslatePhysicsFortranData2Py):
         ]
 
         self.out_vars = {
-            "qvapor": {"serialname": "wr_qv", "kend": namelist.npz - 1},
-            "qliquid": {"serialname": "wr_ql", "kend": namelist.npz - 1},
-            "qrain": {"serialname": "wr_qr", "kend": namelist.npz - 1},
-            "qice": {"serialname": "wr_qi", "kend": namelist.npz - 1},
-            "qsnow": {"serialname": "wr_qs", "kend": namelist.npz - 1},
-            "qgraupel": {"serialname": "wr_qg", "kend": namelist.npz - 1},
-            "temperature": {"serialname": "wr_pt", "kend": namelist.npz - 1},
+            "qvapor": {"serialname": "wr_qv", "kend": namelist.npz, "mp3": True},
+            "qliquid": {"serialname": "wr_ql", "kend": namelist.npz, "mp3": True},
+            "qrain": {"serialname": "wr_qr", "kend": namelist.npz, "mp3": True},
+            "qice": {"serialname": "wr_qi", "kend": namelist.npz, "mp3": True},
+            "qsnow": {"serialname": "wr_qs", "kend": namelist.npz, "mp3": True},
+            "qgraupel": {"serialname": "wr_qg", "kend": namelist.npz, "mp3": True},
+            "temperature": {"serialname": "wr_pt", "kend": namelist.npz, "mp3": True},
             "cloud_condensation_nuclei": {
                 "serialname": "wr_ccn",
-                "kend": namelist.npz - 1,
+                "kend": namelist.npz,
+                "mp3": True
             },
-            "reevap": {"serialname": "wr_reevap", "kend": namelist.npz - 1},
+            "reevap": {"serialname": "wr_reevap", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
