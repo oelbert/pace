@@ -520,6 +520,21 @@ class Sedimentation:
             vterminal_ice,
         )
 
+        qv = qvapor.view[:]
+        ql = qliquid.view[:]
+        qr = qrain.view[:]
+        qi = qice.view[:]
+        qs = qsnow.view[:]
+        qg = qgraupel.view[:]
+        tmp = temperature.view[:]
+        dp = delp.view[:]
+        ze = self._z_edge.view[:]
+        zt = self._z_terminal.view[:]
+        zs = self._z_surface.view[:]
+        vti = vterminal_ice.view[:]
+        rr = column_rain.view[:]
+        icpk = self._icpk.view[:]
+
         if self.config.do_sedi_melt:
             (
                 qice.view[:],
@@ -528,23 +543,23 @@ class Sedimentation:
                 temperature.view[:],
                 self._cvm,
             ) = sedi_melt(
-                qvapor.view[:],
-                qliquid.view[:],
-                qrain.view[:],
-                qice.view[:],
-                qsnow.view[:],
-                qgraupel.view[:],
+                qv,
+                ql,
+                qr,
+                qi,
+                qs,
+                qg,
                 self._cvm,
-                temperature.view[:],
-                delp.view[:],
-                self._z_edge.view[:],
-                self._z_terminal.view[:],
-                self._z_surface.view[:],
+                tmp,
+                dp,
+                ze,
+                zt,
+                zs,
                 self._timestep,
-                vterminal_ice.view[:],
-                column_rain.view[:],
+                vti,
+                rr,
                 self.config.tau_imlt,
-                self._icpk.view[:],
+                icpk,
                 self._ks,
                 self._ke,
                 self._is_,
