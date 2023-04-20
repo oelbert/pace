@@ -292,14 +292,17 @@ def test_sequential_savepoint(
     if len(failing_names) > 0:
         get_thresholds(case.testobj, input_data=original_input_data)
         out_filename = os.path.join(OUTDIR, f"{case.savepoint_name}.nc")
-        save_netcdf(
-            case.testobj,
-            [input_data],
-            [output],
-            ref_data_out,
-            failing_names,
-            out_filename,
-        )
+        try:
+            save_netcdf(
+                case.testobj,
+                [input_data],
+                [output],
+                ref_data_out,
+                failing_names,
+                out_filename,
+            )
+        except Exception as error:
+            print(f"TestSequential SaveNetCDF Error: {error}")
     assert failing_names == [], f"only the following variables passed: {passing_names}"
     assert len(passing_names) > 0, "No tests passed"
 

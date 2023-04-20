@@ -28,15 +28,15 @@ class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
         self.in_vars["parameters"] = ["convt"]
 
         self.out_vars = {
-            "qvapor": {"serialname": "ne_qv", "kend": namelist.npz - 1},
-            "qliquid": {"serialname": "ne_ql", "kend": namelist.npz - 1},
-            "qrain": {"serialname": "ne_qr", "kend": namelist.npz - 1},
-            "qice": {"serialname": "ne_qi", "kend": namelist.npz - 1},
-            "qsnow": {"serialname": "ne_qs", "kend": namelist.npz - 1},
-            "qgraupel": {"serialname": "ne_qg", "kend": namelist.npz - 1},
-            "temperature": {"serialname": "ne_pt", "kend": namelist.npz - 1},
-            "delp": {"serialname": "ne_delp", "kend": namelist.npz - 1},
-            "condensation": {"serialname": "ne_cond"},
+            "qvapor": {"serialname": "ne_qv", "kend": namelist.npz - 1, "mp3": True},
+            "qliquid": {"serialname": "ne_ql", "kend": namelist.npz - 1, "mp3": True},
+            "qrain": {"serialname": "ne_qr", "kend": namelist.npz - 1, "mp3": True},
+            "qice": {"serialname": "ne_qi", "kend": namelist.npz - 1, "mp3": True},
+            "qsnow": {"serialname": "ne_qs", "kend": namelist.npz - 1, "mp3": True},
+            "qgraupel": {"serialname": "ne_qg", "kend": namelist.npz - 1, "mp3": True},
+            "temperature": {"serialname": "ne_pt", "kend": namelist.npz - 1, "mp3": True},
+            "delp": {"serialname": "ne_delp", "kend": namelist.npz - 1, "mp3": True},
+            "condensation": {"serialname": "ne_cond", "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

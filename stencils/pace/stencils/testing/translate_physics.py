@@ -101,7 +101,7 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
             elif n_dim == 2:
                 rearranged = np.reshape(data[:, :], (cn, cn, npz))
             elif n_dim == 1:
-                rearranged = np.reshape(data[:, :], (cn, cn))
+                rearranged = np.reshape(data[:], (cn, cn))
             else:
                 raise NotImplementedError("Data dimension not supported")
         else:
@@ -161,46 +161,74 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
             if not manual:
                 data_result = as_numpy(out_data[var])
                 n_dim = len(data_result.shape)
-                cn2 = int(data_result.shape[0] - self.grid.halo * 2 - 1) ** 2
+                cn = int(data_result.shape[0] - self.grid.halo * 2 - 1)
+                cn2 = cn ** 2
                 roll_zero = info["out_roll_zero"] if "out_roll_zero" in info else False
                 index_order = info["order"] if "order" in info else "C"
                 dycore = info["dycore"] if "dycore" in info else False
-                if n_dim == 3:
-                    npz = data_result.shape[2]
-                    k_length = info["kend"] if "kend" in info else npz
-                    if compute_domain:
-                        ds = self.grid.compute_dict()
-                    else:
-                        ds = self.grid.default_domain_dict()
-                    ds.update(info)
-                    ij_slice = self.grid.slice_dict(ds)
-                    data_compute = data_result[ij_slice[0], ij_slice[1], :]
-                    if dycore:
+                mp3_format = info["mp3"] if "mp3" in info else False
+                if mp3_format:
+                    if n_dim == 3:
+                        if compute_domain:
+                            ds = self.grid.compute_dict()
+                        else:
+                            ds = self.grid.default_domain_dict()
+                        ds.update(info)
+                        ij_slice = self.grid.slice_dict(ds)
+                        npz = data_result.shape[-1]
+                        k_length = info["kend"] if "kend" in info else npz
+                        data_compute = data_result[ij_slice[0], ij_slice[1], :]
                         if k_length < npz:
-                            data_compute = data_compute[:, :, 0:-1]
+                            data_compute = data_compute[:, :, :k_length]
+                        out[serialname] = np.reshape(data_compute, (cn2, k_length))
+                    elif n_dim == 1:
+                        if compute_domain:
+                            ds = self.grid.compute_dict()
+                        else:
+                            ds = self.grid.default_domain_dict()
+                        ds.update(info)
+                        ij_slice = self.grid.slice_dict(ds)
+                        data_compute = data_result[ij_slice[0], ij_slice[1]]
+                        out[serialname] = np.reshape(data_compute, (cn2))
+                    else:
+                        raise NotImplementedError("Data dimension not supported")
+                else:
+                    if n_dim == 3:
+                        npz = data_result.shape[2]
+                        k_length = info["kend"] if "kend" in info else npz
+                        if compute_domain:
+                            ds = self.grid.compute_dict()
+                        else:
+                            ds = self.grid.default_domain_dict()
+                        ds.update(info)
+                        ij_slice = self.grid.slice_dict(ds)
+                        data_compute = data_result[ij_slice[0], ij_slice[1], :]
+                        if dycore:
+                            if k_length < npz:
+                                data_compute = data_compute[:, :, 0:-1]
+                            out[serialname] = data_compute
+                        else:
+                            data_compute = np.reshape(
+                                data_compute, (cn2, npz), order=index_order
+                            )
+                            if k_length < npz:
+                                out[serialname] = data_compute[:, ::-1][:, 1:]
+                            else:
+                                if roll_zero:
+                                    out[serialname] = np.roll(data_compute[:, ::-1], -1)
+                                else:
+                                    out[serialname] = data_compute[:, ::-1]
+                    elif n_dim == 2:
+                        if compute_domain:
+                            ds = self.grid.compute_dict()
+                        else:
+                            ds = self.grid.default_domain_dict()
+                        ds.update(info)
+                        ij_slice = self.grid.slice_dict(ds)
+                        data_compute = data_result[ij_slice[0], ij_slice[1]]
                         out[serialname] = data_compute
                     else:
-                        data_compute = np.reshape(
-                            data_compute, (cn2, npz), order=index_order
-                        )
-                        if k_length < npz:
-                            out[serialname] = data_compute[:, ::-1][:, 1:]
-                        else:
-                            if roll_zero:
-                                out[serialname] = np.roll(data_compute[:, ::-1], -1)
-                            else:
-                                out[serialname] = data_compute[:, ::-1]
-                elif n_dim == 2:
-                    if compute_domain:
-                        ds = self.grid.compute_dict()
-                    else:
-                        ds = self.grid.default_domain_dict()
-                    ds.update(info)
-                    ij_slice = self.grid.slice_dict(ds)
-                    data_compute = data_result[ij_slice[0], ij_slice[1]]
-                    out[serialname] = data_compute
-                else:
-                    raise NotImplementedError("Output data dimension not supported")
+                        raise NotImplementedError("Output data dimension not supported")
         return out
 
 
