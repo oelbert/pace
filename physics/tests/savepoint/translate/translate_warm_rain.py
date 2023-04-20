@@ -22,7 +22,6 @@ class TranslateWarmRain(TranslatePhysicsFortranData2Py):
             "qgraupel": {"serialname": "wr_qg", "mp3": True},
             "temperature": {"serialname": "wr_pt", "mp3": True},
             "delp": {"serialname": "wr_delp", "mp3": True},
-            "delz": {"serialname": "wr_delz", "mp3": True},
             "density": {"serialname": "wr_den", "mp3": True},
             "density_factor": {"serialname": "wr_denfac", "mp3": True},
             "vterminal_water": {"serialname": "wr_vtw", "mp3": True},

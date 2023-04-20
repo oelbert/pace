@@ -29,7 +29,7 @@ class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
         }
 
         self.out_vars = {
-            "qa": {"serialname": "ne_qa", "kend": namelist.npz, "mp3": True},
+            "qa": {"serialname": "cf_qa", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

@@ -25,14 +25,14 @@ class TranslateSubgridZProc(TranslatePhysicsFortranData2Py):
             "temperature": {"serialname": "sz_pt", "mp3": True},
             "density": {"serialname": "sz_den", "mp3": True},
             "density_factor": {"serialname": "sz_denfac", "mp3": True},
-            "delp": {"serialname": "wr_delp", "mp3": True},
+            "delp": {"serialname": "sz_delp", "mp3": True},
             "rh_adj": {"serialname": "sz_rh_adj", "mp3": True},
             "cloud_condensation_nuclei": {"serialname": "sz_ccn", "mp3": True},
             "cloud_ice_nuclei": {"serialname": "sz_cin", "mp3": True},
-            "condensation": {"serialname": "sz_cond", "mp3": True},
-            "deposition": {"serialname": "sz_dep", "mp3": True},
-            "evaporation": {"serialname": "sz_evap", "mp3": True},
-            "sublimation": {"serialname": "sz_sub", "mp3": True},
+            "cond": {"serialname": "sz_cond", "mp3": True},
+            "dep": {"serialname": "sz_dep", "mp3": True},
+            "reevap": {"serialname": "sz_reevap", "mp3": True},
+            "sub": {"serialname": "sz_sub", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -53,10 +53,10 @@ class TranslateSubgridZProc(TranslatePhysicsFortranData2Py):
                 "mp3": True
             },
             "cloud_ice_nuclei": {"serialname": "sz_cin", "kend": namelist.npz, "mp3": True},
-            "condensation": {"serialname": "sz_cond", "kend": namelist.npz, "mp3": True},
-            "deposition": {"serialname": "sz_dep", "kend": namelist.npz, "mp3": True},
-            "evaporation": {"serialname": "sz_evap", "kend": namelist.npz, "mp3": True},
-            "sublimation": {"serialname": "sz_sub", "kend": namelist.npz, "mp3": True},
+            "cond": {"serialname": "sz_cond", "kend": namelist.npz, "mp3": True},
+            "dep": {"serialname": "sz_dep", "kend": namelist.npz, "mp3": True},
+            "reevap": {"serialname": "sz_reevap", "kend": namelist.npz, "mp3": True},
+            "sub": {"serialname": "sz_sub", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
