@@ -181,7 +181,7 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
                         if k_length < npz:
                             data_compute = data_compute[:, :, :k_length]
                         out[serialname] = np.reshape(data_compute, (cn2, k_length))
-                    elif n_dim == 1:
+                    elif n_dim == 2:
                         if compute_domain:
                             ds = self.grid.compute_dict()
                         else:
