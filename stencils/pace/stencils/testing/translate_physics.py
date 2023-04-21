@@ -90,7 +90,7 @@ class TranslatePhysicsFortranData2Py(TranslateFortranData2Py):
         else:
             return data
         return rearranged
-    
+
     def transform_mp3_serialized_data(self, data):
         if isinstance(data, np.ndarray):
             n_dim = len(data.shape)

@@ -46,7 +46,7 @@ class TranslateWarmRain(TranslatePhysicsFortranData2Py):
             "cloud_condensation_nuclei": {
                 "serialname": "wr_ccn",
                 "kend": namelist.npz,
-                "mp3": True
+                "mp3": True,
             },
             "reevap": {"serialname": "wr_reevap", "kend": namelist.npz, "mp3": True},
         }

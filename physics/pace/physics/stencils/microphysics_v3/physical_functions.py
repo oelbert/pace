@@ -127,7 +127,9 @@ def calc_heat_cap_and_latent_heat_coeff(
     lcpk = (lv00 + d1_vap * temperature) / cvm
     icpk = (li00 + d1_ice * temperature) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * temperature) / cvm
-    tcp3 = lcpk + icpk * min(1.0, basic.dim(constants.TICE0, temperature) / (constants.TICE0 - t_wfr))
+    tcp3 = lcpk + icpk * min(
+        1.0, basic.dim(constants.TICE0, temperature) / (constants.TICE0 - t_wfr)
+    )
 
     return q_liq, q_solid, cvm, te, lcpk, icpk, tcpk, tcp3
 
@@ -179,7 +181,9 @@ def update_hydrometeors_and_temperatures(
     lcpk = (lv00 + d1_vap * tk) / cvm
     icpk = (li00 + d1_ice * tk) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * tk) / cvm
-    tcp3 = lcpk + icpk * min(1.0, basic.dim(constants.TICE0, tk) / (constants.TICE0 - t_wfr))
+    tcp3 = lcpk + icpk * min(
+        1.0, basic.dim(constants.TICE0, tk) / (constants.TICE0 - t_wfr)
+    )
 
     return (
         qvapor,
@@ -251,7 +255,9 @@ def sat_spec_hum_water_ice(temp, density):
     if temp < constants.TICE0:
         dqdt = q * (constants.D2ICE + constants.LI2_0 / temp) / (constants.RVGAS * temp)
     else:
-        dqdt = q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+        dqdt = (
+            q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+        )
     return q, dqdt
 
 

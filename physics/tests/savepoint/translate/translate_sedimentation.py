@@ -59,22 +59,54 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
             "ua": {"serialname": "sd_u", "kend": namelist.npz, "mp3": True},
             "va": {"serialname": "sd_v", "kend": namelist.npz, "mp3": True},
             "wa": {"serialname": "sd_w", "kend": namelist.npz, "mp3": True},
-            "preflux_water": {"serialname": "sd_pfw", "kend": namelist.npz, "mp3": True},
+            "preflux_water": {
+                "serialname": "sd_pfw",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
             "preflux_rain": {"serialname": "sd_pfr", "kend": namelist.npz, "mp3": True},
             "preflux_ice": {"serialname": "sd_pfi", "kend": namelist.npz, "mp3": True},
             "preflux_snow": {"serialname": "sd_pfs", "kend": namelist.npz, "mp3": True},
-            "preflux_graupel": {"serialname": "sd_pfg", "kend": namelist.npz, "mp3": True},
-            "vterminal_water": {"serialname": "sd_vtw", "kend": namelist.npz, "mp3": True},
-            "vterminal_rain": {"serialname": "sd_vtr", "kend": namelist.npz, "mp3": True},
-            "vterminal_ice": {"serialname": "sd_vti", "kend": namelist.npz, "mp3": True},
-            "vterminal_snow": {"serialname": "sd_vts", "kend": namelist.npz, "mp3": True},
-            "vterminal_graupel": {"serialname": "sd_vtg", "kend": namelist.npz, "mp3": True},
+            "preflux_graupel": {
+                "serialname": "sd_pfg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_water": {
+                "serialname": "sd_vtw",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_rain": {
+                "serialname": "sd_vtr",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_ice": {
+                "serialname": "sd_vti",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_snow": {
+                "serialname": "sd_vts",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_graupel": {
+                "serialname": "sd_vtg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
             "column_water": {"serialname": "sd_w1", "mp3": True},
             "column_rain": {"serialname": "sd_r1", "mp3": True},
             "column_ice": {"serialname": "sd_i1", "mp3": True},
             "column_snow": {"serialname": "sd_s1", "mp3": True},
             "column_graupel": {"serialname": "sd_g1", "mp3": True},
-            "column_energy_change": {"serialname": "sd_dte", "kend": namelist.npz, "mp3": True},
+            "column_energy_change": {
+                "serialname": "sd_dte",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
         }
 
         self.stencil_factory = stencil_factory
@@ -111,13 +143,13 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
                 inputs[var] = pace.util.Quantity(
                     inputs[var],
                     dims=[pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
-                    units = "unknown"
+                    units="unknown",
                 )
             elif len(inputs[var].shape) == 2:
                 inputs[var] = pace.util.Quantity(
                     inputs[var],
                     dims=[pace.util.X_DIM, pace.util.Y_DIM],
-                    units = "unknown"
+                    units="unknown",
                 )
             else:
                 raise TypeError(
