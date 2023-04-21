@@ -106,6 +106,24 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
             convert_mm_day=inputs.pop("convt"),
         )
 
+        for var in inputs.keys():
+            if len(inputs[var].shape) == 3:
+                inputs[var] = pace.util.Quantity(
+                    inputs[var],
+                    dims=[pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+                    units = "unknown"
+                )
+            elif len(inputs[var].shape) == 2:
+                inputs[var] = pace.util.Quantity(
+                    inputs[var],
+                    dims=[pace.util.X_DIM, pace.util.Y_DIM],
+                    units = "unknown"
+                )
+            else:
+                raise TypeError(
+                    f"input data with strange len: {len(inputs[var].shape)}"
+                )
+
         compute_func(**inputs)
 
         return self.slice_output(inputs)
