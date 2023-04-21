@@ -50,9 +50,13 @@ class TranslateSubgridZProc(TranslatePhysicsFortranData2Py):
             "cloud_condensation_nuclei": {
                 "serialname": "sz_ccn",
                 "kend": namelist.npz,
-                "mp3": True
+                "mp3": True,
             },
-            "cloud_ice_nuclei": {"serialname": "sz_cin", "kend": namelist.npz, "mp3": True},
+            "cloud_ice_nuclei": {
+                "serialname": "sz_cin",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
             "cond": {"serialname": "sz_cond", "kend": namelist.npz, "mp3": True},
             "dep": {"serialname": "sz_dep", "kend": namelist.npz, "mp3": True},
             "reevap": {"serialname": "sz_reevap", "kend": namelist.npz, "mp3": True},

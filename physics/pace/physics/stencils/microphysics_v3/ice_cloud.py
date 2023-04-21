@@ -267,7 +267,7 @@ def melt_snow(
                     acco_2_1,
                     acc2,
                     acc3,
-                )
+                ),
             )
             pracs = physfun.accretion_3d(
                 qsnow,
@@ -307,7 +307,7 @@ def melt_snow(
                 csmlt_2,
                 csmlt_3,
                 csmlt_4,
-            )
+            ),
         )
         sink = min(qsnow, min((sink + pracs) * timestep, tc / icpk))
         tmp = min(sink, basic.dim(qs_mlt, qliquid))
@@ -447,7 +447,7 @@ def melt_graupel(
                     acco_2_2,
                     acc4,
                     acc5,
-                )
+                ),
             )
 
         tin = temperature
@@ -474,7 +474,7 @@ def melt_graupel(
                 cgmlt_2,
                 cgmlt_3,
                 cgmlt_4,
-            )
+            ),
         )
         sink = min(qgraupel, min(sink * timestep, tc / icpk))
 
@@ -943,7 +943,7 @@ def accrete_graupel_with_cloud_water_and_rain(
                     acc4,
                     acc5,
                 ),
-                qrain
+                qrain,
             )
 
         sink = pgacr + pgacw
