@@ -76,3 +76,24 @@ Microph:
       mph_ql_dt: 1e-8
       mph_qr_dt: 1e-9
       mph_qg_dt: 1e-18
+
+Sedimentation:
+  - backend: numpy
+    ignore_near_zero_errors:
+      sd_qv: 1e-14
+      sd_ql: 1e-14
+      sd_qr: 1e-14
+      sd_qi: 1e-14
+      sd_qs: 1e-14
+      sd_qg: 1e-14
+      sd_pfw: 1e-14
+      sd_pfr: 1e-14
+      sd_pfi: 1e-14
+      sd_pfs: 1e-14
+      sd_pfg: 1e-14
+      sd_w1: 1e-14
+      sd_r1: 1e-14
+      sd_i1: 1e-14
+      sd_s1: 1e-14
+      sd_g1: 1e-14
+      sd_dte: 1e-14

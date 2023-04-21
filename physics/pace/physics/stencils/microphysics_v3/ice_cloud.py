@@ -1324,7 +1324,7 @@ class IceCloud:
                 "li20": config.li20,
                 "lv00": config.lv00,
                 "t_wfr": config.t_wfr,
-                "tice": config.tice,
+                "tice": constants.TICE0,
                 "ql_mlt": config.ql_mlt,
                 "tau_imlt": config.tau_imlt,
                 "tice_mlt": config.tice_mlt,

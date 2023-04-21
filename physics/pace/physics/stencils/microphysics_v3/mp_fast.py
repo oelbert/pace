@@ -576,7 +576,7 @@ class FastMicrophysics:
                 "li20": config.li20,
                 "d1_vap": config.d1_vap,
                 "d1_ice": config.d1_ice,
-                "tice": config.tice,
+                "tice": constants.TICE0,
                 "t_wfr": config.t_wfr,
                 "convt": convert_mm_day,
                 "ql_mlt": config.ql_mlt,

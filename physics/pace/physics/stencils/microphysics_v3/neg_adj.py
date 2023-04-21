@@ -1,6 +1,7 @@
 from gt4py.cartesian.gtscript import BACKWARD, FORWARD, PARALLEL, computation, interval
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
@@ -182,7 +183,7 @@ class AdjustNegativeTracers:
                 "li20": config.li20,
                 "d1_vap": config.d1_vap,
                 "d1_ice": config.d1_ice,
-                "tice": config.tice,
+                "tice": constants.TICE0,
                 "t_wfr": config.t_wfr,
                 "convt": convert_mm_day,
                 "ntimes": ntimes,

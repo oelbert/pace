@@ -24,7 +24,6 @@ class AdjustNegativeTracerConfig:
     li20: float
     lv00: float
     t_wfr: float
-    tice: float
 
 
 @dataclasses.dataclass
@@ -39,7 +38,6 @@ class FastMPConfig:
     li20: float
     d1_vap: float
     d1_ice: float
-    tice: float
     t_wfr: float
     ql_mlt: float
     qs_mlt: float
@@ -206,6 +204,7 @@ class MicroPhysicsConfig:
     z_slope_ice: bool
     z_slope_liq: bool
     tice: float
+    tice_mlt: float
     alin: float
     alinw: float
     alini: float
@@ -258,7 +257,6 @@ class MicroPhysicsConfig:
     c1_ice: float = dataclasses.field(init=False)
     n_min: int = dataclasses.field(init=False)
     delt: float = dataclasses.field(init=False)
-    tice_mlt: float = dataclasses.field(init=False)
     esbasw: float = dataclasses.field(init=False)
     tbasw: float = dataclasses.field(init=False)
     esbasi: float = dataclasses.field(init=False)
@@ -403,16 +401,14 @@ class MicroPhysicsConfig:
 
         self.n_min = 1600
         self.delt = 0.1
-        self.tice_mlt = self.tice
-        self.tice = 273.15
         self.esbasw = 1013246.0
-        self.tbasw = self.tice + 100.0
+        self.tbasw = constants.TICE0 + 100.0
         self.esbasi = 6107.1
-        self.tmin = self.tice - self.n_min * self.delt
+        self.tmin = constants.TICE0 - self.n_min * self.delt
         if self.do_warm_rain:  # unsupported
             self.t_wfr = self.tmin
         else:
-            self.t_wfr = self.tice - 40.0
+            self.t_wfr = constants.TICE0 - 40.0
 
     @property
     def adjustnegative(self) -> AdjustNegativeTracerConfig:
@@ -426,7 +422,6 @@ class MicroPhysicsConfig:
             li20=self.li20,
             lv00=self.lv00,
             t_wfr=self.t_wfr,
-            tice=self.tice,
         )
 
     @property
@@ -442,7 +437,6 @@ class MicroPhysicsConfig:
             li20=self.li20,
             d1_vap=self.d1_vap,
             d1_ice=self.d1_ice,
-            tice=self.tice,
             t_wfr=self.t_wfr,
             ql_mlt=self.ql_mlt,
             qs_mlt=self.qs_mlt,
@@ -1530,6 +1524,7 @@ class PhysicsConfig:
     z_slope_ice: bool = NamelistDefaults.z_slope_ice
     z_slope_liq: bool = NamelistDefaults.z_slope_liq
     tice: float = NamelistDefaults.tice
+    tice_mlt: float = NamelistDefaults.tice_mlt
     alin: float = NamelistDefaults.alin
     alinw: float = NamelistDefaults.alinw
     alini: float = NamelistDefaults.alini
@@ -1708,6 +1703,7 @@ class PhysicsConfig:
             z_slope_ice=namelist.z_slope_ice,
             z_slope_liq=namelist.z_slope_liq,
             tice=namelist.tice,
+            tice_mlt=namelist.tice_mlt,
             alin=namelist.alin,
             alinw=namelist.alinw,
             alini=namelist.alini,
@@ -1874,6 +1870,7 @@ class PhysicsConfig:
             z_slope_ice=self.z_slope_ice,
             z_slope_liq=self.z_slope_liq,
             tice=self.tice,
+            tice_mlt=self.tice_mlt,
             alin=self.alin,
             alinw=self.alinw,
             alini=self.alini,

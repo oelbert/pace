@@ -1227,7 +1227,7 @@ class VerticalSubgridProcesses:
                 "li20": config.li20,
                 "lv00": config.lv00,
                 "t_wfr": config.t_wfr,
-                "tice": config.tice,
+                "tice": constants.TICE0,
                 "t_min": config.t_min,
                 "t_sub": config.t_sub,
                 "do_cond_timescale": config.do_cond_timescale,

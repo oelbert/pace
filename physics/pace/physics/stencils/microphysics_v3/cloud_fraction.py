@@ -318,7 +318,7 @@ class CloudFraction:
                 "rad_rain": config.rad_rain,
                 "rad_snow": config.rad_snow,
                 "t_wfr": config.t_wfr,
-                "tice": config.tice,
+                "tice": constants.TICE0,
                 "cld_min": config.cld_min,
                 "do_cld_adj": config.do_cld_adj,
                 "f_dq_m": config.f_dq_m,
