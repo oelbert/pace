@@ -307,8 +307,8 @@ class Sedimentation:
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
         self._z_surface = quantity_factory.zeros([X_DIM, Y_DIM], units="unknown")
-        self._z_edge = make_quantity()
-        self._z_terminal = make_quantity()
+        self._z_edge = quantity_factory.zeros([X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown")
+        self._z_terminal = quantity_factory.zeros([X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown")
         self._icpk = make_quantity()
         self._cvm = make_quantity()
 
