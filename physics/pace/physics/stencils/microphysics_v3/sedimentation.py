@@ -162,7 +162,7 @@ def sedi_melt(
         q_melt = qgraupel
     else:
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
-    ke = qvapor.shape[2]
+    ke = qvapor.shape[2] - 1
     ks = 0
     for i in range(qvapor.shape[0]):
         for j in range(qvapor.shape[1]):
