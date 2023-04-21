@@ -151,12 +151,6 @@ def sedi_melt(
     r1,
     tau_mlt,
     icpk,
-    ks,
-    ke,
-    is_,
-    ie,
-    js,
-    je,
     mode,
 ):
     li00 = -5
@@ -168,8 +162,10 @@ def sedi_melt(
         q_melt = qgraupel
     else:
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
-    for i in range(is_, ie + 1):
-        for j in range(js, je + 1):
+    ke = qvapor.shape[2]
+    ks = 0
+    for i in range(qvapor.shape[0]):
+        for j in range(qvapor.shape[1]):
             for k in range(ke, ks - 1, -1):
                 if v_terminal[i, j, k] >= 1.0e-10:
                     continue
@@ -296,12 +292,6 @@ class Sedimentation:
         convert_mm_day: float,
     ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
-        self._is_ = self._idx.isc
-        self._ie = self._idx.iec
-        self._js = self._idx.jsc
-        self._je = self._idx.jec
-        self._ks = 0
-        self._ke = config.npz - 1
 
         assert config.ifflag in [
             1,
@@ -545,12 +535,6 @@ class Sedimentation:
                 column_rain.view[:],
                 self.config.tau_imlt,
                 self._icpk.view[:],
-                self._ks,
-                self._ke,
-                self._is_,
-                self._ie,
-                self._js,
-                self._je,
                 "ice",
             )
 
@@ -639,12 +623,6 @@ class Sedimentation:
                 column_rain.view[:],
                 self.config.tau_smlt,
                 self._icpk.view[:],
-                self._ks,
-                self._ke,
-                self._is_,
-                self._ie,
-                self._js,
-                self._je,
                 "snow",
             )
 
@@ -762,12 +740,6 @@ class Sedimentation:
                 column_rain.view[:],
                 self.config.tau_gmlt,
                 self._icpk.view[:],
-                self._ks,
-                self._ke,
-                self._is_,
-                self._ie,
-                self._js,
-                self._je,
                 "graupel",
             )
 
