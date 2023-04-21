@@ -173,6 +173,9 @@ def sedi_melt(
     tau_mlt,
     icpk,
     li00,
+    c1_vap,
+    c1_liq,
+    c1_ice,
     ks,
     ke,
     is_,
@@ -201,22 +204,24 @@ def sedi_melt(
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
                         ):
-                            cvm[i, j, k] = physfun.moist_heat_capacity(
-                                qvapor[i, j, k],
-                                qliquid[i, j, k],
-                                qrain[i, j, k],
-                                qice[i, j, k],
-                                qsnow[i, j, k],
-                                qgraupel[i, j, k],
-                            )
-                            cvm[i, j, m] = physfun.moist_heat_capacity(
-                                qvapor[i, j, m],
-                                qliquid[i, j, m],
-                                qrain[i, j, m],
-                                qice[i, j, m],
-                                qsnow[i, j, m],
-                                qgraupel[i, j, m],
-                            )
+                            cvm[i, j, k] = 1.0 + qvapor[i, j, k] * c1_vap + (qliquid[i, j, k] + qrain[i, j, k]) * c1_liq + (qice[i, j, k]+qsnow[i, j, k]+qgraupel[i, j, k]) * c1_ice
+                            cvm[i, j, m] = 1.0 + qvapor[i, j, m] * c1_vap + (qliquid[i, j, m] + qrain[i, j, m]) * c1_liq + (qice[i, j, m]+qsnow[i, j, m]+qgraupel[i, j, m]) * c1_ice
+                            # cvm[i, j, k] = physfun.moist_heat_capacity(
+                            #     qvapor[i, j, k],
+                            #     qliquid[i, j, k],
+                            #     qrain[i, j, k],
+                            #     qice[i, j, k],
+                            #     qsnow[i, j, k],
+                            #     qgraupel[i, j, k],
+                            # )
+                            # cvm[i, j, m] = physfun.moist_heat_capacity(
+                            #     qvapor[i, j, m],
+                            #     qliquid[i, j, m],
+                            #     qrain[i, j, m],
+                            #     qice[i, j, m],
+                            #     qsnow[i, j, m],
+                            #     qgraupel[i, j, m],
+                            # )
                             dtime = min(
                                 timestep,
                                 (z_edge[i, j, m] - z_edge[i, j, m + 1])
@@ -246,24 +251,30 @@ def sedi_melt(
                             temperature[i, j, k] = (
                                 temperature[i, j, k] * cvm[i, j, k]
                                 - li00 * sink * delp[i, j, m] / delp[i, j, k]
-                            ) / physfun.moist_heat_capacity(
-                                qvapor[i, j, k],
-                                qliquid[i, j, k],
-                                qrain[i, j, k],
-                                qice[i, j, k],
-                                qsnow[i, j, k],
-                                qgraupel[i, j, k],
+                            ) / (
+                                1.0 + qvapor[i, j, k] * c1_vap + (qliquid[i, j, k] + qrain[i, j, k]) * c1_liq + (qice[i, j, k]+qsnow[i, j, k]+qgraupel[i, j, k]) * c1_ice
                             )
+                            # physfun.moist_heat_capacity(
+                            #     qvapor[i, j, k],
+                            #     qliquid[i, j, k],
+                            #     qrain[i, j, k],
+                            #     qice[i, j, k],
+                            #     qsnow[i, j, k],
+                            #     qgraupel[i, j, k],
+                            # )
                             temperature[i, j, m] = (
                                 temperature[i, j, m] * cvm[i, j, m]
-                            ) / physfun.moist_heat_capacity(
-                                qvapor[i, j, m],
-                                qliquid[i, j, m],
-                                qrain[i, j, m],
-                                qice[i, j, m],
-                                qsnow[i, j, m],
-                                qgraupel[i, j, m],
+                            ) / (
+                                1.0 + qvapor[i, j, m] * c1_vap + (qliquid[i, j, m] + qrain[i, j, m]) * c1_liq + (qice[i, j, m]+qsnow[i, j, m]+qgraupel[i, j, m]) * c1_ice
                             )
+                            # physfun.moist_heat_capacity(
+                            #     qvapor[i, j, m],
+                            #     qliquid[i, j, m],
+                            #     qrain[i, j, m],
+                            #     qice[i, j, m],
+                            #     qsnow[i, j, m],
+                            #     qgraupel[i, j, m],
+                            # )
                         if q_melt[i, j, k] < constants.QCMIN:
                             break
 
@@ -326,6 +337,9 @@ class Sedimentation:
         self._je = self._idx.jec
         self._ks = 0
         self._ke = config.npz - 1
+        self.c1_vap = config.c1_vap
+        self.c1_liq = config.c1_liq
+        self.c1_ice = config.c1_ice
 
         assert config.ifflag in [
             1,
@@ -579,6 +593,9 @@ class Sedimentation:
                 self.config.tau_imlt,
                 self._icpk.data[:],
                 self.li00,
+                self.c1_vap,
+                self.c1_liq,
+                self.c1_ice,
                 self._ks,
                 self._ke,
                 self._is_,
@@ -674,6 +691,9 @@ class Sedimentation:
                 self.config.tau_smlt,
                 self._icpk.data[:],
                 self.li00,
+                self.c1_vap,
+                self.c1_liq,
+                self.c1_ice,
                 self._ks,
                 self._ke,
                 self._is_,
@@ -798,6 +818,9 @@ class Sedimentation:
                 self.config.tau_gmlt,
                 self._icpk.data[:],
                 self.li00,
+                self.c1_vap,
+                self.c1_liq,
+                self.c1_ice,
                 self._ks,
                 self._ke,
                 self._is_,
