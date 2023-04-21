@@ -22,7 +22,7 @@ from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
 from ..._config import MicroPhysicsConfig
 
 
-def init_heat_cap_latent_heat_precip(
+def init_zeros_heat_cap_latent_heat_precip(
     qvapor: FloatField,
     qliquid: FloatField,
     qrain: FloatField,
@@ -31,6 +31,16 @@ def init_heat_cap_latent_heat_precip(
     qgraupel: FloatField,
     temperature: FloatField,
     icpk: FloatField,
+    preflux_water: FloatField,
+    preflux_rain: FloatField,
+    preflux_ice: FloatField,
+    preflux_snow: FloatField,
+    preflux_graupel: FloatField,
+    vterminal_water: FloatField,
+    vterminal_rain: FloatField,
+    vterminal_ice: FloatField,
+    vterminal_snow: FloatField,
+    vterminal_graupel: FloatField,
     column_water: FloatFieldIJ,
     column_rain: FloatFieldIJ,
     column_ice: FloatFieldIJ,
@@ -57,6 +67,18 @@ def init_heat_cap_latent_heat_precip(
             qgraupel,
             temperature,
         )
+
+        preflux_water = 0.
+        preflux_rain = 0.
+        preflux_ice = 0.
+        preflux_snow = 0.
+        preflux_graupel = 0.
+        vterminal_water = 0.
+        vterminal_rain = 0.
+        vterminal_ice = 0.
+        vterminal_snow = 0.
+        vterminal_graupel = 0.
+
     with computation(FORWARD), interval(-1, None):
         column_water = 0.0
         column_rain = 0.0
@@ -108,7 +130,7 @@ def calc_terminal_velocity_ice(
     Fortran name is term_ice
     """
 
-    from __externals__ import aa, bb, cc, constant_v, dd, ee, ifflag, tice, v_fac, v_max
+    from __externals__ import aa, bb, cc, constant_v, dd, ee, ifflag, v_fac, v_max
 
     with computation(PARALLEL), interval(...):
 
@@ -118,13 +140,12 @@ def calc_terminal_velocity_ice(
             if qice < constants.QFMIN:
                 v_terminal = 0.0
             else:
-                tc = temperature - tice
+                tc = temperature - constants.TICE0
                 if ifflag == 1:
                     v_terminal = (
                         (3.0 + (log(qice * density) / log(10)))
                         * (tc * (aa * tc + bb) + cc)
-                        + dd * tc
-                        + ee
+                        + dd * tc + ee
                     )
                     v_terminal = 0.01 * v_fac * exp(v_terminal * log(10.0))
                 else:  # ifflag == 2:
@@ -151,6 +172,7 @@ def sedi_melt(
     r1,
     tau_mlt,
     icpk,
+    li00,
     ks,
     ke,
     is_,
@@ -159,7 +181,6 @@ def sedi_melt(
     je,
     mode,
 ):
-    li00 = -5
     if mode == "ice":
         q_melt = qice
     elif mode == "snow":
@@ -170,15 +191,15 @@ def sedi_melt(
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
-            for k in range(ke, ks - 1, -1):
-                if v_terminal[i, j, k] >= 1.0e-10:
+            for k in range(ke - 1, ks - 1, -1):
+                if v_terminal[i, j, k] < 1.0e-10:
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
-                    for m in range(k + 1, ke + 1):
+                    for m in range(k + 1, ke):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
                             break
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
-                            temperature[i, j, m] > constants.TICE
+                            temperature[i, j, m] > constants.TICE0
                         ):
                             cvm[i, j, k] = physfun.moist_heat_capacity(
                                 qvapor[i, j, k],
@@ -205,7 +226,7 @@ def sedi_melt(
                             sink = min(
                                 q_melt[i, j, k] * delp[i, j, k] / delp[i, j, m],
                                 dtime
-                                * (temperature[i, j, m] - constants.TICE)
+                                * (temperature[i, j, m] - constants.TICE0)
                                 / icpk[i, j, m],
                             )
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
@@ -213,12 +234,15 @@ def sedi_melt(
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
+
+                            #these may be redundant depending on how dace copies
                             if mode == "ice":
                                 qice[i, j, k] = q_melt[i, j, k]
                             elif mode == "snow":
                                 qsnow[i, j, k] = q_melt[i, j, k]
                             else:
                                 qgraupel[i, j, k] = q_melt[i, j, k]
+                            
                             temperature[i, j, k] = (
                                 temperature[i, j, k] * cvm[i, j, k]
                                 - li00 * sink * delp[i, j, m] / delp[i, j, k]
@@ -255,7 +279,7 @@ def calc_edge_and_terminal_height(
 ):
     """
     Calculate grid cell edge heights and terminal fall heights for sedimentation
-    Forttan name is zezt
+    Fortran name is zezt
     """
     from __externals__ import timestep
 
@@ -268,12 +292,12 @@ def calc_edge_and_terminal_height(
         with interval(0, 1):
             z_terminal = z_edge
         with interval(1, -1):
-            z_terminal = z_edge - (0.5 * timestep * (v_terminal[0, 0, -1] - v_terminal))
+            z_terminal = z_edge - ((0.5 * timestep) * (v_terminal[0, 0, -1] + v_terminal))
         with interval(-1, None):
             z_terminal = z_surface - timestep * v_terminal[0, 0, -1]
     with computation(FORWARD):
         with interval(1, None):
-            if z_terminal > z_terminal[0, 0, -1]:
+            if z_terminal >= z_terminal[0, 0, -1]:
                 z_terminal = z_terminal[0, 0, -1] - constants.DZ_MIN_FLIP
 
 
@@ -311,6 +335,7 @@ class Sedimentation:
         self._timestep = timestep
         self._convert_mm_day = convert_mm_day
         self.config = config
+        self.li00 = config.li00
 
         # allocate internal storages
         def make_quantity():
@@ -323,8 +348,8 @@ class Sedimentation:
         self._cvm = make_quantity()
 
         # compile stencils
-        self._init_heat_cap_latent_heat_precip = stencil_factory.from_origin_domain(
-            func=init_heat_cap_latent_heat_precip,
+        self._init_zeros_heat_cap_latent_heat_precip = stencil_factory.from_origin_domain(
+            func=init_zeros_heat_cap_latent_heat_precip,
             externals={
                 "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
@@ -334,7 +359,6 @@ class Sedimentation:
                 "li20": config.li20,
                 "d1_vap": config.d1_vap,
                 "d1_ice": config.d1_ice,
-                "tice": config.tice,
                 "t_wfr": config.t_wfr,
             },
             origin=self._idx.origin_compute(),
@@ -346,7 +370,6 @@ class Sedimentation:
                 func=calc_terminal_velocity_ice,
                 externals={
                     "ifflag": config.ifflag,
-                    "tice": config.tice,
                     "constant_v": config.const_vi,
                     "v_fac": config.vi_fac,
                     "v_max": config.vi_max,
@@ -465,7 +488,7 @@ class Sedimentation:
             column_graupel (inout):
         """
 
-        self._init_heat_cap_latent_heat_precip(
+        self._init_zeros_heat_cap_latent_heat_precip(
             qvapor,
             qliquid,
             qrain,
@@ -474,6 +497,16 @@ class Sedimentation:
             qgraupel,
             temperature,
             self._icpk,
+            preflux_water,
+            preflux_rain,
+            preflux_ice,
+            preflux_snow,
+            preflux_graupel,
+            vterminal_water,
+            vterminal_rain,
+            vterminal_ice,
+            vterminal_snow,
+            vterminal_graupel,
             column_water,
             column_rain,
             column_ice,
@@ -483,8 +516,6 @@ class Sedimentation:
 
         # Terminal fall and melting of falling cloud ice into rain:
         if self.config.do_psd_ice_fall:
-            self._calc_terminal_ice_velocity(qice, temperature, density, vterminal_ice)
-        else:
             if self.config.const_vi is False:
                 self._calc_terminal_rsg_velocity(
                     qice,
@@ -511,6 +542,8 @@ class Sedimentation:
                     self.config.blini,
                     self.config.vi_max,
                 )
+        else:
+            self._calc_terminal_ice_velocity(qice, temperature, density, vterminal_ice)
 
         self._calc_edge_and_terminal_height(
             self._z_surface,
@@ -545,6 +578,7 @@ class Sedimentation:
                 column_rain.data[:],
                 self.config.tau_imlt,
                 self._icpk.data[:],
+                self.li00,
                 self._ks,
                 self._ke,
                 self._is_,
@@ -639,6 +673,7 @@ class Sedimentation:
                 column_rain.data[:],
                 self.config.tau_smlt,
                 self._icpk.data[:],
+                self.li00,
                 self._ks,
                 self._ke,
                 self._is_,
@@ -762,6 +797,7 @@ class Sedimentation:
                 column_rain.data[:],
                 self.config.tau_gmlt,
                 self._icpk.data[:],
+                self.li00,
                 self._ks,
                 self._ke,
                 self._is_,

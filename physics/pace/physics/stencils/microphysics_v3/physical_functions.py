@@ -118,7 +118,6 @@ def calc_heat_cap_and_latent_heat_coeff(
         li20,
         lv00,
         t_wfr,
-        tice,
     )
 
     q_liq = qliquid + qrain
@@ -128,7 +127,7 @@ def calc_heat_cap_and_latent_heat_coeff(
     lcpk = (lv00 + d1_vap * temperature) / cvm
     icpk = (li00 + d1_ice * temperature) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * temperature) / cvm
-    tcp3 = lcpk + icpk * min(1.0, basic.dim(tice, temperature) / (tice - t_wfr))
+    tcp3 = lcpk + icpk * min(1.0, basic.dim(constants.TICE0, temperature) / (constants.TICE0 - t_wfr))
 
     return q_liq, q_solid, cvm, te, lcpk, icpk, tcpk, tcp3
 
@@ -163,7 +162,6 @@ def update_hydrometeors_and_temperatures(
         li20,
         lv00,
         t_wfr,
-        tice,
     )
 
     qvapor += delta_vapor
@@ -181,7 +179,7 @@ def update_hydrometeors_and_temperatures(
     lcpk = (lv00 + d1_vap * tk) / cvm
     icpk = (li00 + d1_ice * tk) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * tk) / cvm
-    tcp3 = lcpk + icpk * min(1.0, basic.dim(tice, tk) / (tice - t_wfr))
+    tcp3 = lcpk + icpk * min(1.0, basic.dim(constants.TICE0, tk) / (constants.TICE0 - t_wfr))
 
     return (
         qvapor,
@@ -208,8 +206,8 @@ def table0(temp):
     """
     return constants.E00 * exp(
         (
-            constants.DC_VAP * log(temp / constants.TICE)
-            + constants.LV0 * (temp - constants.TICE) / (temp * constants.TICE)
+            constants.DC_VAP * log(temp / constants.TICE0)
+            + constants.LV0_0 * (temp - constants.TICE0) / (temp * constants.TICE0)
         )
         / constants.RVGAS
     )
@@ -217,12 +215,12 @@ def table0(temp):
 
 @gtscript.function
 def table2(temp):
-    if temp < constants.TICE:
+    if temp < constants.TICE0:
         # Over ice between -160 degrees Celsius and 0 degrees Celsius
         return_val = constants.E00 * exp(
             (
-                constants.D2ICE * log(temp / constants.TICE)
-                + constants.LI2 * (temp - constants.TICE) / (temp * constants.TICE)
+                constants.D2ICE * log(temp / constants.TICE0)
+                + constants.LI2_0 * (temp - constants.TICE0) / (temp * constants.TICE0)
             )
             / constants.RVGAS
         )
@@ -241,19 +239,19 @@ def sat_spec_hum_water(temp, density):
     compute the saturated specific humidity, core function
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
-    dqdt = q * (constants.DC_VAP + constants.LV0 / temp) / (constants.RVGAS * temp)
+    dqdt = q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
     return q, dqdt
 
 
 @gtscript.function
 def sat_spec_hum_water_ice(temp, density):
-    if temp > constants.TICE + 102.0:
-        temp = constants.TICE + 102.0
+    if temp > constants.TICE0 + 102.0:
+        temp = constants.TICE0 + 102.0
     q = table2(temp) / (constants.RVGAS * temp * density)
-    if temp < constants.TICE:
-        dqdt = q * (constants.D2ICE + constants.LI2 / temp) / (constants.RVGAS * temp)
+    if temp < constants.TICE0:
+        dqdt = q * (constants.D2ICE + constants.LI2_0 / temp) / (constants.RVGAS * temp)
     else:
-        dqdt = q * (constants.DC_VAP + constants.LV0 / temp) / (constants.RVGAS * temp)
+        dqdt = q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
     return q, dqdt
 
 

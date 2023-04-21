@@ -76,11 +76,17 @@ CV_VAP = 3.0 * RVGAS  # Heat capacity of water vapor at constant volume
 ZVIR = RVGAS / RDGAS - 1  # con_fvirt in Fortran physics
 C_ICE = 1972.0  # Heat capacity of ice at -15 degrees Celsius
 C_LIQ = 4.1855e3  # Heat capacity of water at 15 degrees Celsius
+C_ICE0 = 2.106e3 # Heat capacity of ice at 0 degrees Celsius
+C_LIQ0 = 4.218e3 # Heat capacity of water at 0 degrees Celsius
 CP_VAP = 4.0 * RVGAS  # Heat capacity of water vapor at constant pressure
 TICE = 273.16  # Freezing temperature
-DC_ICE = C_LIQ - C_ICE  # Isobaric heating / cooling
-DC_VAP = CP_VAP - C_LIQ  # Isobaric heating / cooling
-D2ICE = DC_VAP + DC_ICE  # Isobaric heating / cooling
+TICE0 = TICE - 0.01
+DC_ICE = C_LIQ - C_ICE  # Isobaric heating / cooling (J/kg/K)
+DC_ICE0 = C_LIQ0 - C_ICE0  # Isobaric heating / cooling (J/kg/K)
+DC_VAP = CP_VAP - C_LIQ  # Isobaric heating / cooling (J/kg/K)
+DC_VAP0 = CP_VAP - C_LIQ0  # Isobaric heating / cooling (J/kg/K)
+D2ICE = DC_VAP + DC_ICE  # Isobaric heating / cooling (J/kg/K)
+D2ICE0 = DC_VAP + DC_ICE0  # Isobaric heating / cooling (J/kg/K)
 LI0 = HLF - DC_ICE * TICE
 EPS = RDGAS / RVGAS
 LV0 = (
@@ -92,9 +98,19 @@ LI00 = (
 LI2 = (
     LV0 + LI00
 )  # 2.86799816e6, sublimation latent heat coefficient at 0 degrees Kelvin
+
+LV0_0 = (
+    HLV - DC_VAP0 * TICE0
+)  # 3148711.3338762247, evaporation latent heat coefficient at 0 degrees Kelvin
+LI00_0 = (
+    HLF - DC_ICE0 * TICE0
+)  # -242413.92000000004, fusion latent heat coefficient at 0 degrees Kelvin
+LI2_0 = (
+    LV0 + LI00
+)  # 2906297.413876225, sublimation latent heat coefficient at 0 degrees Kelvin
+
 E00 = 611.21  # Saturation vapor pressure at 0 degrees Celsius
 T_WFR = TICE - 40.0  # homogeneous freezing temperature
-TICE0 = TICE - 0.01
 T_MIN = 178.0  # Minimum temperature to freeze-dry all water vapor
 T_SAT_MIN = TICE - 160.0
 LAT2 = (HLV + HLF) ** 2  # used in bigg mechanism
