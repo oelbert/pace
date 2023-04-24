@@ -40,10 +40,10 @@ def prep_terminal_fall(
     from __externals__ import do_sedi_w
 
     with computation(BACKWARD), interval(...):
-        if q_fall < constants.QFMIN:
+        if q_fall > constants.QFMIN:
             no_fall = 0.0
     with computation(FORWARD), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             if __INLINED(do_sedi_w):
                 dm = delp * (1.0 + qvapor + qliquid + qrain + qice + qsnow + qgraupel)
             tot_e_initial = physfun.calc_moist_total_energy(
@@ -72,42 +72,42 @@ def fall_implicit(
 
     with computation(FORWARD):
         with interval(...):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 delz = z_edge - z_edge[0, 0, 1]
                 dd = timestep * v_terminal
                 q_fall = q_fall * delp
 
     with computation(FORWARD):
         with interval(0, 1):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 qm = q_fall / (delz + dd)
 
         with interval(1, None):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 qm = (q_fall + qm[0, 0, -1] * dd[0, 0, -1]) / (delz + dd)
 
     with computation(FORWARD):
         with interval(...):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 qm = qm * delz
 
     with computation(FORWARD):
         with interval(0, 1):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 flux = q_fall - qm
 
         with interval(1, None):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 flux = flux[0, 0, -1] + q_fall - qm
 
     with computation(FORWARD):
         with interval(-1, None):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 precip += flux
 
     with computation(FORWARD):
         with interval(...):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 q_fall = qm / delp
 
 
@@ -120,7 +120,7 @@ def pre_lagrangian(
     no_fall: FloatFieldIJ,
 ):
     with computation(PARALLEL), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             delz = z_terminal - z_terminal[0, 0, 1]
             q *= delp
             q4_1 = q / delz
@@ -162,7 +162,7 @@ def fall_lagrangian(
     """
     # TODO: Can we make lev a 2D temporary?
     with computation(FORWARD), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             pl = (z_terminal[0, 0, lev] - z_edge) / delz[0, 0, lev]
             if z_terminal[0, 0, lev + 1] <= z_edge[0, 0, 1]:
                 pr = (z_terminal[0, 0, lev] - z_edge[0, 0, 1]) / delz[0, 0, lev]
@@ -201,17 +201,17 @@ def fall_lagrangian(
             lev = lev - 1
 
     with computation(BACKWARD), interval(0, 1):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             flux = q - qm
             q = qm / delp
 
     with computation(FORWARD), interval(1, None):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             flux = flux[0, 0, -1] + q - qm
             q = qm / delp
 
     with computation(FORWARD), interval(-1, None):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             precipitation += flux
 
 
@@ -230,11 +230,11 @@ def finish_implicit_lagrangian(
     from __externals__ import sed_fac
 
     with computation(PARALLEL), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             q = q_post_implicit * sed_fac + q_post_lagrangian * (1.0 - sed_fac)
             flux = m_post_implicit * sed_fac + m_post_lagrangian * (1.0 - sed_fac)
     with computation(FORWARD), interval(-1, None):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             precipitation = (
                 precipitation_post_implicit * sed_fac
                 + precipitation_post_lagrangian * (1.0 - sed_fac)
@@ -265,7 +265,7 @@ def update_energy_wind_heat_post_fall(
     from __externals__ import cw, do_sedi_heat, do_sedi_uv, do_sedi_w
 
     with computation(FORWARD), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             post_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
@@ -282,7 +282,7 @@ def update_energy_wind_heat_post_fall(
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 ua = (delp * ua + flux[0, 0, -1] * ua[0, 0, -1]) / (
                     delp + flux[0, 0, -1]
                 )
@@ -292,12 +292,12 @@ def update_energy_wind_heat_post_fall(
 
     with computation(FORWARD), interval(0, 1):
         if __INLINED(do_sedi_w):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 wa = wa + flux * v_terminal / dm
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_w):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 wa = (
                     dm * wa
                     + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
@@ -306,7 +306,7 @@ def update_energy_wind_heat_post_fall(
 
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             initial_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
@@ -322,18 +322,18 @@ def update_energy_wind_heat_post_fall(
     # sedi_heat
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_heat):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 dgz = -0.5 * constants.GRAV * (delz[0, 0, -1] + delz)
                 cv0 = dm * (
                     constants.CV_AIR
                     + qvapor * constants.CV_VAP
-                    + (qrain + qliquid) * constants.C_LIQ
-                    + (qice + qsnow + qgraupel) * constants.C_ICE
+                    + (qrain + qliquid) * constants.C_LIQ0
+                    + (qice + qsnow + qgraupel) * constants.C_ICE0
                 ) + cw * (flux - flux[0, 0, -1])
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_heat):
-            if no_fall > 0.0:
+            if no_fall == 0.0:
                 temperature = (
                     cv0 * temperature
                     + flux[0, 0, -1] * (cw * temperature[0, 0, -1] + dgz)
@@ -341,7 +341,7 @@ def update_energy_wind_heat_post_fall(
 
     # energy change during sedimentation heating
     with computation(FORWARD), interval(...):
-        if no_fall > 0.0:
+        if no_fall == 0.0:
             post_energy = physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
