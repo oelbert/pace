@@ -31,7 +31,7 @@ class TranslateTerminalFall(TranslatePhysicsFortranData2Py):
             "column_energy_change": {"serialname": "tf_dte", "mp3": True},
             "flux": {"serialname": "tf_pfi", "mp3": True},
             "v_terminal": {"serialname": "tf_vt", "mp3": True},
-            "": {"serialname": "tf_i1", "mp3": True},
+            "precipitation": {"serialname": "tf_i1", "mp3": True},
         }
 
         self.in_vars["parameters"] = ["dt"]
@@ -47,8 +47,8 @@ class TranslateTerminalFall(TranslatePhysicsFortranData2Py):
             "ua": {"serialname": "tf_ua", "kend": namelist.npz, "mp3": True},
             "va": {"serialname": "tf_va", "kend": namelist.npz, "mp3": True},
             "wa": {"serialname": "tf_wa", "kend": namelist.npz, "mp3": True},
-            "preflux_ice": {"serialname": "tf_pfi", "kend": namelist.npz, "mp3": True},
-            "column_ice": {"serialname": "tf_i1", "mp3": True},
+            "flux": {"serialname": "tf_pfi", "kend": namelist.npz, "mp3": True},
+            "precipitation": {"serialname": "tf_i1", "mp3": True},
             "column_energy_change": {
                 "serialname": "tf_dte",
                 "kend": namelist.npz,
