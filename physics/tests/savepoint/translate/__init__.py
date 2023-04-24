@@ -16,7 +16,7 @@ from .translate_phifv3 import TranslatePhiFV3
 from .translate_prsfv3 import TranslatePrsFV3
 from .translate_sedimentation import TranslateSedimentation
 from .translate_subgridz import TranslateSubgridZProc
-from .translate_terminal_fall import TerminalFall
+from .translate_terminal_fall import TranslateTerminalFall
 from .translate_update_pressure_sfc_winds_phys import (
     TranslatePhysUpdatePressureSurfaceWinds,
 )
