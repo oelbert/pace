@@ -6,7 +6,9 @@ from pace.physics.stencils.microphysics_v3.sedimentation import (
     calc_edge_and_terminal_height,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
-from pace.util import X_DIM, Y_DIM, Z_INTERFACE_DIM
+
+
+# from pace.util import X_DIM, Y_DIM, Z_INTERFACE_DIM
 
 
 class ZeZt:
@@ -16,11 +18,13 @@ class ZeZt:
         config,
         timestep,
     ):
+        self._idx = stencil_factory.grid_indexing
         self.config = config
-        self._calc_edge_and_terminal_height = stencil_factory.from_dims_halo(
+        self._calc_edge_and_terminal_height = stencil_factory.from_origin_domain(
             func=calc_edge_and_terminal_height,
             externals={"timestep": timestep},
-            compute_dims=[X_DIM, Y_DIM, Z_INTERFACE_DIM],
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(add=(0, 0, 1)),
         )
 
     def __call__(
@@ -59,8 +63,8 @@ class TranslateZeZt(TranslatePhysicsFortranData2Py):
         self.in_vars["parameters"] = ["dt"]
 
         self.out_vars = {
-            "z_edge": {"serialname": "zz_ze", "kend": namelist.npz, "mp3": True},
-            "z_terminal": {"serialname": "zz_zt", "kend": namelist.npz, "mp3": True},
+            "z_edge": {"serialname": "zz_ze", "mp3": True},
+            "z_terminal": {"serialname": "zz_zt", "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

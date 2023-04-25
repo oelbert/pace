@@ -447,10 +447,11 @@ class Sedimentation:
                 domain=self._idx.domain_compute(),
             )
 
-        self._calc_edge_and_terminal_height = stencil_factory.from_dims_halo(
+        self._calc_edge_and_terminal_height = stencil_factory.from_origin_domain(
             func=calc_edge_and_terminal_height,
             externals={"timestep": self._timestep},
-            compute_dims=[X_DIM, Y_DIM, Z_INTERFACE_DIM],
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(add=(0, 0, 1)),
         )
 
         self._terminal_fall = TerminalFall(
