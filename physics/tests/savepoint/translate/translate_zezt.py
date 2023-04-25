@@ -71,8 +71,6 @@ class TranslateZeZt(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        inputs["tracer"] = "ice"
-
         compute_func = ZeZt(
             self.stencil_factory,
             self.config,
