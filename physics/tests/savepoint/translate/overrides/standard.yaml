@@ -97,3 +97,20 @@ Sedimentation:
       sd_s1: 1e-14
       sd_g1: 1e-14
       sd_dte: 1e-14
+
+TerminalFall:
+  - backend: numpy
+    ignore_near_zero_errors:
+      tf_qv: 1e-14
+      tf_ql: 1e-14
+      tf_qr: 1e-14
+      tf_qi: 1e-14
+      tf_qs: 1e-14
+      tf_qg: 1e-14
+      tf_pt: 1e-14
+      tf_ua: 1e-14
+      tf_va: 1e-14
+      tf_wa: 1e-14
+      tf_pfi: 1e-14
+      tf_i1: 1e-14
+      tf_dte: 1e-14
