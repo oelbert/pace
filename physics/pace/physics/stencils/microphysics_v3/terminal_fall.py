@@ -278,7 +278,7 @@ def update_energy_wind_heat_post_fall(
                 False,
             )
 
-            column_energy_change = column_energy_change + post_energy - initial_energy
+            column_energy_change = column_energy_change + initial_energy - post_energy
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv):
