@@ -50,7 +50,6 @@ class TranslateNegAdjP(TranslatePhysicsFortranData2Py):
         compute_func = AdjustNegativeTracers(
             self.stencil_factory,
             self.config,
-            self.config.ntimes,
             convert_mm_day=inputs.pop("convt"),
         )
 

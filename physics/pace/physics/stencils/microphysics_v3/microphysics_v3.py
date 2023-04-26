@@ -778,7 +778,6 @@ class Microphysics:
         self.config = config
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._max_timestep = self.config.mp_time
-        self._ntimes = self.config.ntimes
         self.do_mp_fast = do_mp_fast
         self.do_mp_full = do_mp_full
         self.consv_te = consv_te
@@ -888,7 +887,7 @@ class Microphysics:
         self._set_timestepping(self.config.dt_atmos)  # will change from dt_atmos
         # when we inline microphysics
 
-        self._convert_mm_day = 86400.0 * constants.RGRAV / self.split_timestep
+        self._convert_mm_day = 86400.0 * constants.RGRAV / self.config.dt_split
 
         self._copy_stencil = stencil_factory.from_origin_domain(
             basic.copy_defn,
@@ -931,7 +930,7 @@ class Microphysics:
                     "lv00": self.config.lv00,
                     "li00": self.config.li00,
                     "c_air": self.config.c_air,
-                    "timestep": self.full_timestep,
+                    "timestep": self.config.dt_atmos,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -948,7 +947,7 @@ class Microphysics:
                     "lv00": self.config.lv00,
                     "li00": self.config.li00,
                     "c_air": self.config.c_air,
-                    "timestep": self.full_timestep,
+                    "timestep": self.config.dt_atmos,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -992,7 +991,7 @@ class Microphysics:
             self._neg_adj = AdjustNegativeTracers(
                 stencil_factory,
                 self.config.adjustnegative,
-                self._ntimes,
+                self.config.ntimes,
                 self._convert_mm_day,
             )
 
@@ -1000,7 +999,7 @@ class Microphysics:
             self._mp_fast = FastMicrophysics(
                 stencil_factory,
                 self.config.fastmp,
-                self.full_timestep,
+                self.config.dt_atmos,
                 self._convert_mm_day,
             )
 
@@ -1009,8 +1008,7 @@ class Microphysics:
                 stencil_factory,
                 quantity_factory,
                 config,
-                self.split_timestep,
-                self._ntimes,
+                self.config.dt_split,
                 self._convert_mm_day,
             )
 
@@ -1138,7 +1136,7 @@ class Microphysics:
         )
 
     def _update_timestep_if_needed(self, timestep: float):
-        if timestep != self.full_timestep:
+        if timestep != self.config.dt_atmos:
             self._set_timestepping(timestep)
 
     def _set_timestepping(self, full_timestep: float):
@@ -1147,11 +1145,14 @@ class Microphysics:
         full_timestep is equivalent to dtm
         split_timestep is equivalent to dts
         """
-        self._ntimes = int(
-            max(self._ntimes, full_timestep / min(full_timestep, self._max_timestep))
+        self.config.ntimes = int(
+            max(
+                self.config.ntimes,
+                full_timestep / min(full_timestep, self._max_timestep),
+            )
         )
-        self.split_timestep = full_timestep / self._ntimes
-        self.full_timestep = full_timestep
+        self.config.dt_split = full_timestep / self.config.ntimes
+        self.config.dt_atmos = full_timestep
 
     def __call__(
         self,

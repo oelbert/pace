@@ -83,14 +83,13 @@ class FullMicrophysics:
         quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
         timestep: float,
-        ntimes: int,
         convert_mm_day: float,
     ):
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
 
         self._do_warm_rain = config.do_warm_rain
-        self._ntimes = ntimes
+        self._ntimes = config.ntimes
 
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")

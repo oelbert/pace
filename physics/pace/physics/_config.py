@@ -82,6 +82,7 @@ class FastMPConfig:
 @dataclasses.dataclass
 class MicroPhysicsConfig:
     dt_atmos: float
+    dt_split: float = dataclasses.field(init=False)
     ntimes: int
     hydrostatic: bool
     npx: int
@@ -399,6 +400,8 @@ class MicroPhysicsConfig:
 
         self._calculate_melting_and_freezing_constants()
 
+        self._set_timestepping()
+
         self.n_min = 1600
         self.delt = 0.1
         self.esbasw = 1013246.0
@@ -477,6 +480,17 @@ class MicroPhysicsConfig:
             is_fac=self.is_fac,
             tau_i2s=self.tau_i2s,
         )
+
+    def _set_timestepping(self):
+        """
+        Set split timestepping info
+        full_timestep is equivalent to dtm
+        split_timestep is equivalent to dts
+        """
+        self.ntimes = int(
+            max(self.ntimes, self.dt_atmos / min(self.dt_atmos, self._max_timestep))
+        )
+        self.dt_split = self.dt_atmos / self.ntimes
 
     def _calculate_particle_parameters(self):
         """

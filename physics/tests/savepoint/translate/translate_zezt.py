@@ -63,8 +63,12 @@ class TranslateZeZt(TranslatePhysicsFortranData2Py):
         self.in_vars["parameters"] = ["dt"]
 
         self.out_vars = {
-            "z_edge": {"serialname": "zz_ze", "mp3": True},
-            "z_terminal": {"serialname": "zz_zt", "mp3": True},
+            "z_edge": {"serialname": "zz_ze", "kend": namelist.npz + 1, "mp3": True},
+            "z_terminal": {
+                "serialname": "zz_zt",
+                "kend": namelist.npz + 1,
+                "mp3": True,
+            },
         }
 
         self.stencil_factory = stencil_factory
