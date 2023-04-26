@@ -991,7 +991,6 @@ class Microphysics:
             self._neg_adj = AdjustNegativeTracers(
                 stencil_factory,
                 self.config.adjustnegative,
-                self.config.ntimes,
                 self._convert_mm_day,
             )
 
