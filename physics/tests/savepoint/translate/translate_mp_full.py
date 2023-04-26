@@ -143,7 +143,6 @@ class TranslateMPFull(TranslatePhysicsFortranData2Py):
             self.quantity_factory,
             self.config,
             inputs.pop("dt"),
-            self.config.ntimes,
             inputs.pop("convt"),
         )
 

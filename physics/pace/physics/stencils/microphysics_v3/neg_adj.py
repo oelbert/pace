@@ -166,7 +166,6 @@ class AdjustNegativeTracers:
         self,
         stencil_factory: StencilFactory,
         config: AdjustNegativeTracerConfig,
-        ntimes: int,
         convert_mm_day: float,
     ):
 
@@ -186,7 +185,7 @@ class AdjustNegativeTracers:
                 "tice": constants.TICE0,
                 "t_wfr": config.t_wfr,
                 "convt": convert_mm_day,
-                "ntimes": ntimes,
+                "ntimes": config.ntimes,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

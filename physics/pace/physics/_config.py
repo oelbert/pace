@@ -15,6 +15,7 @@ DEFAULT_BOOL = False
 
 @dataclasses.dataclass
 class AdjustNegativeTracerConfig:
+    ntimes: float
     c1_ice: float
     c1_liq: float
     c1_vap: float
@@ -416,6 +417,7 @@ class MicroPhysicsConfig:
     @property
     def adjustnegative(self) -> AdjustNegativeTracerConfig:
         return AdjustNegativeTracerConfig(
+            ntimes=self.ntimes,
             c1_ice=self.c1_ice,
             c1_liq=self.c1_liq,
             c1_vap=self.c1_vap,
