@@ -351,7 +351,7 @@ def calc_moist_total_energy(
     """
     from __externals__ import c1_ice, c1_liq, c1_vap, c_air
 
-    q_liq = qrain + qliquid
+    q_liq = qliquid + qrain
     q_solid = qice + qsnow + qgraupel
     q_cond = q_liq + q_solid
     con = 1.0 - (qvapor + q_cond)

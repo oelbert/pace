@@ -290,19 +290,20 @@ def update_energy_wind_heat_post_fall(
                     delp + flux[0, 0, -1]
                 )
 
-    with computation(FORWARD), interval(0, 1):
-        if __INLINED(do_sedi_w):
-            if no_fall == 0.0:
-                wa = wa + flux * v_terminal / dm
+    with computation(FORWARD):
+        with interval(0, 1):
+            if __INLINED(do_sedi_w):
+                if no_fall == 0.0:
+                    wa = wa + flux * v_terminal / dm
 
-    with computation(FORWARD), interval(1, None):
-        if __INLINED(do_sedi_w):
-            if no_fall == 0.0:
-                wa = (
-                    dm * wa
-                    + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
-                    + flux * v_terminal
-                ) / (dm + flux[0, 0, -1])
+        with interval(1, None):
+            if __INLINED(do_sedi_w):
+                if no_fall == 0.0:
+                    wa = (
+                        dm * wa
+                        + flux[0, 0, -1] * (wa[0, 0, -1] - v_terminal[0, 0, -1])
+                        + flux * v_terminal
+                    ) / (dm + flux[0, 0, -1])
 
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):

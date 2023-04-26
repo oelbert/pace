@@ -49,11 +49,7 @@ class TranslateTerminalFall(TranslatePhysicsFortranData2Py):
             "wa": {"serialname": "tf_wa", "kend": namelist.npz, "mp3": True},
             "flux": {"serialname": "tf_pfi", "kend": namelist.npz, "mp3": True},
             "precipitation": {"serialname": "tf_i1", "mp3": True},
-            "column_energy_change": {
-                "serialname": "tf_dte",
-                "kend": namelist.npz,
-                "mp3": True,
-            },
+            "column_energy_change": {"serialname": "tf_dte", "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

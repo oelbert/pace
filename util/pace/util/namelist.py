@@ -121,7 +121,7 @@ class NamelistDefaults:
     vr_fac = 1.0  # if const_vr: 4.
     de_ice = False  # To prevent excessive build-up of cloud ice from external sources
     do_qa = True  # Do inline cloud fraction
-    do_sedi_heat = False  # Transport of heat in sedimentation
+    do_sedi_heat = True  # Transport of heat in sedimentation
     do_sedi_melt = True  # Melt cloud ice, snow, and graupel during sedimentation
     do_sedi_uv = True  # Transport of horizontal momentum in sedimentation
     do_sedi_w = True  # Transport of vertical motion in sedimentation
