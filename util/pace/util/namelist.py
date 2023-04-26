@@ -139,7 +139,7 @@ class NamelistDefaults:
     do_new_acc_ice = False  # Perform the new accretion for cloud water
     cp_heating = False  # update temperature based on constant pressure
     mono_prof = False  # Perform terminal fall with mono ppm scheme
-    mp_time = 225.0  # Maximum microphysics timestep (sec)
+    mp_time = 150.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
     qi0_crt = 1.0e-04  # Cloud ice to snow autoconversion threshold
     qs0_crt = 0.003  # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)

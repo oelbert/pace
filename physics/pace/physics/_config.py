@@ -488,7 +488,7 @@ class MicroPhysicsConfig:
         split_timestep is equivalent to dts
         """
         self.ntimes = int(
-            max(self.ntimes, self.dt_atmos / min(self.dt_atmos, self._max_timestep))
+            max(self.ntimes, self.dt_atmos / min(self.dt_atmos, self.mp_time))
         )
         self.dt_split = self.dt_atmos / self.ntimes
 
