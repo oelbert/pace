@@ -16,7 +16,13 @@ class StartFall:
         self.config = config
         self._prep_terminal_fall = stencil_factory.from_origin_domain(
             func=prep_terminal_fall,
-            externals={"do_sedi_w": config.do_sedi_w},
+            externals={
+                "do_sedi_w": config.do_sedi_w,
+                "c1_ice": config.c1_ice,
+                "c1_liq": config.c1_liq,
+                "c1_vap": config.c1_vap,
+                "c_air": config.c_air,
+            },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
