@@ -476,8 +476,6 @@ class TerminalFall:
             compute_dims=dims,
         )
 
-        pass
-
     def __call__(
         self,
         qvapor: FloatField,

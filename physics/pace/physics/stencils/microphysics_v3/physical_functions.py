@@ -219,6 +219,12 @@ def table0(temp):
 
 @gtscript.function
 def table2(temp):
+    """
+    Saturation water vapor pressure table 2, water and ice
+    same as table 1, but the blending is replaced with smoothing around 0 deg C
+    it is not designed for mixed-phase cloud microphysics
+    used for ice microphysics (< 0 deg C) or warm rain microphysics (> 0 deg C)
+    """
     if temp < constants.TICE0:
         # Over ice between -160 degrees Celsius and 0 degrees Celsius
         return_val = constants.E00 * exp(

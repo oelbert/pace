@@ -88,7 +88,6 @@ class TranslateStartFall(TranslatePhysicsFortranData2Py):
         }
 
         self.stencil_factory = stencil_factory
-        self.grid_indexing = self.stencil_factory.grid_indexing
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics
 
