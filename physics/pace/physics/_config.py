@@ -374,6 +374,7 @@ class MicroPhysicsConfig:
         if self.hydrostatic:
             self.c_air = constants.CP_AIR
             self.c_vap = constants.CP_VAP
+            self.do_sedi_w = False
         else:
             self.c_air = constants.CV_AIR
             self.c_vap = constants.CV_VAP

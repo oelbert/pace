@@ -55,6 +55,7 @@ class TranslateTerminalFall(TranslatePhysicsFortranData2Py):
         self.stencil_factory = stencil_factory
         self.grid_indexing = self.stencil_factory.grid_indexing
         pconf = PhysicsConfig.from_namelist(namelist)
+        pconf.hydrostatic = True
         self.config = pconf.microphysics
 
         sizer = pace.util.SubtileGridSizer.from_tile_params(
