@@ -1,8 +1,12 @@
 import pace.dsl
 import pace.util
+import pace.util.constants as constants
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.terminal_fall import prep_terminal_fall
+from pace.physics.stencils.microphysics_v3.terminal_fall import (
+    prep_terminal_fall,
+    update_energy_wind_heat_post_fall,
+)
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
@@ -58,6 +62,73 @@ class StartFall:
         )
 
 
+class EndFall:
+    def __init__(
+        self,
+        stencil_factory: pace.dsl.StencilFactory,
+        config,
+    ):
+        self._idx = stencil_factory.grid_indexing
+        self.config = config
+        self._update_energy_wind_heat_post_fall = stencil_factory.from_origin_domain(
+            func=update_energy_wind_heat_post_fall,
+            externals={
+                "do_sedi_uv": config.do_sedi_uv,
+                "do_sedi_w": config.do_sedi_w,
+                "do_sedi_heat": config.do_sedi_heat,
+                "cw": constants.C_ICE,
+                "c1_ice": config.c1_ice,
+                "c1_liq": config.c1_liq,
+                "c1_vap": config.c1_vap,
+                "c_air": config.c_air,
+            },
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+
+    def __call__(
+        self,
+        qvapor: FloatField,
+        qliquid: FloatField,
+        qrain: FloatField,
+        qice: FloatField,
+        qsnow: FloatField,
+        qgraupel: FloatField,
+        initial_energy: FloatField,
+        ua: FloatField,
+        va: FloatField,
+        wa: FloatField,
+        temperature: FloatField,
+        delp: FloatField,
+        delz: FloatField,
+        flux: FloatField,
+        dm: FloatField,
+        v_terminal: FloatField,
+        column_energy_change: FloatFieldIJ,
+        no_fall: FloatFieldIJ,
+    ):
+        self._update_energy_wind_heat_post_fall(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            initial_energy,
+            ua,
+            va,
+            wa,
+            temperature,
+            delp,
+            delz,
+            flux,
+            dm,
+            v_terminal,
+            column_energy_change,
+            no_fall,
+        )
+
+
 class TranslateStartFall(TranslatePhysicsFortranData2Py):
     def __init__(
         self,
@@ -96,6 +167,66 @@ class TranslateStartFall(TranslatePhysicsFortranData2Py):
         self.make_storage_data_input_vars(inputs)
 
         compute_func = StartFall(
+            self.stencil_factory,
+            self.config,
+        )
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
+
+
+class TranslateEndFall(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+        self.in_vars["data_vars"] = {
+            "qvapor": {"serialname": "ef_qv", "mp3": True},
+            "qliquid": {"serialname": "ef_ql", "mp3": True},
+            "qrain": {"serialname": "ef_qr", "mp3": True},
+            "qice": {"serialname": "ef_qi", "mp3": True},
+            "qsnow": {"serialname": "ef_qs", "mp3": True},
+            "qgraupel": {"serialname": "ef_qg", "mp3": True},
+            "initial_energy": {"serialname": "ef_ie", "mp3": True},
+            "ua": {"serialname": "ef_ua", "mp3": True},
+            "va": {"serialname": "ef_va", "mp3": True},
+            "wa": {"serialname": "ef_wa", "mp3": True},
+            "temperature": {"serialname": "ef_pt", "mp3": True},
+            "delp": {"serialname": "ef_dp", "mp3": True},
+            "delz": {"serialname": "ef_dz", "mp3": True},
+            "flux": {"serialname": "ef_pfi", "mp3": True},
+            "dm": {"serialname": "ef_dm", "mp3": True},
+            "v_terminal": {"serialname": "ef_vt", "mp3": True},
+            "column_energy_change": {"serialname": "ef_dte", "mp3": True},
+            "no_fall": {"serialname": "ef_nf", "mp3": True},
+        }
+
+        self.out_vars = {
+            "ua": {"serialname": "ef_u", "kend": namelist.npz, "mp3": True},
+            "va": {"serialname": "ef_v", "kend": namelist.npz, "mp3": True},
+            "wa": {"serialname": "ef_w", "kend": namelist.npz, "mp3": True},
+            "temperature": {"serialname": "ef_pt", "kend": namelist.npz, "mp3": True},
+            "initial_energy": {
+                "serialname": "ef_ie",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "column_energy_change": {"serialname": "ef_dte", "mp3": True},
+        }
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        pconf.hydrostatic = True
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        compute_func = EndFall(
             self.stencil_factory,
             self.config,
         )

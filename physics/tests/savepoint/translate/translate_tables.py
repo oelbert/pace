@@ -19,13 +19,13 @@ def init_tables(
 
 
 class InitTables:
-    def __init__(self, stencil_factory: pace.dsl.StencilFactory, config, length):
+    def __init__(self, stencil_factory: pace.dsl.StencilFactory, config):
         self._idx = stencil_factory.grid_indexing
         self.config = config
         self._init_tables = stencil_factory.from_origin_domain(
             func=init_tables,
             origin=self._idx.origin_compute(),
-            domain=self._idx.domain_compute(add=(0, 0, length - config.npz)),
+            domain=self._idx.domain_compute(),
         )
 
     def __call__(
@@ -49,7 +49,6 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
         stencil_factory: pace.dsl.StencilFactory,
     ):
         super().__init__(grid, namelist, stencil_factory)
-        self.length = 2621
 
         self.in_vars["data_vars"] = {
             "temp": {"serialname": "tc_temp", "mp3": True},
@@ -58,8 +57,8 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
         }
 
         self.out_vars = {
-            "table0": {"serialname": "tc_t0", "kend": self.length, "mp3": True},
-            "table2": {"serialname": "tc_t2", "kend": self.length, "mp3": True},
+            "table0": {"serialname": "tc_t0", "kend": namelist.npz, "mp3": True},
+            "table2": {"serialname": "tc_t2", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
@@ -72,7 +71,6 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
         compute_func = InitTables(
             self.stencil_factory,
             self.config,
-            self.length,
         )
 
         compute_func(**inputs)
