@@ -86,7 +86,7 @@ DC_ICE0 = C_LIQ0 - C_ICE0  # Isobaric heating / cooling (J/kg/K)
 DC_VAP = CP_VAP - C_LIQ  # Isobaric heating / cooling (J/kg/K)
 DC_VAP0 = CP_VAP - C_LIQ0  # Isobaric heating / cooling (J/kg/K)
 D2ICE = DC_VAP + DC_ICE  # Isobaric heating / cooling (J/kg/K)
-D2ICE0 = DC_VAP + DC_ICE0  # Isobaric heating / cooling (J/kg/K)
+D2ICE0 = DC_VAP0 + DC_ICE0  # Isobaric heating / cooling (J/kg/K)
 LI0 = HLF - DC_ICE * TICE
 EPS = RDGAS / RVGAS
 LV0 = (
@@ -106,7 +106,7 @@ LI00_0 = (
     HLF - DC_ICE0 * TICE0
 )  # -242413.92000000004, fusion latent heat coefficient at 0 degrees Kelvin
 LI2_0 = (
-    LV0 + LI00
+    LV0_0 + LI00_0
 )  # 2906297.413876225, sublimation latent heat coefficient at 0 degrees Kelvin
 
 E00 = 611.21  # Saturation vapor pressure at 0 degrees Celsius

@@ -210,7 +210,7 @@ def table0(temp):
     """
     return constants.E00 * exp(
         (
-            constants.DC_VAP * log(temp / constants.TICE0)
+            constants.DC_VAP0 * log(temp / constants.TICE0)
             + constants.LV0_0 * (temp - constants.TICE0) / (temp * constants.TICE0)
         )
         / constants.RVGAS
@@ -229,7 +229,7 @@ def table2(temp):
         # Over ice between -160 degrees Celsius and 0 degrees Celsius
         return_val = constants.E00 * exp(
             (
-                constants.D2ICE * log(temp / constants.TICE0)
+                constants.D2ICE0 * log(temp / constants.TICE0)
                 + constants.LI2_0 * (temp - constants.TICE0) / (temp * constants.TICE0)
             )
             / constants.RVGAS
@@ -249,7 +249,7 @@ def sat_spec_hum_water(temp, density):
     compute the saturated specific humidity, core function
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
-    dqdt = q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+    dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
     return q, dqdt
 
 
@@ -259,10 +259,12 @@ def sat_spec_hum_water_ice(temp, density):
         temp = constants.TICE0 + 102.0
     q = table2(temp) / (constants.RVGAS * temp * density)
     if temp < constants.TICE0:
-        dqdt = q * (constants.D2ICE + constants.LI2_0 / temp) / (constants.RVGAS * temp)
+        dqdt = (
+            q * (constants.D2ICE0 + constants.LI2_0 / temp) / (constants.RVGAS * temp)
+        )
     else:
         dqdt = (
-            q * (constants.DC_VAP + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+            q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
         )
     return q, dqdt
 
