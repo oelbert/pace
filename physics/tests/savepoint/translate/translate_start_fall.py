@@ -89,8 +89,8 @@ class TranslateStartFall(TranslatePhysicsFortranData2Py):
 
         self.stencil_factory = stencil_factory
         pconf = PhysicsConfig.from_namelist(namelist)
+        pconf.hydrostatic = True
         self.config = pconf.microphysics
-        self.config.hydrostatic = True
 
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
