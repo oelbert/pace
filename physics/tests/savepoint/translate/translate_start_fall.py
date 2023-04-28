@@ -43,7 +43,7 @@ class StartFall:
         qgraupel: FloatField,
         temperature: FloatField,
         dm: FloatField,
-        tot_e_initial: FloatField,
+        tot_e_initial: FloatFieldIJ,
         no_fall: FloatFieldIJ,
     ):
         self._prep_terminal_fall(
@@ -94,7 +94,6 @@ class EndFall:
         qice: FloatField,
         qsnow: FloatField,
         qgraupel: FloatField,
-        initial_energy: FloatField,
         ua: FloatField,
         va: FloatField,
         wa: FloatField,
@@ -104,6 +103,8 @@ class EndFall:
         flux: FloatField,
         dm: FloatField,
         v_terminal: FloatField,
+        tmp_energy1: FloatFieldIJ,
+        tmp_energy2: FloatFieldIJ,
         column_energy_change: FloatFieldIJ,
         no_fall: FloatFieldIJ,
     ):
@@ -114,7 +115,6 @@ class EndFall:
             qice,
             qsnow,
             qgraupel,
-            initial_energy,
             ua,
             va,
             wa,
@@ -124,6 +124,8 @@ class EndFall:
             flux,
             dm,
             v_terminal,
+            tmp_energy1,
+            tmp_energy2,
             column_energy_change,
             no_fall,
         )
@@ -154,7 +156,7 @@ class TranslateStartFall(TranslatePhysicsFortranData2Py):
 
         self.out_vars = {
             "dm": {"serialname": "sf_dm", "kend": namelist.npz, "mp3": True},
-            "tot_e_initial": {"serialname": "sf_e1", "kend": namelist.npz, "mp3": True},
+            "tot_e_initial": {"serialname": "sf_e1", "mp3": True},
             "no_fall": {"serialname": "sf_nf", "mp3": True},
         }
 
@@ -191,7 +193,6 @@ class TranslateEndFall(TranslatePhysicsFortranData2Py):
             "qice": {"serialname": "ef_qi", "mp3": True},
             "qsnow": {"serialname": "ef_qs", "mp3": True},
             "qgraupel": {"serialname": "ef_qg", "mp3": True},
-            "initial_energy": {"serialname": "ef_ie", "mp3": True},
             "ua": {"serialname": "ef_ua", "mp3": True},
             "va": {"serialname": "ef_va", "mp3": True},
             "wa": {"serialname": "ef_wa", "mp3": True},
@@ -202,6 +203,8 @@ class TranslateEndFall(TranslatePhysicsFortranData2Py):
             "dm": {"serialname": "ef_dm", "mp3": True},
             "v_terminal": {"serialname": "ef_vt", "mp3": True},
             "column_energy_change": {"serialname": "ef_dte", "mp3": True},
+            "tmp_energy1": {"serialname": "ef_ie", "mp3": True},
+            "tmp_energy2": {"serialname": "ef_fe", "mp3": True},
             "no_fall": {"serialname": "ef_nf", "mp3": True},
         }
 
@@ -210,9 +213,8 @@ class TranslateEndFall(TranslatePhysicsFortranData2Py):
             "va": {"serialname": "ef_va", "kend": namelist.npz, "mp3": True},
             "wa": {"serialname": "ef_wa", "kend": namelist.npz, "mp3": True},
             "temperature": {"serialname": "ef_pt", "kend": namelist.npz, "mp3": True},
-            "initial_energy": {
+            "tmp_energy1": {
                 "serialname": "ef_ie",
-                "kend": namelist.npz,
                 "mp3": True,
             },
             "column_energy_change": {"serialname": "ef_dte", "mp3": True},

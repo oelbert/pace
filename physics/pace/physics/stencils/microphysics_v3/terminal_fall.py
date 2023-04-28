@@ -34,7 +34,7 @@ def prep_terminal_fall(
     qgraupel: FloatField,
     temperature: FloatField,
     dm: FloatField,
-    tot_e_initial: FloatField,
+    tot_e_initial: FloatFieldIJ,
     no_fall: FloatFieldIJ,
 ):
     from __externals__ import do_sedi_w
@@ -46,7 +46,7 @@ def prep_terminal_fall(
         if no_fall == 0.0:
             if __INLINED(do_sedi_w):
                 dm = delp * (1.0 + qvapor + qliquid + qrain + qice + qsnow + qgraupel)
-            tot_e_initial = physfun.calc_moist_total_energy(
+            tot_e_initial += physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -248,7 +248,6 @@ def update_energy_wind_heat_post_fall(
     qice: FloatField,
     qsnow: FloatField,
     qgraupel: FloatField,
-    initial_energy: FloatField,
     ua: FloatField,
     va: FloatField,
     wa: FloatField,
@@ -258,15 +257,18 @@ def update_energy_wind_heat_post_fall(
     flux: FloatField,
     dm: FloatField,
     v_terminal: FloatField,
+    tmp_energy1: FloatFieldIJ,
+    tmp_energy2: FloatFieldIJ,
     column_energy_change: FloatFieldIJ,
     no_fall: FloatFieldIJ,
 ):
 
     from __externals__ import cw, do_sedi_heat, do_sedi_uv, do_sedi_w
 
+    # TODO: tmp_energy2 should be a 2d temporary
     with computation(FORWARD), interval(...):
         if no_fall == 0.0:
-            post_energy = physfun.calc_moist_total_energy(
+            tmp_energy2 += physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -278,7 +280,10 @@ def update_energy_wind_heat_post_fall(
                 False,
             )
 
-            column_energy_change = column_energy_change + initial_energy - post_energy
+    with computation(FORWARD), interval(-1, None):
+        column_energy_change = column_energy_change + tmp_energy1 - tmp_energy2
+        tmp_energy1 = 0.0
+        tmp_energy2 = 0.0
 
     with computation(FORWARD), interval(1, None):
         if __INLINED(do_sedi_uv):
@@ -308,7 +313,7 @@ def update_energy_wind_heat_post_fall(
     # energy change during sedimentation heating
     with computation(PARALLEL), interval(...):
         if no_fall == 0.0:
-            initial_energy = physfun.calc_moist_total_energy(
+            tmp_energy1 += physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -343,7 +348,7 @@ def update_energy_wind_heat_post_fall(
     # energy change during sedimentation heating
     with computation(FORWARD), interval(...):
         if no_fall == 0.0:
-            post_energy = physfun.calc_moist_total_energy(
+            tmp_energy2 += physfun.calc_moist_total_energy(
                 qvapor,
                 qliquid,
                 qrain,
@@ -355,7 +360,9 @@ def update_energy_wind_heat_post_fall(
                 False,
             )
 
-            column_energy_change = column_energy_change + initial_energy - post_energy
+    with computation(FORWARD), interval(-1, None):
+        if no_fall == 0.0:
+            column_energy_change = column_energy_change + tmp_energy1 - tmp_energy2
 
 
 class TerminalFall:
@@ -389,8 +396,8 @@ class TerminalFall:
         self._q_fall = quantity_factory.zeros(dims=dims, units="unknown")
         self._no_fall = quantity_factory.ones(dims=[X_DIM, Y_DIM], units="unknown")
         self._dm = quantity_factory.zeros(dims=dims, units="Pa")
-        self._intial_energy = quantity_factory.zeros(dims=dims, units="unknown")
-        self._final_energy = quantity_factory.zeros(dims=dims, units="unknown")
+        self._tmp_energy1 = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
+        self._tmp_energy2 = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
 
         if (self._sedflag == 3) or (self._sedflag == 4):
             self._q4_1 = quantity_factory.zeros(dims=dims, units="unknown")
@@ -544,7 +551,7 @@ class TerminalFall:
             qgraupel,
             temperature,
             self._dm,
-            self._intial_energy,
+            self._tmp_energy1,
             self._no_fall,
         )
 
@@ -645,7 +652,6 @@ class TerminalFall:
             qice,
             qsnow,
             qgraupel,
-            self._intial_energy,
             ua,
             va,
             wa,
@@ -655,6 +661,8 @@ class TerminalFall:
             flux,
             self._dm,
             v_terminal,
+            self._tmp_energy1,
+            self._tmp_energy2,
             column_energy_change,
             self._no_fall,
         )
