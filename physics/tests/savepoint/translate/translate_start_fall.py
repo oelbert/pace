@@ -206,9 +206,9 @@ class TranslateEndFall(TranslatePhysicsFortranData2Py):
         }
 
         self.out_vars = {
-            "ua": {"serialname": "ef_u", "kend": namelist.npz, "mp3": True},
-            "va": {"serialname": "ef_v", "kend": namelist.npz, "mp3": True},
-            "wa": {"serialname": "ef_w", "kend": namelist.npz, "mp3": True},
+            "ua": {"serialname": "ef_ua", "kend": namelist.npz, "mp3": True},
+            "va": {"serialname": "ef_va", "kend": namelist.npz, "mp3": True},
+            "wa": {"serialname": "ef_wa", "kend": namelist.npz, "mp3": True},
             "temperature": {"serialname": "ef_pt", "kend": namelist.npz, "mp3": True},
             "initial_energy": {
                 "serialname": "ef_ie",
