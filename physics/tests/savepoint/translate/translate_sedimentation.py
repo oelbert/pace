@@ -509,15 +509,15 @@ class TranslateCalcVTIce(TranslatePhysicsFortranData2Py):
         super().__init__(grid, namelist, stencil_factory)
 
         self.in_vars["data_vars"] = {
-            "qfall": {"serialname": "vt_qi", "kend": namelist.npz, "mp3": True},
-            "density": {"serialname": "vt_den", "mp3": True},
-            "density_factor": {"serialname": "vt_denfac", "mp3": True},
-            "temperature": {"serialname": "vt_pt", "kend": namelist.npz, "mp3": True},
-            "vterminal": {"serialname": "vt_vti", "kend": namelist.npz, "mp3": True},
+            "qfall": {"serialname": "vti_qi", "kend": namelist.npz, "mp3": True},
+            "density": {"serialname": "vti_den", "mp3": True},
+            "density_factor": {"serialname": "vti_denfac", "mp3": True},
+            "temperature": {"serialname": "vti_pt", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vti_vti", "kend": namelist.npz, "mp3": True},
         }
 
         self.out_vars = {
-            "vterminal": {"serialname": "vt_vti", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vti_vti", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
@@ -549,15 +549,15 @@ class TranslateCalcVTSnow(TranslatePhysicsFortranData2Py):
         super().__init__(grid, namelist, stencil_factory)
 
         self.in_vars["data_vars"] = {
-            "qfall": {"serialname": "vt_qs", "kend": namelist.npz, "mp3": True},
-            "density": {"serialname": "vt_den", "mp3": True},
-            "density_factor": {"serialname": "vt_denfac", "mp3": True},
-            "temperature": {"serialname": "vt_pt", "kend": namelist.npz, "mp3": True},
-            "vterminal": {"serialname": "vt_vts", "kend": namelist.npz, "mp3": True},
+            "qfall": {"serialname": "vts_qs", "kend": namelist.npz, "mp3": True},
+            "density": {"serialname": "vts_den", "mp3": True},
+            "density_factor": {"serialname": "vts_denfac", "mp3": True},
+            "temperature": {"serialname": "vts_pt", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vts_vts", "kend": namelist.npz, "mp3": True},
         }
 
         self.out_vars = {
-            "vterminal": {"serialname": "vt_vts", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vts_vts", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
