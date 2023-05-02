@@ -21,12 +21,6 @@ class PassVars:
         c1_vap,
         c1_liq,
         c1_ice,
-        n_min,
-        delt,
-        esbasw,
-        tbasw,
-        esbasi,
-        tmin,
         t_wfr,
         pcaw,
         pcbw,
@@ -101,14 +95,14 @@ class PassVars:
         cgsub_3,
         cgsub_4,
         cgsub_5,
-        csmelt_1,
-        csmelt_2,
-        csmelt_3,
-        csmelt_4,
-        cgmelt_1,
-        cgmelt_2,
-        cgmelt_3,
-        cgmelt_4,
+        csmlt_1,
+        csmlt_2,
+        csmlt_3,
+        csmlt_4,
+        cgmlt_1,
+        cgmlt_2,
+        cgmlt_3,
+        cgmlt_4,
         cgfr_1,
         cgfr_2,
         normw,
@@ -147,12 +141,6 @@ class PassVars:
         c1_vap[:] = self.config.c1_vap
         c1_liq[:] = self.config.c1_liq
         c1_ice[:] = self.config.c1_ice
-        n_min[:] = self.config.n_min
-        delt[:] = self.config.delt
-        esbasw[:] = self.config.esbasw
-        tbasw[:] = self.config.tbasw
-        esbasi[:] = self.config.esbasi
-        tmin[:] = self.config.tmin
         t_wfr[:] = self.config.t_wfr
         pcaw[:] = self.config.pcaw
         pcbw[:] = self.config.pcbw
@@ -227,14 +215,14 @@ class PassVars:
         cgsub_3[:] = self.config.cgsub_3
         cgsub_4[:] = self.config.cgsub_4
         cgsub_5[:] = self.config.cgsub_5
-        csmelt_1[:] = self.config.csmelt_1
-        csmelt_2[:] = self.config.csmelt_2
-        csmelt_3[:] = self.config.csmelt_3
-        csmelt_4[:] = self.config.csmelt_4
-        cgmelt_1[:] = self.config.cgmelt_1
-        cgmelt_2[:] = self.config.cgmelt_2
-        cgmelt_3[:] = self.config.cgmelt_3
-        cgmelt_4[:] = self.config.cgmelt_4
+        csmlt_1[:] = self.config.csmlt_1
+        csmlt_2[:] = self.config.csmlt_2
+        csmlt_3[:] = self.config.csmlt_3
+        csmlt_4[:] = self.config.csmlt_4
+        cgmlt_1[:] = self.config.cgmlt_1
+        cgmlt_2[:] = self.config.cgmlt_2
+        cgmlt_3[:] = self.config.cgmlt_3
+        cgmlt_4[:] = self.config.cgmlt_4
         cgfr_1[:] = self.config.cgfr_1
         cgfr_2[:] = self.config.cgfr_2
         normw[:] = self.config.normw
@@ -296,12 +284,6 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
             "c1_vap": {"serialname": "ini_c1_vap", "mp3": True},
             "c1_liq": {"serialname": "ini_c1_liq", "mp3": True},
             "c1_ice": {"serialname": "ini_c1_ice", "mp3": True},
-            "n_min": {"serialname": "ini_n_min", "mp3": True},
-            "delt": {"serialname": "ini_delt", "mp3": True},
-            "esbasw": {"serialname": "ini_esbasw", "mp3": True},
-            "tbasw": {"serialname": "ini_tbasw", "mp3": True},
-            "esbasi": {"serialname": "ini_esbasi", "mp3": True},
-            "tmin": {"serialname": "ini_tmin", "mp3": True},
             "t_wfr": {"serialname": "ini_t_wfr", "mp3": True},
             "pcaw": {"serialname": "ini_pcaw", "mp3": True},
             "pcbw": {"serialname": "ini_pcbw", "mp3": True},
@@ -376,14 +358,14 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
             "cgsub_3": {"serialname": "ini_cgsub_3", "mp3": True},
             "cgsub_4": {"serialname": "ini_cgsub_4", "mp3": True},
             "cgsub_5": {"serialname": "ini_cgsub_5", "mp3": True},
-            "csmelt_1": {"serialname": "ini_csmelt_1", "mp3": True},
-            "csmelt_2": {"serialname": "ini_csmelt_2", "mp3": True},
-            "csmelt_3": {"serialname": "ini_csmelt_3", "mp3": True},
-            "csmelt_4": {"serialname": "ini_csmelt_4", "mp3": True},
-            "cgmelt_1": {"serialname": "ini_cgmelt_1", "mp3": True},
-            "cgmelt_2": {"serialname": "ini_cgmelt_2", "mp3": True},
-            "cgmelt_3": {"serialname": "ini_cgmelt_3", "mp3": True},
-            "cgmelt_4": {"serialname": "ini_cgmelt_4", "mp3": True},
+            "csmlt_1": {"serialname": "ini_csmlt_1", "mp3": True},
+            "csmlt_2": {"serialname": "ini_csmlt_2", "mp3": True},
+            "csmlt_3": {"serialname": "ini_csmlt_3", "mp3": True},
+            "csmlt_4": {"serialname": "ini_csmlt_4", "mp3": True},
+            "cgmlt_1": {"serialname": "ini_cgmlt_1", "mp3": True},
+            "cgmlt_2": {"serialname": "ini_cgmlt_2", "mp3": True},
+            "cgmlt_3": {"serialname": "ini_cgmlt_3", "mp3": True},
+            "cgmlt_4": {"serialname": "ini_cgmlt_4", "mp3": True},
             "cgfr_1": {"serialname": "ini_cgfr_1", "mp3": True},
             "cgfr_2": {"serialname": "ini_cgfr_2", "mp3": True},
             "normw": {"serialname": "ini_normw", "mp3": True},
@@ -424,12 +406,6 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
             "c1_vap": {"serialname": "ini_c1_vap", "mp3": True},
             "c1_liq": {"serialname": "ini_c1_liq", "mp3": True},
             "c1_ice": {"serialname": "ini_c1_ice", "mp3": True},
-            "n_min": {"serialname": "ini_n_min", "mp3": True},
-            "delt": {"serialname": "ini_delt", "mp3": True},
-            "esbasw": {"serialname": "ini_esbasw", "mp3": True},
-            "tbasw": {"serialname": "ini_tbasw", "mp3": True},
-            "esbasi": {"serialname": "ini_esbasi", "mp3": True},
-            "tmin": {"serialname": "ini_tmin", "mp3": True},
             "t_wfr": {"serialname": "ini_t_wfr", "mp3": True},
             "pcaw": {"serialname": "ini_pcaw", "mp3": True},
             "pcbw": {"serialname": "ini_pcbw", "mp3": True},
@@ -504,14 +480,14 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
             "cgsub_3": {"serialname": "ini_cgsub_3", "mp3": True},
             "cgsub_4": {"serialname": "ini_cgsub_4", "mp3": True},
             "cgsub_5": {"serialname": "ini_cgsub_5", "mp3": True},
-            "csmelt_1": {"serialname": "ini_csmelt_1", "mp3": True},
-            "csmelt_2": {"serialname": "ini_csmelt_2", "mp3": True},
-            "csmelt_3": {"serialname": "ini_csmelt_3", "mp3": True},
-            "csmelt_4": {"serialname": "ini_csmelt_4", "mp3": True},
-            "cgmelt_1": {"serialname": "ini_cgmelt_1", "mp3": True},
-            "cgmelt_2": {"serialname": "ini_cgmelt_2", "mp3": True},
-            "cgmelt_3": {"serialname": "ini_cgmelt_3", "mp3": True},
-            "cgmelt_4": {"serialname": "ini_cgmelt_4", "mp3": True},
+            "csmlt_1": {"serialname": "ini_csmlt_1", "mp3": True},
+            "csmlt_2": {"serialname": "ini_csmlt_2", "mp3": True},
+            "csmlt_3": {"serialname": "ini_csmlt_3", "mp3": True},
+            "csmlt_4": {"serialname": "ini_csmlt_4", "mp3": True},
+            "cgmlt_1": {"serialname": "ini_cgmlt_1", "mp3": True},
+            "cgmlt_2": {"serialname": "ini_cgmlt_2", "mp3": True},
+            "cgmlt_3": {"serialname": "ini_cgmlt_3", "mp3": True},
+            "cgmlt_4": {"serialname": "ini_cgmlt_4", "mp3": True},
             "cgfr_1": {"serialname": "ini_cgfr_1", "mp3": True},
             "cgfr_2": {"serialname": "ini_cgfr_2", "mp3": True},
             "normw": {"serialname": "ini_normw", "mp3": True},
