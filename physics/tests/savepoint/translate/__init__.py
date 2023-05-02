@@ -14,7 +14,12 @@ from .translate_mp_full import TranslateMPFull
 from .translate_neg_adj import TranslateNegAdjP
 from .translate_phifv3 import TranslatePhiFV3
 from .translate_prsfv3 import TranslatePrsFV3
-from .translate_sedimentation import TranslateSedimentation
+from .translate_sedimentation import (
+    TranslateCalcVTIce,
+    TranslateCalcVTSnow,
+    TranslateSediMeltIce,
+    TranslateSedimentation,
+)
 from .translate_start_fall import TranslateEndFall, TranslateStartFall
 from .translate_subgridz import TranslateSubgridZProc
 from .translate_tables import TranslateTableComputation
