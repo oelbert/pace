@@ -1,8 +1,288 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
+from pace.physics.stencils.microphysics_v3.sedimentation import (
+    Sedimentation,
+    calc_terminal_velocity_ice,
+    calc_terminal_velocity_rsg,
+    sedi_melt,
+)
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+class CalcVT:
+    def __init__(
+        self,
+        stencil_factory: pace.dsl.StencilFactory,
+        config,
+    ):
+        self._idx = stencil_factory.grid_indexing
+        if config.do_psd_ice_fall is False:
+            self._calc_terminal_ice_velocity = stencil_factory.from_origin_domain(
+                func=calc_terminal_velocity_ice,
+                externals={
+                    "ifflag": config.ifflag,
+                    "constant_v": config.const_vi,
+                    "v_fac": config.vi_fac,
+                    "v_max": config.vi_max,
+                    "aa": -4.14122e-5,
+                    "bb": -0.00538922,
+                    "cc": -0.0516344,
+                    "dd": 0.00216078,
+                    "ee": 1.9714,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+        if False in [
+            config.const_vr,
+            config.const_vi,
+            config.const_vs,
+            config.const_vg,
+        ]:
+            self._calc_terminal_rsg_velocity = stencil_factory.from_origin_domain(
+                func=calc_terminal_velocity_rsg,
+                externals={"const_v": False},
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+        if True in [config.const_vr, config.const_vi, config.const_vs, config.const_vg]:
+            self._calc_terminal_rsg_velocity_const = stencil_factory.from_origin_domain(
+                func=calc_terminal_velocity_rsg,
+                externals={"const_v": True},
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+
+    def __call__(
+        self,
+        qfall,
+        density,
+        temperature,
+        vterminal,
+        density_factor,
+        mode,
+    ):
+        if mode == "ice":
+            if self.config.do_psd_ice_fall:
+                if self.config.const_vi is False:
+                    self._calc_terminal_rsg_velocity(
+                        qfall,
+                        density,
+                        density_factor,
+                        vterminal,
+                        self.config.vi_fac,
+                        self.config.tvai,
+                        self.config.tvbi,
+                        self.config.mui,
+                        self.config.blini,
+                        self.config.vi_max,
+                    )
+                else:
+                    self._calc_terminal_rsg_velocity_const(
+                        qfall,
+                        density,
+                        density_factor,
+                        vterminal,
+                        self.config.vi_fac,
+                        self.config.tvai,
+                        self.config.tvbi,
+                        self.config.mui,
+                        self.config.blini,
+                        self.config.vi_max,
+                    )
+            else:
+                self._calc_terminal_ice_velocity(qfall, temperature, density, vterminal)
+        elif mode == "snow":
+            if self.config.const_vs is False:
+                self._calc_terminal_rsg_velocity(
+                    qfall,
+                    density,
+                    density_factor,
+                    vterminal,
+                    self.config.vs_fac,
+                    self.config.tvas,
+                    self.config.tvbs,
+                    self.config.mus,
+                    self.config.blins,
+                    self.config.vs_max,
+                )
+            else:
+                self._calc_terminal_rsg_velocity_const(
+                    qfall,
+                    density,
+                    density_factor,
+                    vterminal,
+                    self.config.vs_fac,
+                    self.config.tvas,
+                    self.config.tvbs,
+                    self.config.mus,
+                    self.config.blins,
+                    self.config.vs_max,
+                )
+        else:
+            raise ValueError(f"calc_vt mode {mode} not ice or snow")
+
+
+class SediMelt:
+    def __init__(
+        self,
+        stencil_factory: pace.dsl.StencilFactory,
+        config,
+        timestep,
+    ):
+        self._idx = stencil_factory.grid_indexing
+        self.config = config
+
+        self.li00 = config.li00
+        self._timestep = timestep
+
+        self._idx = stencil_factory.grid_indexing
+        self._is_ = self._idx.isc
+        self._ie = self._idx.iec
+        self._js = self._idx.jsc
+        self._je = self._idx.jec
+        self._ks = 0
+        self._ke = config.npz - 1
+        self.c1_vap = config.c1_vap
+        self.c1_liq = config.c1_liq
+        self.c1_ice = config.c1_ice
+
+    def __call__(
+        self,
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cvm,
+        temperature,
+        delp,
+        z_edge,
+        z_terminal,
+        z_surface,
+        icpk,
+        vterminal,
+        column_rain,
+        mode: str,
+    ):
+        if self.config.do_sedi_melt:
+            if mode == "ice":
+                (
+                    qice.data[:],
+                    qrain.data[:],
+                    column_rain.data[:],
+                    temperature.data[:],
+                    cvm.data[:],
+                ) = sedi_melt(
+                    qvapor.data[:],
+                    qliquid.data[:],
+                    qrain.data[:],
+                    qice.data[:],
+                    qsnow.data[:],
+                    qgraupel.data[:],
+                    cvm.data[:],
+                    temperature.data[:],
+                    delp.data[:],
+                    z_edge.data[:],
+                    z_terminal.data[:],
+                    z_surface.data[:],
+                    self._timestep,
+                    vterminal.data[:],
+                    column_rain.data[:],
+                    self.config.tau_imlt,
+                    icpk.data[:],
+                    self.li00,
+                    self.c1_vap,
+                    self.c1_liq,
+                    self.c1_ice,
+                    self._ks,
+                    self._ke,
+                    self._is_,
+                    self._ie,
+                    self._js,
+                    self._je,
+                    mode,
+                )
+            elif mode == "snow":
+                (
+                    qsnow.data[:],
+                    qrain.data[:],
+                    column_rain.data[:],
+                    temperature.data[:],
+                    cvm.data[:],
+                ) = sedi_melt(
+                    qvapor.data[:],
+                    qliquid.data[:],
+                    qrain.data[:],
+                    qice.data[:],
+                    qsnow.data[:],
+                    qgraupel.data[:],
+                    cvm.data[:],
+                    temperature.data[:],
+                    delp.data[:],
+                    z_edge.data[:],
+                    z_terminal.data[:],
+                    z_surface.data[:],
+                    self._timestep,
+                    vterminal.data[:],
+                    column_rain.data[:],
+                    self.config.tau_imlt,
+                    icpk.data[:],
+                    self.li00,
+                    self.c1_vap,
+                    self.c1_liq,
+                    self.c1_ice,
+                    self._ks,
+                    self._ke,
+                    self._is_,
+                    self._ie,
+                    self._js,
+                    self._je,
+                    mode,
+                )
+            elif mode == "graupel":
+                (
+                    qgraupel.data[:],
+                    qrain.data[:],
+                    column_rain.data[:],
+                    temperature.data[:],
+                    cvm.data[:],
+                ) = sedi_melt(
+                    qvapor.data[:],
+                    qliquid.data[:],
+                    qrain.data[:],
+                    qice.data[:],
+                    qsnow.data[:],
+                    qgraupel.data[:],
+                    cvm.data[:],
+                    temperature.data[:],
+                    delp.data[:],
+                    z_edge.data[:],
+                    z_terminal.data[:],
+                    z_surface.data[:],
+                    self._timestep,
+                    vterminal.data[:],
+                    column_rain.data[:],
+                    self.config.tau_imlt,
+                    icpk.data[:],
+                    self.li00,
+                    self.c1_vap,
+                    self.c1_liq,
+                    self.c1_ice,
+                    self._ks,
+                    self._ke,
+                    self._is_,
+                    self._ie,
+                    self._js,
+                    self._je,
+                    mode,
+                )
+            else:
+                raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
 
 
 class TranslateSedimentation(TranslatePhysicsFortranData2Py):
@@ -155,6 +435,144 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
                 raise TypeError(
                     f"input data with strange len: {len(inputs[var].shape)}"
                 )
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
+
+
+class TranslateSediMeltIce(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+        self.in_vars["data_vars"] = {
+            "qvapor": {"serialname": "sm_qv", "kend": namelist.npz, "mp3": True},
+            "qliquid": {"serialname": "sm_ql", "kend": namelist.npz, "mp3": True},
+            "qrain": {"serialname": "sm_qr", "kend": namelist.npz, "mp3": True},
+            "qice": {"serialname": "sm_qi", "kend": namelist.npz, "mp3": True},
+            "qsnow": {"serialname": "sm_qs", "kend": namelist.npz, "mp3": True},
+            "qgraupel": {"serialname": "sm_qg", "kend": namelist.npz, "mp3": True},
+            "cvm": {"serialname": "sm_cv", "kend": namelist.npz, "mp3": True},
+            "temperature": {"serialname": "sm_pt", "kend": namelist.npz, "mp3": True},
+            "delp": {"serialname": "sm_dp", "kend": namelist.npz, "mp3": True},
+            "z_edge": {"serialname": "sm_ze", "kend": namelist.npz + 1, "mp3": True},
+            "z_terminal": {
+                "serialname": "sm_zt",
+                "kend": namelist.npz + 1,
+                "mp3": True,
+            },
+            "z_surface": {"serialname": "sm_zs", "mp3": True},
+            "icpk": {"serialname": "sm_ic", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "sm_vt", "kend": namelist.npz, "mp3": True},
+            "column_rain": {"serialname": "sm_r1", "mp3": True},
+        }
+        self.in_vars["parameters"] = ["dt"]
+        self.out_vars = {
+            "qrain": {"serialname": "sm_qr", "kend": namelist.npz, "mp3": True},
+            "qice": {"serialname": "sm_qi", "kend": namelist.npz, "mp3": True},
+            "temperature": {"serialname": "sm_pt", "kend": namelist.npz, "mp3": True},
+            "cvm": {"serialname": "sm_cv", "kend": namelist.npz, "mp3": True},
+            "column_rain": {"serialname": "sm_r1", "mp3": True},
+        }
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        inputs["mode"] = "ice"
+
+        compute_func = SediMelt(
+            self.stencil_factory,
+            self.config,
+            timestep=inputs.pop("dt"),
+        )
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
+
+
+class TranslateCalcVTIce(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+
+        self.in_vars["data_vars"] = {
+            "qfall": {"serialname": "vt_qi", "kend": namelist.npz, "mp3": True},
+            "density": {"serialname": "vt_den", "mp3": True},
+            "density_factor": {"serialname": "vt_denfac", "mp3": True},
+            "temperature": {"serialname": "vt_pt", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vt_vti", "kend": namelist.npz, "mp3": True},
+        }
+
+        self.out_vars = {
+            "vterminal": {"serialname": "vt_vti", "kend": namelist.npz, "mp3": True},
+        }
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        inputs["mode"] = "ice"
+
+        compute_func = CalcVT(
+            self.stencil_factory,
+            self.config,
+        )
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
+
+
+class TranslateCalcVTSnow(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+
+        self.in_vars["data_vars"] = {
+            "qfall": {"serialname": "vt_qs", "kend": namelist.npz, "mp3": True},
+            "density": {"serialname": "vt_den", "mp3": True},
+            "density_factor": {"serialname": "vt_denfac", "mp3": True},
+            "temperature": {"serialname": "vt_pt", "kend": namelist.npz, "mp3": True},
+            "vterminal": {"serialname": "vt_vts", "kend": namelist.npz, "mp3": True},
+        }
+
+        self.out_vars = {
+            "vterminal": {"serialname": "vt_vts", "kend": namelist.npz, "mp3": True},
+        }
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        inputs["mode"] = "snow"
+
+        compute_func = CalcVT(
+            self.stencil_factory,
+            self.config,
+        )
 
         compute_func(**inputs)
 

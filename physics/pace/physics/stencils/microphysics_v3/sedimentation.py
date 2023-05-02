@@ -261,10 +261,7 @@ def sedi_melt(
                             else:
                                 qgraupel[i, j, k] = q_melt[i, j, k]
 
-                            temperature[i, j, k] = (
-                                temperature[i, j, k] * cvm[i, j, k]
-                                - li00 * sink * delp[i, j, m] / delp[i, j, k]
-                            ) / (
+                            cvm_tmp = (
                                 1.0
                                 + qvapor[i, j, k] * c1_vap
                                 + (qliquid[i, j, k] + qrain[i, j, k]) * c1_liq
@@ -279,9 +276,11 @@ def sedi_melt(
                             #     qsnow[i, j, k],
                             #     qgraupel[i, j, k],
                             # )
-                            temperature[i, j, m] = (
-                                temperature[i, j, m] * cvm[i, j, m]
-                            ) / (
+                            temperature[i, j, k] = (
+                                temperature[i, j, k] * cvm[i, j, k]
+                                - li00 * sink * delp[i, j, m] / delp[i, j, k]
+                            ) / cvm_tmp
+                            cvm_tmp = (
                                 1.0
                                 + qvapor[i, j, m] * c1_vap
                                 + (qliquid[i, j, m] + qrain[i, j, m]) * c1_liq
@@ -296,10 +295,17 @@ def sedi_melt(
                             #     qsnow[i, j, m],
                             #     qgraupel[i, j, m],
                             # )
+                            temperature[i, j, m] = (
+                                temperature[i, j, m] * cvm[i, j, m]
+                            ) / cvm_tmp
                         if q_melt[i, j, k] < constants.QCMIN:
                             break
-
-    return q_melt, qrain, r1, temperature, cvm
+    if mode == "ice":
+        return qice, qrain, r1, temperature, cvm
+    elif mode == "snow":
+        return qsnow, qrain, r1, temperature, cvm
+    else:  # mode == "graupel":
+        return qgraupel, qrain, r1, temperature, cvm
 
 
 def calc_edge_and_terminal_height(
