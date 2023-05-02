@@ -88,7 +88,7 @@ class FullMicrophysics:
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
 
-        self._do_warm_rain = config.do_warm_rain
+        self._do_warm_rain = config.do_warm_rain_mp
         self._ntimes = config.ntimes
 
         def make_quantity():

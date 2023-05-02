@@ -892,7 +892,7 @@ class Sedimentation:
 
         # Terminal fall of cloud water
         if self.config.do_psd_water_fall:
-            if self.config.const_vs is False:
+            if self.config.const_vw is False:
                 self._calc_terminal_rsg_velocity(
                     qliquid,
                     density,

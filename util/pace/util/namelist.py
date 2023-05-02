@@ -23,9 +23,12 @@ class NamelistDefaults:
     tau_smlt = 900.0  # snow melting timescale
     tau_gmlt = 600.0  # snow melting timescale
     tau_g2r = 600.0  # graupel melting to rain
-    tau_imlt = 600.0  # cloud ice melting
+    tau_imlt = 1200.0  # cloud ice melting
     tau_i2s = 1000.0  # cloud ice to snow auto - conversion
     tau_l2r = 900.0  # cloud water to rain auto - conversion
+    tau_l2v = 300.0  # cloud water to water vapor (evaporation)
+    tau_v2l = 150.0  # water vapor to cloud water (condensation)
+    tau_revp = 0.0  # rain evaporation time scale (s)
     tau_g2v = 1200.0  # graupel sublimation
     tau_v2g = 21600.0  # graupel deposition -- make it a slow process
     tau_wbf = 300.0  # wegener bergeron findeisen timescale
@@ -55,9 +58,6 @@ class NamelistDefaults:
     # 2: binary cloud scheme
     # 3: extension of 0
     cld_min = 0.05  # minimum cloud fraction
-    tau_l2v = 300.0  # cloud water to water vapor (evaporation)
-    tau_v2l = 150.0  # water vapor to cloud water (condensation)
-    tau_revp = 0.0  # rain evaporation time scale (s)
     c2l_ord = 4
     regional = False
     m_split = 0
@@ -75,7 +75,7 @@ class NamelistDefaults:
     qc_crt = 5.0e-8  # Minimum condensate mixing ratio to allow partial cloudiness
     c_cracw = 0.8  # Rain accretion efficiency
     c_paut = (
-        0.5  # Autoconversion cloud water to rain (use 0.5 to reduce autoconversion)
+        0.55  # Autoconversion cloud water to rain (use 0.5 to reduce autoconversion)
     )
     c_pracs = 1.0  # snow to rain accretion efficiency
     c_psacr = 1.0  # rain to snow accretion efficiency
@@ -91,6 +91,7 @@ class NamelistDefaults:
     ccn_o = 90.0  # CCN over ocean (cm^-3)
     use_rhc_cevap = False  # cap of rh for cloud water evaporation
     use_rhc_revap = False  # cap of rh for rain evaporation
+    const_vw = False  # Fall velocity tuning constant of cloud water
     const_vg = False  # Fall velocity tuning constant of graupel
     const_vi = False  # Fall velocity tuning constant of ice
     const_vr = False  # Fall velocity tuning constant of rain water
@@ -129,7 +130,7 @@ class NamelistDefaults:
     do_cond_timescale = False  # Whether to apply a timescale to condensation
     do_hail = False  # Use hail parameters instead of graupel
     consv_checker = False  # Turn on energy and water conservation check in microphysics
-    do_warm_rain = False  # Do only warm rain microphysics
+    do_warm_rain_mp = False  # Do only warm rain microphysics
     do_wbf = False  # Do Wegener Bergeron Findeisen process
     do_psd_water_fall = False  # Calculate cloud water terminal velocity based on PSD
     do_psd_ice_fall = False  # Calculate cloud ice terminal velocity based on PSD
@@ -142,17 +143,17 @@ class NamelistDefaults:
     mp_time = 150.0  # Maximum microphysics timestep (sec)
     prog_ccn = False  # Do prognostic ccn (yi ming's method)
     qi0_crt = 1.0e-04  # Cloud ice to snow autoconversion threshold
-    qs0_crt = 0.003  # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)
+    qs0_crt = 1.0e-3  # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)
     rh_inc = 0.25  # RH increment for complete evaporation of cloud water and cloud ice
     rh_inr = 0.25  # RH increment for minimum evaporation of rain
-    rthresh = 1e-05  # Critical cloud drop radius (micrometers)
+    rthresh = 10.0e-6  # Critical cloud drop radius (micrometers)
     sedi_transport = True  # Transport of momentum in sedimentation
     use_ppm = False  # Use ppm fall scheme
     vw_max = 0.01  # Maximum fall speed for cloud water
-    vg_max = 16.0  # Maximum fall speed for graupel
-    vi_max = 1.0  # Maximum fall speed for ice
-    vr_max = 16.0  # Maximum fall speed for rain
-    vs_max = 2.0  # Maximum fall speed for snow
+    vg_max = 8.0  # Maximum fall speed for graupel
+    vi_max = 0.5  # Maximum fall speed for ice
+    vr_max = 12.0  # Maximum fall speed for rain
+    vs_max = 5.0  # Maximum fall speed for snow
     z_slope_ice = True  # Use linear mono slope for autoconversions
     z_slope_liq = True  # Use linear mono slope for autoconversions
     tice = 273.16  # set tice = 165. to turn off ice - phase phys (kessler emulator)
@@ -310,7 +311,7 @@ class Namelist:
     # print_memory_usage: Any
     a_imp: float = DEFAULT_FLOAT
     # adjust_dry_mass: Any
-    beta: float = DEFAULT_FLOAT
+    beta: float = 1.22
     # consv_am: Any
     consv_te: float = DEFAULT_FLOAT
     d2_bg: float = DEFAULT_FLOAT
@@ -387,6 +388,7 @@ class Namelist:
     const_vg: bool = NamelistDefaults.const_vg
     const_vi: bool = NamelistDefaults.const_vi
     const_vr: bool = NamelistDefaults.const_vr
+    const_vw: bool = NamelistDefaults.const_vw
     const_vs: bool = NamelistDefaults.const_vs
     qc_crt: float = NamelistDefaults.qc_crt
     vw_fac: float = NamelistDefaults.vw_fac
@@ -405,7 +407,7 @@ class Namelist:
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     do_hail: bool = NamelistDefaults.do_hail
     consv_checker: bool = NamelistDefaults.consv_checker
-    do_warm_rain: bool = NamelistDefaults.do_warm_rain
+    do_warm_rain_mp: bool = NamelistDefaults.do_warm_rain_mp
     do_wbf: bool = NamelistDefaults.do_wbf
     do_psd_water_fall: bool = NamelistDefaults.do_psd_water_fall
     do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall

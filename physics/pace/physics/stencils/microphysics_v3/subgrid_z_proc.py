@@ -1267,7 +1267,7 @@ class VerticalSubgridProcesses:
                 "bling": config.bling,
                 "mug": config.mug,
                 "gs_fac": config.gs_fac,
-                "do_warm_rain_mp": config.do_warm_rain,
+                "do_warm_rain_mp": config.do_warm_rain_mp,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

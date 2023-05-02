@@ -566,7 +566,7 @@ class FastMicrophysics:
         self._fast_microphysics = stencil_factory.from_origin_domain(
             func=fast_microphysics,
             externals={
-                "do_warm_rain_mp": config.do_warm_rain,
+                "do_warm_rain_mp": config.do_warm_rain_mp,
                 "do_wbf": config.do_wbf,
                 "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,

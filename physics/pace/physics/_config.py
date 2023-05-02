@@ -29,7 +29,7 @@ class AdjustNegativeTracerConfig:
 
 @dataclasses.dataclass
 class FastMPConfig:
-    do_warm_rain: bool
+    do_warm_rain_mp: bool
     do_wbf: bool
     c1_vap: float
     c1_liq: float
@@ -109,6 +109,7 @@ class MicroPhysicsConfig:
     const_vg: bool
     const_vi: bool
     const_vr: bool
+    const_vw: bool
     const_vs: bool
     vw_fac: float
     vs_fac: float
@@ -158,7 +159,7 @@ class MicroPhysicsConfig:
     do_cond_timescale: bool
     do_hail: bool
     consv_checker: bool
-    do_warm_rain: bool
+    do_warm_rain_mp: bool
     do_wbf: bool
     do_psd_water_fall: bool
     do_psd_ice_fall: bool
@@ -410,7 +411,7 @@ class MicroPhysicsConfig:
         self.tbasw = constants.TICE0 + 100.0
         self.esbasi = 6107.1
         self.tmin = constants.TICE0 - self.n_min * self.delt
-        if self.do_warm_rain:  # unsupported
+        if self.do_warm_rain_mp:  # unsupported
             self.t_wfr = self.tmin
         else:
             self.t_wfr = constants.TICE0 - 40.0
@@ -433,7 +434,7 @@ class MicroPhysicsConfig:
     @property
     def fastmp(self) -> FastMPConfig:
         return FastMPConfig(
-            do_warm_rain=self.do_warm_rain,
+            do_warm_rain_mp=self.do_warm_rain_mp,
             do_wbf=self.do_wbf,
             c1_vap=self.c1_vap,
             c1_liq=self.c1_liq,
@@ -1417,6 +1418,7 @@ class PhysicsConfig:
     const_vg: bool = NamelistDefaults.const_vg
     const_vi: bool = NamelistDefaults.const_vi
     const_vr: bool = NamelistDefaults.const_vr
+    const_vw: bool = NamelistDefaults.const_vw
     const_vs: bool = NamelistDefaults.const_vs
     vw_fac: float = NamelistDefaults.vw_fac
     vs_fac: float = NamelistDefaults.vs_fac
@@ -1493,7 +1495,7 @@ class PhysicsConfig:
     do_cond_timescale: bool = NamelistDefaults.do_cond_timescale
     do_hail: bool = NamelistDefaults.do_hail
     consv_checker: bool = NamelistDefaults.consv_checker
-    do_warm_rain: bool = NamelistDefaults.do_warm_rain
+    do_warm_rain_mp: bool = NamelistDefaults.do_warm_rain_mp
     do_wbf: bool = NamelistDefaults.do_wbf
     do_psd_water_fall: bool = NamelistDefaults.do_psd_water_fall
     do_psd_ice_fall: bool = NamelistDefaults.do_psd_ice_fall
@@ -1626,6 +1628,7 @@ class PhysicsConfig:
             const_vg=namelist.const_vg,
             const_vi=namelist.const_vi,
             const_vr=namelist.const_vr,
+            const_vw=namelist.const_vw,
             const_vs=namelist.const_vs,
             vw_fac=namelist.vw_fac,
             vs_fac=namelist.vs_fac,
@@ -1674,7 +1677,7 @@ class PhysicsConfig:
             do_cond_timescale=namelist.do_cond_timescale,
             do_hail=namelist.do_hail,
             consv_checker=namelist.consv_checker,
-            do_warm_rain=namelist.do_warm_rain,
+            do_warm_rain_mp=namelist.do_warm_rain_mp,
             do_wbf=namelist.do_wbf,
             do_psd_water_fall=namelist.do_psd_water_fall,
             do_psd_ice_fall=namelist.do_psd_ice_fall,
@@ -1793,6 +1796,7 @@ class PhysicsConfig:
             const_vg=self.const_vg,
             const_vi=self.const_vi,
             const_vr=self.const_vr,
+            const_vw=self.const_vw,
             const_vs=self.const_vs,
             vw_fac=self.vw_fac,
             vs_fac=self.vs_fac,
@@ -1841,7 +1845,7 @@ class PhysicsConfig:
             do_cond_timescale=self.do_cond_timescale,
             do_hail=self.do_hail,
             consv_checker=self.consv_checker,
-            do_warm_rain=self.do_warm_rain,
+            do_warm_rain_mp=self.do_warm_rain_mp,
             do_wbf=self.do_wbf,
             do_psd_water_fall=self.do_psd_water_fall,
             do_psd_ice_fall=self.do_psd_ice_fall,
