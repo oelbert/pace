@@ -311,7 +311,7 @@ def update_energy_wind_heat_post_fall(
                     ) / (dm + flux[0, 0, -1])
 
     # energy change during sedimentation heating
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         if no_fall == 0.0:
             tmp_energy1 += physfun.calc_moist_total_energy(
                 qvapor,
