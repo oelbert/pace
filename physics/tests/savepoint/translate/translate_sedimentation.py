@@ -17,6 +17,7 @@ class CalcVT:
         config,
     ):
         self._idx = stencil_factory.grid_indexing
+        self.config = config
         if config.do_psd_ice_fall is False:
             self._calc_terminal_ice_velocity = stencil_factory.from_origin_domain(
                 func=calc_terminal_velocity_ice,
