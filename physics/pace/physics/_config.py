@@ -816,7 +816,7 @@ class MicroPhysicsConfig:
         self.tvbw = math.exp(
             blinw
             / (muw + 3)
-            * math.log(constants.PI * constants.RHO_I * math.gamma(muw + 3))
+            * math.log(constants.PI * constants.RHO_W * math.gamma(muw + 3))
         ) * math.gamma(muw + 3)
 
         self.tvai = (
@@ -840,7 +840,7 @@ class MicroPhysicsConfig:
         self.tvbr = math.exp(
             blinr
             / (mur + 3)
-            * math.log(constants.PI * constants.RHO_I * math.gamma(mur + 3))
+            * math.log(constants.PI * constants.RHO_R * math.gamma(mur + 3))
         ) * math.gamma(mur + 3)
 
         self.tvas = (
@@ -852,7 +852,7 @@ class MicroPhysicsConfig:
         self.tvbs = math.exp(
             blins
             / (mus + 3)
-            * math.log(constants.PI * constants.RHO_I * math.gamma(mus + 3))
+            * math.log(constants.PI * constants.RHO_S * math.gamma(mus + 3))
         ) * math.gamma(mus + 3)
 
         self.tvag = (
@@ -864,7 +864,7 @@ class MicroPhysicsConfig:
         self.tvbg = math.exp(
             bling
             / (mug + 3)
-            * math.log(constants.PI * constants.RHO_I * math.gamma(mug + 3))
+            * math.log(constants.PI * constants.RHO_G * math.gamma(mug + 3))
         ) * math.gamma(mug + 3)
 
         self.tvah = (
@@ -876,7 +876,7 @@ class MicroPhysicsConfig:
         self.tvbh = math.exp(
             blinh
             / (muh + 3)
-            * math.log(constants.PI * constants.RHO_I * math.gamma(muh + 3))
+            * math.log(constants.PI * constants.RHO_H * math.gamma(muh + 3))
         ) * math.gamma(muh + 3)
 
     def _calculate_slope_parameters(self):

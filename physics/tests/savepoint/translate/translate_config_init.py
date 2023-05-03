@@ -247,26 +247,10 @@ class PassVars:
         csacr[:] = self.config.csacr
         cgacr[:] = self.config.cgacr
         cgacs[:] = self.config.cgacs
-        acc[
-            :,
-            :,
-            :self.l1
-        ] = self.config.acc
-        acco1[
-            :,
-            :,
-            :self.l2
-        ] = self.config.acco[0]
-        acco2[
-            :,
-            :,
-            :self.l2
-        ] = self.config.acco[1]
-        acco3[
-            :,
-            :,
-            :self.l2
-        ] = self.config.acco[2]
+        acc[:, :, : self.l1] = self.config.acc
+        acco1[:, :, : self.l2] = self.config.acco[0]
+        acco2[:, :, : self.l2] = self.config.acco[1]
+        acco3[:, :, : self.l2] = self.config.acco[2]
 
 
 class TranslateConfigInit(TranslatePhysicsFortranData2Py):
@@ -277,6 +261,8 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
         stencil_factory: pace.dsl.StencilFactory,
     ):
         super().__init__(grid, namelist, stencil_factory)
+
+        self.max_error = 1.0e-33
 
         self.in_vars["data_vars"] = {
             "c_air": {"serialname": "ini_c_air", "mp3": True},
