@@ -262,8 +262,6 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
 
-        self.max_error = 1.0e-33
-
         self.in_vars["data_vars"] = {
             "c_air": {"serialname": "ini_c_air", "mp3": True},
             "c_vap": {"serialname": "ini_c_vap", "mp3": True},
