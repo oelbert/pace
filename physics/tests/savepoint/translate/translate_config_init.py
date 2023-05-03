@@ -250,23 +250,23 @@ class PassVars:
         acc[
             :,
             :,
-            :l1
+            :self.l1
         ] = self.config.acc
         acco1[
             :,
             :,
-            :l2
-        ] = self.config.acco[1]
+            :self.l2
+        ] = self.config.acco[0]
         acco2[
             :,
             :,
-            :l2
-        ] = self.config.acco[2]
+            :self.l2
+        ] = self.config.acco[1]
         acco3[
             :,
             :,
-            :l2
-        ] = self.config.acco[3]
+            :self.l2
+        ] = self.config.acco[2]
 
 
 class TranslateConfigInit(TranslatePhysicsFortranData2Py):
