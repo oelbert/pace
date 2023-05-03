@@ -3,6 +3,7 @@ from pace.stencils.testing.translate_update_dwind_phys import TranslateUpdateDWi
 
 from .translate_atmos_phy_statein import TranslateAtmosPhysDriverStatein
 from .translate_cloud_frac import TranslateCloudFrac
+from .translate_config_init import TranslateConfigInit
 from .translate_driver import TranslateDriver
 from .translate_fillgfs import TranslateFillGFS
 from .translate_fv_update_phys import TranslateFVUpdatePhys
