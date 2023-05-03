@@ -7,6 +7,8 @@ from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2
 class PassVars:
     def __init__(self, config):
         self.config = config
+        self.l1 = len(config.acc)
+        self.l2 = len(config.acco[1])
 
     def __call__(
         self,
@@ -248,18 +250,22 @@ class PassVars:
         acc[
             :,
             :,
+            :l1
         ] = self.config.acc
         acco1[
             :,
             :,
+            :l2
         ] = self.config.acco[1]
         acco2[
             :,
             :,
+            :l2
         ] = self.config.acco[2]
         acco3[
             :,
             :,
+            :l2
         ] = self.config.acco[3]
 
 
@@ -524,7 +530,6 @@ class TranslateConfigInit(TranslatePhysicsFortranData2Py):
 
         compute_func = PassVars(
             self.config,
-            timestep=inputs.pop("dt"),
         )
 
         compute_func(**inputs)
