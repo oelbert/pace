@@ -533,6 +533,8 @@ class MicroPhysicsConfig:
         bling = self.bling
         blinh = self.blinh
 
+        # TODO: Refactor these to be functions, holy cow
+
         # Particle Concentration:
         self.pcaw = (
             math.exp(3 / (muw + 3) * math.log(n0w_sig))
@@ -915,6 +917,8 @@ class MicroPhysicsConfig:
         snow sublimation, and graupel or hail sublimation, Lin et al. (1983)
         """
 
+        # TODO: These should also be made functions
+
         self.crevp_1 = (
             2.0
             * constants.PI
@@ -940,7 +944,7 @@ class MicroPhysicsConfig:
             )
             * math.exp((1 + self.mur) / (self.mur + 3) * math.log(self.normr))
             / math.gamma(1 + self.mur)
-            * math.exp((-1 - self.blinr) / 2 * math.log(self.expor))
+            * math.exp((-1 - self.blinr) / 2.0 * math.log(self.expor))
         )
         self.crevp_4 = constants.TCOND * constants.RVGAS
         self.crevp_5 = constants.VDIFU
@@ -970,7 +974,7 @@ class MicroPhysicsConfig:
             )
             * math.exp((1 + self.mus) / (self.mus + 3) * math.log(self.norms))
             / math.gamma(1 + self.mus)
-            * math.exp((-1 - self.blins) / 2 * math.log(self.expos))
+            * math.exp((-1 - self.blins) / 2.0 * math.log(self.expos))
         )
         self.cssub_4 = constants.TCOND * constants.RVGAS
         self.cssub_5 = constants.VDIFU
@@ -1286,7 +1290,7 @@ class MicroPhysicsConfig:
                 accoi.append(
                     occ[i]
                     * math.gamma(6 + acc[2 * k] - (i + 1))
-                    * math.gamma(acc[2 * k + 1] + (i + 1) - 1)
+                    * math.gamma(acc[2 * k + 1] + i)
                     / (
                         math.exp(
                             (6 + acc[2 * k] - (i + 1))
@@ -1294,12 +1298,12 @@ class MicroPhysicsConfig:
                             * math.log(act[2 * k])
                         )
                         * math.exp(
-                            (acc[2 * k + 1] + (i + 1) - 1)
+                            (acc[2 * k + 1] + i)
                             / (acc[2 * k + 1] + 3)
                             * math.log(act[2 * k + 1])
                         )
                     )
-                    * math.exp((i + 1 - 3) * math.log(ace[2 * k]))
+                    * math.exp((i - 2) * math.log(ace[2 * k]))
                     * math.exp((4 - (i + 1)) * math.log(ace[2 * k + 1]))
                 )
             acco.append(accoi)
