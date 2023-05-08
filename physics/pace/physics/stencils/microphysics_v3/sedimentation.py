@@ -203,16 +203,19 @@ def sedi_melt(
     index_4 = []
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
+            if i == 8:
+                if (j == 46) or (j == 47):
+                    breakpoint()
+            if (i == 9) and (j == 47):
+                breakpoint()
             for k in range(ke - 1, ks - 1, -1):
                 if v_terminal[i, j, k] < 1.0e-10:
-                    print("vterminal too low")
                     count_1 += 1
                     index_1.append((i, j, k))
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
                     for m in range(k + 1, ke):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
-                            print("zt too high")
                             count_2 += 1
                             index_2.append((i, j, k))
                             break
