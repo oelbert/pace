@@ -143,7 +143,7 @@ def calc_terminal_velocity_ice(
                 tc = temperature - constants.TICE0
                 if ifflag == 1:
                     v_terminal = (
-                        (3.0 + (log(qice * density) / log(10)))
+                        (3.0 + log(qice * density) / log(10))
                         * (tc * (aa * tc + bb) + cc)
                         + dd * tc
                         + ee
@@ -261,7 +261,6 @@ def sedi_melt(
                             )
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
                             if z_terminal[i, j, k] < z_surface[i, j]:
-                                print("adding to precip")
                                 count_3 += 1
                                 index_3.append((i, j, k))
                                 r1[i, j] += sink * delp[i, j, m]

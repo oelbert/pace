@@ -68,6 +68,7 @@ class CalcVT:
     ):
         if mode == "ice":
             if self.config.do_psd_ice_fall:
+                print("calling psd for ice")
                 if self.config.const_vi is False:
                     self._calc_terminal_rsg_velocity(
                         qfall,
@@ -95,6 +96,7 @@ class CalcVT:
                         self.config.vi_max,
                     )
             else:
+                print("calling term_ice")
                 self._calc_terminal_ice_velocity(qfall, temperature, density, vterminal)
         elif mode == "snow":
             if self.config.const_vs is False:
@@ -172,13 +174,7 @@ class SediMelt:
     ):
         if self.config.do_sedi_melt:
             if mode == "ice":
-                (
-                    qice,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    cvm,
-                ) = sedi_melt(
+                (qice, qrain, column_rain, temperature, cvm,) = sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -209,13 +205,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "snow":
-                (
-                    qsnow,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    cvm,
-                ) = sedi_melt(
+                (qsnow, qrain, column_rain, temperature, cvm,) = sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -246,13 +236,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "graupel":
-                (
-                    qgraupel,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    cvm,
-                ) = sedi_melt(
+                (qgraupel, qrain, column_rain, temperature, cvm,) = sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
