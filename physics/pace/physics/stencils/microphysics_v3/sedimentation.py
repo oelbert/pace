@@ -193,14 +193,23 @@ def sedi_melt(
         q_melt = qgraupel
     else:
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
+    count_1 = 0
+    count_2 = 0
+    count_3 = 0
+    count_4 = 0
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
             for k in range(ke - 1, ks - 1, -1):
                 if v_terminal[i, j, k] < 1.0e-10:
+                    print("vterminal too low")
+                    count_1 += 1
+                    breakpoint()
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
                     for m in range(k + 1, ke):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
+                            print("zt too high")
+                            count_2 += 1
                             break
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
@@ -249,6 +258,8 @@ def sedi_melt(
                             )
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
                             if z_terminal[i, j, k] < z_surface[i, j]:
+                                print("adding to precip")
+                                count_3 += 1
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
@@ -299,6 +310,7 @@ def sedi_melt(
                                 temperature[i, j, m] * cvm[i, j, m]
                             ) / cvm_tmp
                         if q_melt[i, j, k] < constants.QCMIN:
+                            count_4 += 1
                             break
     if mode == "ice":
         return qice, qrain, r1, temperature, cvm
@@ -767,7 +779,7 @@ class Sedimentation:
         if self.config.do_hail:
             if self.config.const_vg is False:
                 self._calc_terminal_rsg_velocity(
-                    qsnow,
+                    qgraupel,
                     density,
                     density_factor,
                     vterminal_graupel,
@@ -780,7 +792,7 @@ class Sedimentation:
                 )
             else:
                 self._calc_terminal_rsg_velocity_const(
-                    qsnow,
+                    qgraupel,
                     density,
                     density_factor,
                     vterminal_graupel,
@@ -795,7 +807,7 @@ class Sedimentation:
         else:
             if self.config.const_vg is False:
                 self._calc_terminal_rsg_velocity(
-                    qsnow,
+                    qgraupel,
                     density,
                     density_factor,
                     vterminal_graupel,
@@ -808,7 +820,7 @@ class Sedimentation:
                 )
             else:
                 self._calc_terminal_rsg_velocity_const(
-                    qsnow,
+                    qgraupel,
                     density,
                     density_factor,
                     vterminal_graupel,
