@@ -194,22 +194,27 @@ def sedi_melt(
     else:
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
     count_1 = 0
+    index_1 = []
     count_2 = 0
+    index_2 = []
     count_3 = 0
+    index_3 = []
     count_4 = 0
+    index_4 = []
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
             for k in range(ke - 1, ks - 1, -1):
                 if v_terminal[i, j, k] < 1.0e-10:
                     print("vterminal too low")
                     count_1 += 1
-                    breakpoint()
+                    index_1.append((i, j, k))
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
                     for m in range(k + 1, ke):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
                             print("zt too high")
                             count_2 += 1
+                            index_2.append((i, j, k))
                             break
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
@@ -260,6 +265,7 @@ def sedi_melt(
                             if z_terminal[i, j, k] < z_surface[i, j]:
                                 print("adding to precip")
                                 count_3 += 1
+                                index_3.append((i, j, k))
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
@@ -311,7 +317,9 @@ def sedi_melt(
                             ) / cvm_tmp
                         if q_melt[i, j, k] < constants.QCMIN:
                             count_4 += 1
+                            index_4.append((i, j, k))
                             break
+    breakpoint()
     if mode == "ice":
         return qice, qrain, r1, temperature, cvm
     elif mode == "snow":
