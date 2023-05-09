@@ -386,6 +386,17 @@ class Sedimentation:
         self.c1_liq = config.c1_liq
         self.c1_ice = config.c1_ice
 
+        if config.do_hail:
+            self.tvag = config.tvah
+            self.tvbg = config.tvbh
+            self.mug = config.muh
+            self.bling = config.blinh
+        else:
+            self.tvag = config.tvag
+            self.tvbg = config.tvbg
+            self.mug = config.mug
+            self.bling = config.bling
+
         assert config.ifflag in [
             1,
             2,
@@ -780,61 +791,32 @@ class Sedimentation:
         self._adjust_fluxes(preflux_snow)
 
         # Terminal fall and melting of falling graupel into rain
-        if self.config.do_hail:
-            if self.config.const_vg is False:
-                self._calc_terminal_rsg_velocity(
-                    qgraupel,
-                    density,
-                    density_factor,
-                    vterminal_graupel,
-                    self.config.vg_fac,
-                    self.config.tvah,
-                    self.config.tvbh,
-                    self.config.muh,
-                    self.config.blinh,
-                    self.config.vg_max,
-                )
-            else:
-                self._calc_terminal_rsg_velocity_const(
-                    qgraupel,
-                    density,
-                    density_factor,
-                    vterminal_graupel,
-                    self.config.vg_fac,
-                    self.config.tvah,
-                    self.config.tvbh,
-                    self.config.muh,
-                    self.config.blinh,
-                    self.config.vg_max,
-                )
-
+        if self.config.const_vg is False:
+            self._calc_terminal_rsg_velocity(
+                qgraupel,
+                density,
+                density_factor,
+                vterminal_graupel,
+                self.config.vg_fac,
+                self.tvag,
+                self.tvbg,
+                self.mug,
+                self.bling,
+                self.config.vg_max,
+            )
         else:
-            if self.config.const_vg is False:
-                self._calc_terminal_rsg_velocity(
-                    qgraupel,
-                    density,
-                    density_factor,
-                    vterminal_graupel,
-                    self.config.vg_fac,
-                    self.config.tvag,
-                    self.config.tvbg,
-                    self.config.mug,
-                    self.config.bling,
-                    self.config.vg_max,
-                )
-            else:
-                self._calc_terminal_rsg_velocity_const(
-                    qgraupel,
-                    density,
-                    density_factor,
-                    vterminal_graupel,
-                    self.config.vg_fac,
-                    self.config.tvag,
-                    self.config.tvbg,
-                    self.config.mug,
-                    self.config.bling,
-                    self.config.vg_max,
-                )
+            self._calc_terminal_rsg_velocity_const(
+                qgraupel,
+                density,
+                density_factor,
+                vterminal_graupel,
+                self.config.vg_fac,
+                self.tvag,
+                self.tvbg,
+                self.mug,
+                self.bling,
+                self.config.vg_max,
+            )
 
         self._calc_edge_and_terminal_height(
             self._z_surface,
