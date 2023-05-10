@@ -247,10 +247,10 @@ def autoconvert_water_rain(
         z_slope_liq,
     )
 
+    # linear_prof
     with computation(FORWARD):
         with interval(0, 1):
             if __INLINED((irain_f == 0) and (z_slope_liq)):
-                # linear_prof
                 dl = 0.0
         with interval(1, None):
             if __INLINED((irain_f == 0) and (z_slope_liq)):
@@ -260,10 +260,10 @@ def autoconvert_water_rain(
             if __INLINED((irain_f == 0) and (z_slope_liq)):
                 # Use twice the strength of the
                 # positive definiteness limiter (lin et al 1994)
-                dl = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qliquid[0, 0, 0])
-                if dq * dq[0, 0, +1] <= 0.0:
+                dl = 0.5 * min(abs(dq + dq[0, 0, 1]), 0.5 * qliquid)
+                if dq * dq[0, 0, 1] <= 0.0:
                     if dq > 0.0:  # Local maximum
-                        dl = min(dl, min(dq, -dq[0, 0, +1]))
+                        dl = min(dl, min(dq, -dq[0, 0, 1]))
                     else:  # Local minimum
                         dl = 0.0
         with interval(-1, None):
@@ -274,11 +274,12 @@ def autoconvert_water_rain(
             if __INLINED(z_slope_liq):
                 # Impose a presumed background horizontal variability that is
                 # proportional to the value itself
-                dl = max(dl, h_var * qliquid)
-                dl = max(dl, 0.0)
+                dl = max(max(dl, h_var * qliquid), 0.0)
             else:
                 dl = max(0.0, h_var * qliquid)
 
+    with computation(PARALLEL), interval(...):
+        if __INLINED(irain_f == 0):
             # rest of praut
             if (temperature > t_wfr) and (qliquid > constants.QCMIN):
                 if __INLINED(do_psd_water_num):
@@ -316,7 +317,7 @@ def autoconvert_water_rain(
                 qc = fac_rc * cloud_condensation_nuclei
                 dq = qliquid - qc
 
-                if dq > 0:
+                if dq > 0.0:
                     c_praut = cpaut * exp(
                         (-1.0 / 3.0) * log(cloud_condensation_nuclei * constants.RHO_W)
                     )
