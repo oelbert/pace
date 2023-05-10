@@ -164,6 +164,7 @@ def cloud_condensation_evaporation(
         use_rhc_cevap,
     )
 
+    # TODO: set these at compiletime
     fac_l2v = 1.0 - exp(-timestep / tau_l2v)
     fac_v2l = 1.0 - exp(-timestep / tau_v2l)
 
@@ -175,7 +176,7 @@ def cloud_condensation_evaporation(
     if dq > 0.0:
         fac = min(1.0, fac_l2v * (rh_fac * dq / qsw))
         sink = min(qliquid, fac * dq / (1 + tcp3 * dqdt))
-        if (use_rhc_cevap) and (rh_tem > rhc_cevap):
+        if (use_rhc_cevap) and (rh_tem >= rhc_cevap):
             sink = 0.0
         reevaporation += sink * delp
     elif do_cond_timescale:
@@ -258,8 +259,7 @@ def complete_freeze(
     tc = t_wfr - temperature
     if (tc > 0.0) and (qliquid > constants.QCMIN):
         sink = qliquid * tc / constants.DT_FR
-        sink = min(sink, tc / icpk)
-        sink = min(qliquid, sink)
+        sink = min(qliquid, min(sink, tc / icpk))
         (
             qvapor,
             qliquid,
@@ -892,7 +892,7 @@ def vertical_subgrid_processes(
     rh_adj: FloatFieldIJ,
 ):
     """"""
-    from __externals__ import do_warm_rain_mp
+    from __externals__ import do_warm_rain_mp, do_wbf
 
     with computation(FORWARD):
         with interval(-1, None):
@@ -1011,35 +1011,36 @@ def vertical_subgrid_processes(
                     tcp3,
                 )
 
-                (
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temperature,
-                    cvm,
-                    lcpk,
-                    icpk,
-                    tcpk,
-                    tcp3,
-                ) = wegener_bergeron_findeisen(
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temperature,
-                    density,
-                    cvm,
-                    te,
-                    lcpk,
-                    icpk,
-                    tcpk,
-                    tcp3,
-                )
+                if __INLINED(do_wbf):
+                    (
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        cvm,
+                        lcpk,
+                        icpk,
+                        tcpk,
+                        tcp3,
+                    ) = wegener_bergeron_findeisen(
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        density,
+                        cvm,
+                        te,
+                        lcpk,
+                        icpk,
+                        tcpk,
+                        tcp3,
+                    )
 
                 (
                     qvapor,
@@ -1268,6 +1269,7 @@ class VerticalSubgridProcesses:
                 "mug": config.mug,
                 "gs_fac": config.gs_fac,
                 "do_warm_rain_mp": config.do_warm_rain_mp,
+                "do_wbf": config.do_wbf,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

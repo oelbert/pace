@@ -126,8 +126,9 @@ def evaporate_rain(
                 blinr,
                 mur,
             )
-            sink = min(timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
-            sink = min(qrain, sink)
+            sink = min(
+                qrain, min(timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
+            )
             if (use_rhc_revap) and (rh_tem >= rhc_revap):
                 sink = 0
 
