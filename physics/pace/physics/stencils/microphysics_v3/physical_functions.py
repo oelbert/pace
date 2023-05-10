@@ -123,7 +123,7 @@ def calc_heat_cap_and_latent_heat_coeff(
     q_liq = qliquid + qrain
     q_solid = qice + qsnow + qgraupel
     cvm = 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
-    te = cvm + temperature + lv00 * qvapor - li00 * q_solid
+    te = cvm * temperature + lv00 * qvapor - li00 * q_solid
     lcpk = (lv00 + d1_vap * temperature) / cvm
     icpk = (li00 + d1_ice * temperature) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * temperature) / cvm

@@ -340,7 +340,7 @@ class WarmRain:
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._fac_revap = 1.0
-        if config.tau_revp > 1.0e6:
+        if config.tau_revp > 1.0e-6:
             self._fac_revap = 1.0 - math.exp(-timestep / config.tau_revp)
 
         fac_rc = (4.0 / 3.0) * constants.PI * constants.RHO_W * config.rthresh ** 3
