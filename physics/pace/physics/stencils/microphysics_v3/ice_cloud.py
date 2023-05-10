@@ -43,7 +43,9 @@ def melt_cloud_ice(
 
     from __externals__ import ql_mlt, tau_imlt, tice_mlt, timestep
 
+    # Todo: this can be done at compile time
     fac_imlt = 1.0 - exp(-timestep / tau_imlt)
+    
     tc = temperature - tice_mlt
     if (tc > 0.0) and (qice > constants.QCMIN):
         sink = fac_imlt * tc / icpk

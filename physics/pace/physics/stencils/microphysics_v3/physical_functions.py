@@ -177,7 +177,7 @@ def update_hydrometeors_and_temperatures(
     q_solid = qice + qsnow + qgraupel
     cvm = 1.0 + qvapor * c1_vap + q_l * c1_liq + q_solid * c1_ice
 
-    tk = (te - lv00 + qvapor + li00 * (qice + qsnow + qgraupel)) / cvm
+    tk = (te - lv00 * qvapor + li00 * (qice + qsnow + qgraupel)) / cvm
     lcpk = (lv00 + d1_vap * tk) / cvm
     icpk = (li00 + d1_ice * tk) / cvm
     tcpk = (li20 + (d1_vap + d1_ice) * tk) / cvm
