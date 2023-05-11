@@ -373,7 +373,6 @@ class Sedimentation:
         quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
         timestep: float,
-        convert_mm_day: float,
     ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._is_ = self._idx.isc
@@ -403,7 +402,6 @@ class Sedimentation:
         ], f"Ice Formation Flag must be 1 or 2 not {config.ifflag}"
 
         self._timestep = timestep
-        self._convert_mm_day = convert_mm_day
         self.config = config
         self.li00 = config.li00
 

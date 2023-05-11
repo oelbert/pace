@@ -121,7 +121,10 @@ class FullMicrophysics:
         self._sub = make_quantity_2D()
 
         self._sedimentation = Sedimentation(
-            stencil_factory, quantity_factory, config, timestep, convert_mm_day
+            stencil_factory,
+            quantity_factory,
+            config,
+            timestep,
         )
 
         self._add_fluxes_and_surface_tracers = stencil_factory.from_origin_domain(

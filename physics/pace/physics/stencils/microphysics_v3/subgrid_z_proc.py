@@ -339,7 +339,9 @@ def wegener_bergeron_findeisen(
         and (qvapor > qsi)
         and (qvapor < qsw)
     ):
+        # TODO: This can be moved to compile-time
         fac_wbf = 1.0 - exp(-timestep / tau_wbf)
+
         sink = min(fac_wbf * qliquid, tc / icpk)
         qim = qi0_crt / density
         tmp = min(sink, basic.dim(qim, qice))
@@ -428,8 +430,7 @@ def freeze_bigg(
             * (exp(0.66 * tc) - 1.0)
             * qliquid ** 2.0
         )
-        sink = min(sink, tc / icpk)
-        sink = min(qliquid, sink)
+        sink = min(qliquid, min(sink, tc / icpk))
 
         (
             qvapor,

@@ -25,6 +25,7 @@ from .translate_start_fall import TranslateEndFall, TranslateStartFall
 from .translate_subgridz import TranslateSubgridZProc
 from .translate_tables import TranslateTableComputation
 from .translate_terminal_fall import TranslateTerminalFall
+from .translate_tracer_sedi import TranslateTracerSed
 from .translate_update_pressure_sfc_winds_phys import (
     TranslatePhysUpdatePressureSurfaceWinds,
 )
