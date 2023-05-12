@@ -201,6 +201,8 @@ def sedi_melt(
     index_3 = []
     count_4 = 0
     index_4 = []
+    count_5 = 0
+    index_5 = []
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
             for k in range(ke - 1, ks - 1, -1):
@@ -212,7 +214,7 @@ def sedi_melt(
                     for m in range(k + 1, ke + 1):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
                             count_2 += 1
-                            index_2.append((i, j, k))
+                            index_2.append((i, j, k, m))
                             break
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
@@ -250,7 +252,7 @@ def sedi_melt(
                             dtime = min(
                                 timestep,
                                 (z_edge[i, j, m] - z_edge[i, j, m + 1])
-                                / v_terminal[i, j, k],
+                                / v_terminal[i, j, k]
                             )
                             dtime = min(1.0, dtime / tau_mlt)
                             sink = min(
@@ -262,7 +264,7 @@ def sedi_melt(
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
                             if z_terminal[i, j, k] < z_surface[i, j]:
                                 count_3 += 1
-                                index_3.append((i, j, k))
+                                index_3.append((i, j, k, m))
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
@@ -314,8 +316,11 @@ def sedi_melt(
                             ) / cvm_tmp
                         if q_melt[i, j, k] < constants.QCMIN:
                             count_4 += 1
-                            index_4.append((i, j, k))
+                            index_4.append((i, j, k, m))
                             break
+                    count_5 += 1
+                    index_5.append((i, j, k))
+    breakpoint()
     if mode == "ice":
         return qice, qrain, r1, temperature, cvm
     elif mode == "snow":
