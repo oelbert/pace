@@ -551,7 +551,7 @@ class TranslateSediMelt(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        inputs["mode"] = "ice"
+        inputs["mode"] = "snow"
 
         compute_func = SediMelt(
             self.stencil_factory,
