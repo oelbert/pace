@@ -240,6 +240,7 @@ class SediMelt:
         qice,
         qsnow,
         qgraupel,
+        qmelt,
         cvm,
         temperature,
         delp,
@@ -283,6 +284,7 @@ class SediMelt:
                     self._je,
                     mode,
                 )
+                qmelt = qice
             elif mode == "snow":
                 (qsnow, qrain, column_rain, temperature, cvm,) = sedi_melt(
                     qvapor,
@@ -314,6 +316,7 @@ class SediMelt:
                     self._je,
                     mode,
                 )
+                qmelt = qsnow
             elif mode == "graupel":
                 (qgraupel, qrain, column_rain, temperature, cvm,) = sedi_melt(
                     qvapor,
@@ -345,6 +348,7 @@ class SediMelt:
                     self._je,
                     mode,
                 )
+                qmelt = qgraupel
             else:
                 raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
 
@@ -519,6 +523,7 @@ class TranslateSediMelt(TranslatePhysicsFortranData2Py):
             "qice": {"serialname": "sm_qi", "kend": namelist.npz, "mp3": True},
             "qsnow": {"serialname": "sm_qs", "kend": namelist.npz, "mp3": True},
             "qgraupel": {"serialname": "sm_qg", "kend": namelist.npz, "mp3": True},
+            "qmelt": {"serialname": "sm_qm", "kend": namelist.npz, "mp3": True},
             "cvm": {"serialname": "sm_cv", "kend": namelist.npz, "mp3": True},
             "temperature": {"serialname": "sm_pt", "kend": namelist.npz, "mp3": True},
             "delp": {"serialname": "sm_dp", "kend": namelist.npz, "mp3": True},
@@ -536,7 +541,7 @@ class TranslateSediMelt(TranslatePhysicsFortranData2Py):
         self.in_vars["parameters"] = ["dt"]
         self.out_vars = {
             "qrain": {"serialname": "sm_qr", "kend": namelist.npz, "mp3": True},
-            "qice": {"serialname": "sm_qi", "kend": namelist.npz, "mp3": True},
+            "qmelt": {"serialname": "sm_qm", "kend": namelist.npz, "mp3": True},
             "temperature": {"serialname": "sm_pt", "kend": namelist.npz, "mp3": True},
             "cvm": {"serialname": "sm_cv", "kend": namelist.npz, "mp3": True},
             "column_rain": {"serialname": "sm_r1", "mp3": True},
