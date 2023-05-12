@@ -605,7 +605,7 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
             "column_snow": {"serialname": "ts_s1", "mp3": True},
             "column_graupel": {"serialname": "ts_g1", "mp3": True},
         }
-        self.in_vars["parameters"] = ["dt", "ts_q"]
+        self.in_vars["parameters"] = ["dt"]
         self.out_vars = {
             "qvapor": {"serialname": "ts_qv", "kend": namelist.npz, "mp3": True},
             "qliquid": {"serialname": "ts_ql", "kend": namelist.npz, "mp3": True},
@@ -659,12 +659,14 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
+        ts_q = "qs"
+
         compute_func = TracerSedimentation(
             self.stencil_factory,
             self.quantity_factory,
             self.config,
             timestep=inputs.pop("dt"),
-            tracer=inputs.pop("ts_q"),
+            tracer=ts_q,
         )
 
         compute_func(**inputs)
