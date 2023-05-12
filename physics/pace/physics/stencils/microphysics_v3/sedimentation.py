@@ -22,6 +22,14 @@ from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
 from ..._config import MicroPhysicsConfig
 
 
+def moist_heat_capacity(
+    qvapor, qliquid, qrain, qice, qsnow, qgraupel, c1_ice, c1_liq, c1_vap
+):
+    q_liq = qliquid + qrain
+    q_solid = qice + qsnow + qgraupel
+    return 1.0 + qvapor * c1_vap + q_liq * c1_liq + q_solid * c1_ice
+
+
 def init_zeros_heat_cap_latent_heat_precip(
     qvapor: FloatField,
     qliquid: FloatField,
@@ -219,19 +227,27 @@ def sedi_melt(
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
                         ):
-                            cvm[i, j, k] = (
-                                1.0
-                                + qvapor[i, j, k] * c1_vap
-                                + (qliquid[i, j, k] + qrain[i, j, k]) * c1_liq
-                                + (qice[i, j, k] + qsnow[i, j, k] + qgraupel[i, j, k])
-                                * c1_ice
+                            cvm[i, j, k] = moist_heat_capacity(
+                                qvapor[i, j, k],
+                                qliquid[i, j, k],
+                                qrain[i, j, k],
+                                qice[i, j, k],
+                                qsnow[i, j, k],
+                                qgraupel[i, j, k],
+                                c1_ice,
+                                c1_liq,
+                                c1_vap,
                             )
-                            cvm[i, j, m] = (
-                                1.0
-                                + qvapor[i, j, m] * c1_vap
-                                + (qliquid[i, j, m] + qrain[i, j, m]) * c1_liq
-                                + (qice[i, j, m] + qsnow[i, j, m] + qgraupel[i, j, m])
-                                * c1_ice
+                            cvm[i, j, m] = moist_heat_capacity(
+                                qvapor[i, j, m],
+                                qliquid[i, j, m],
+                                qrain[i, j, m],
+                                qice[i, j, m],
+                                qsnow[i, j, m],
+                                qgraupel[i, j, m],
+                                c1_ice,
+                                c1_liq,
+                                c1_vap,
                             )
                             # cvm[i, j, k] = physfun.moist_heat_capacity(
                             #     qvapor[i, j, k],
@@ -252,7 +268,7 @@ def sedi_melt(
                             dtime = min(
                                 timestep,
                                 (z_edge[i, j, m] - z_edge[i, j, m + 1])
-                                / v_terminal[i, j, k]
+                                / v_terminal[i, j, k],
                             )
                             dtime = min(1.0, dtime / tau_mlt)
                             sink = min(
@@ -277,12 +293,16 @@ def sedi_melt(
                             else:
                                 qgraupel[i, j, k] = q_melt[i, j, k]
 
-                            cvm_tmp = (
-                                1.0
-                                + qvapor[i, j, k] * c1_vap
-                                + (qliquid[i, j, k] + qrain[i, j, k]) * c1_liq
-                                + (qice[i, j, k] + qsnow[i, j, k] + qgraupel[i, j, k])
-                                * c1_ice
+                            cvm_tmp = moist_heat_capacity(
+                                qvapor[i, j, k],
+                                qliquid[i, j, k],
+                                qrain[i, j, k],
+                                qice[i, j, k],
+                                qsnow[i, j, k],
+                                qgraupel[i, j, k],
+                                c1_ice,
+                                c1_liq,
+                                c1_vap,
                             )
                             # physfun.moist_heat_capacity(
                             #     qvapor[i, j, k],
@@ -296,12 +316,16 @@ def sedi_melt(
                                 temperature[i, j, k] * cvm[i, j, k]
                                 - li00 * sink * delp[i, j, m] / delp[i, j, k]
                             ) / cvm_tmp
-                            cvm_tmp = (
-                                1.0
-                                + qvapor[i, j, m] * c1_vap
-                                + (qliquid[i, j, m] + qrain[i, j, m]) * c1_liq
-                                + (qice[i, j, m] + qsnow[i, j, m] + qgraupel[i, j, m])
-                                * c1_ice
+                            cvm_tmp = moist_heat_capacity(
+                                qvapor[i, j, m],
+                                qliquid[i, j, m],
+                                qrain[i, j, m],
+                                qice[i, j, m],
+                                qsnow[i, j, m],
+                                qgraupel[i, j, m],
+                                c1_ice,
+                                c1_liq,
+                                c1_vap,
                             )
                             # physfun.moist_heat_capacity(
                             #     qvapor[i, j, m],
