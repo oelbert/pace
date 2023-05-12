@@ -309,6 +309,8 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
             "column_graupel": {"serialname": "sd_g1", "mp3": True},
         }
 
+        self.in_vars["parameters"] = ["dt"]
+
         self.out_vars = {
             "qvapor": {"serialname": "sd_qv", "kend": namelist.npz, "mp3": True},
             "qliquid": {"serialname": "sd_ql", "kend": namelist.npz, "mp3": True},
