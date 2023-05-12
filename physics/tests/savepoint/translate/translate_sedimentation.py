@@ -504,7 +504,7 @@ class TranslateSedimentation(TranslatePhysicsFortranData2Py):
         return self.slice_output(inputs)
 
 
-class TranslateSediMeltIce(TranslatePhysicsFortranData2Py):
+class TranslateSediMelt(TranslatePhysicsFortranData2Py):
     def __init__(
         self,
         grid,

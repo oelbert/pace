@@ -19,7 +19,7 @@ from .translate_sedimentation import (
     TranslateCalcVTIce,
     TranslateCalcVTSnow,
     TranslateInitSed,
-    TranslateSediMeltIce,
+    TranslateSediMelt,
     TranslateSedimentation,
 )
 from .translate_start_fall import TranslateEndFall, TranslateStartFall
