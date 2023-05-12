@@ -18,6 +18,7 @@ from .translate_prsfv3 import TranslatePrsFV3
 from .translate_sedimentation import (
     TranslateCalcVTIce,
     TranslateCalcVTSnow,
+    TranslateInitSed,
     TranslateSediMeltIce,
     TranslateSedimentation,
 )
