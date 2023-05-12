@@ -666,7 +666,7 @@ class TranslateInitSed(TranslatePhysicsFortranData2Py):
             "temperature": {"serialname": "is_pt", "kend": namelist.npz, "mp3": True},
             "icpk": {"serialname": "is_icpk", "kend": namelist.npz, "mp3": True},
             "preflux_water": {
-                "serialname": "is_pwf",
+                "serialname": "is_pfw",
                 "kend": namelist.npz,
                 "mp3": True,
             },
@@ -713,7 +713,7 @@ class TranslateInitSed(TranslatePhysicsFortranData2Py):
         self.out_vars = {
             "icpk": {"serialname": "is_icpk", "kend": namelist.npz, "mp3": True},
             "preflux_water": {
-                "serialname": "is_pwf",
+                "serialname": "is_pfw",
                 "kend": namelist.npz,
                 "mp3": True,
             },
@@ -763,8 +763,6 @@ class TranslateInitSed(TranslatePhysicsFortranData2Py):
 
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
-
-        inputs["mode"] = "ice"
 
         compute_func = InitSed(
             self.stencil_factory,
