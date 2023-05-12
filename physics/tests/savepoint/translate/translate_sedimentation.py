@@ -5,9 +5,90 @@ from pace.physics.stencils.microphysics_v3.sedimentation import (
     Sedimentation,
     calc_terminal_velocity_ice,
     calc_terminal_velocity_rsg,
+    init_zeros_heat_cap_latent_heat_precip,
     sedi_melt,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+class InitSed:
+    def __init__(
+        self,
+        stencil_factory: pace.dsl.StencilFactory,
+        config,
+    ):
+        self._idx = stencil_factory.grid_indexing
+
+        self._init_zeros_heat_cap_latent_heat_precip = (
+            stencil_factory.from_origin_domain(
+                func=init_zeros_heat_cap_latent_heat_precip,
+                externals={
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                    "lv00": config.lv00,
+                    "li00": config.li00,
+                    "li20": config.li20,
+                    "d1_vap": config.d1_vap,
+                    "d1_ice": config.d1_ice,
+                    "t_wfr": config.t_wfr,
+                },
+                origin=self._idx.origin_compute(),
+                domain=self._idx.domain_compute(),
+            )
+        )
+
+    def __call__(
+        self,
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        icpk,
+        preflux_water,
+        preflux_rain,
+        preflux_ice,
+        preflux_snow,
+        preflux_graupel,
+        vterminal_water,
+        vterminal_rain,
+        vterminal_ice,
+        vterminal_snow,
+        vterminal_graupel,
+        column_water,
+        column_rain,
+        column_ice,
+        column_snow,
+        column_graupel,
+    ):
+        self._init_zeros_heat_cap_latent_heat_precip(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            icpk,
+            preflux_water,
+            preflux_rain,
+            preflux_ice,
+            preflux_snow,
+            preflux_graupel,
+            vterminal_water,
+            vterminal_rain,
+            vterminal_ice,
+            vterminal_snow,
+            vterminal_graupel,
+            column_water,
+            column_rain,
+            column_ice,
+            column_snow,
+            column_graupel,
+        )
 
 
 class CalcVT:
@@ -552,6 +633,135 @@ class TranslateCalcVTSnow(TranslatePhysicsFortranData2Py):
         inputs["mode"] = "snow"
 
         compute_func = CalcVT(
+            self.stencil_factory,
+            self.config,
+        )
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
+
+
+class TranslateInitSed(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+
+        self.in_vars["data_vars"] = {
+            "qvapor": {"serialname": "is_qv", "kend": namelist.npz, "mp3": True},
+            "qliquid": {"serialname": "is_ql", "kend": namelist.npz, "mp3": True},
+            "qrain": {"serialname": "is_qr", "kend": namelist.npz, "mp3": True},
+            "qice": {"serialname": "is_qi", "kend": namelist.npz, "mp3": True},
+            "qsnow": {"serialname": "is_qs", "kend": namelist.npz, "mp3": True},
+            "qgraupel": {"serialname": "is_qg", "kend": namelist.npz, "mp3": True},
+            "temperature": {"serialname": "is_pt", "kend": namelist.npz, "mp3": True},
+            "icpk": {"serialname": "is_icpk", "kend": namelist.npz, "mp3": True},
+            "preflux_water": {
+                "serialname": "is_pwf",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "preflux_rain": {"serialname": "is_pfr", "kend": namelist.npz, "mp3": True},
+            "preflux_ice": {"serialname": "is_pfi", "kend": namelist.npz, "mp3": True},
+            "preflux_snow": {"serialname": "is_pfs", "kend": namelist.npz, "mp3": True},
+            "preflux_graupel": {
+                "serialname": "is_pfg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_water": {
+                "serialname": "is_vtw",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_rain": {
+                "serialname": "is_vtr",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_ice": {
+                "serialname": "is_vti",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_snow": {
+                "serialname": "is_vts",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_graupel": {
+                "serialname": "is_vtg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "column_water": {"serialname": "is_w1", "mp3": True},
+            "column_rain": {"serialname": "is_r1", "mp3": True},
+            "column_ice": {"serialname": "is_i1", "mp3": True},
+            "column_snow": {"serialname": "is_s1", "mp3": True},
+            "column_graupel": {"serialname": "is_g1", "mp3": True},
+        }
+
+        self.out_vars = {
+            "icpk": {"serialname": "is_icpk", "kend": namelist.npz, "mp3": True},
+            "preflux_water": {
+                "serialname": "is_pwf",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "preflux_rain": {"serialname": "is_pfr", "kend": namelist.npz, "mp3": True},
+            "preflux_ice": {"serialname": "is_pfi", "kend": namelist.npz, "mp3": True},
+            "preflux_snow": {"serialname": "is_pfs", "kend": namelist.npz, "mp3": True},
+            "preflux_graupel": {
+                "serialname": "is_pfg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_water": {
+                "serialname": "is_vtw",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_rain": {
+                "serialname": "is_vtr",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_ice": {
+                "serialname": "is_vti",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_snow": {
+                "serialname": "is_vts",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "vterminal_graupel": {
+                "serialname": "is_vtg",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
+            "column_water": {"serialname": "is_w1", "mp3": True},
+            "column_rain": {"serialname": "is_r1", "mp3": True},
+            "column_ice": {"serialname": "is_i1", "mp3": True},
+            "column_snow": {"serialname": "is_s1", "mp3": True},
+            "column_graupel": {"serialname": "is_g1", "mp3": True},
+        }
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        inputs["mode"] = "ice"
+
+        compute_func = InitSed(
             self.stencil_factory,
             self.config,
         )
