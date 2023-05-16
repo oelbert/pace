@@ -344,7 +344,6 @@ def sedi_melt(
                             break
                     count_5 += 1
                     index_5.append((i, j, k))
-    breakpoint()
     if mode == "ice":
         return qice, qrain, r1, temperature, cvm
     elif mode == "snow":
@@ -719,7 +718,7 @@ class Sedimentation:
 
         self._adjust_fluxes(preflux_ice)
 
-        # Terminal fall and melting of falling snow into rain
+        # Terminal fall and melting of falling snow into rain:
         if self.config.const_vs is False:
             self._calc_terminal_rsg_velocity(
                 qsnow,

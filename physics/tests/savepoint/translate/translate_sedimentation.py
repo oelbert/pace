@@ -612,6 +612,7 @@ class TranslateCalcVTSnow(TranslatePhysicsFortranData2Py):
         stencil_factory: pace.dsl.StencilFactory,
     ):
         super().__init__(grid, namelist, stencil_factory)
+        self.max_error = 1.0e-30
 
         self.in_vars["data_vars"] = {
             "qfall": {"serialname": "vts_qs", "kend": namelist.npz, "mp3": True},
