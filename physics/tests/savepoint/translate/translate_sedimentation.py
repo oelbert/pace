@@ -253,7 +253,7 @@ class SediMelt:
     ):
         if self.config.do_sedi_melt:
             if mode == "ice":
-                (qice, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -284,7 +284,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "snow":
-                (qsnow, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -315,7 +315,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "graupel":
-                (qgraupel, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,

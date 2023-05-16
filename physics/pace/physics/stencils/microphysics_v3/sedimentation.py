@@ -344,12 +344,6 @@ def sedi_melt(
                             break
                     count_5 += 1
                     index_5.append((i, j, k))
-    if mode == "ice":
-        return qice, qrain, r1, temperature, cvm
-    elif mode == "snow":
-        return qsnow, qrain, r1, temperature, cvm
-    else:  # mode == "graupel":
-        return qgraupel, qrain, r1, temperature, cvm
 
 
 def calc_edge_and_terminal_height(
@@ -657,13 +651,7 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            (
-                qice.data[:],
-                qrain.data[:],
-                column_rain.data[:],
-                temperature.data[:],
-                self._cvm.data[:],
-            ) = sedi_melt(
+            sedi_melt(
                 qvapor.data[:],
                 qliquid.data[:],
                 qrain.data[:],
@@ -755,13 +743,7 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            (
-                qsnow.data[:],
-                qrain.data[:],
-                column_rain.data[:],
-                temperature.data[:],
-                self._cvm.data[:],
-            ) = sedi_melt(
+            sedi_melt(
                 qvapor.data[:],
                 qliquid.data[:],
                 qrain.data[:],
@@ -853,13 +835,7 @@ class Sedimentation:
         )
 
         if self.config.do_sedi_melt:
-            (
-                qgraupel.data[:],
-                qrain.data[:],
-                column_rain.data[:],
-                temperature.data[:],
-                self._cvm.data[:],
-            ) = sedi_melt(
+            sedi_melt(
                 qvapor.data[:],
                 qliquid.data[:],
                 qrain.data[:],

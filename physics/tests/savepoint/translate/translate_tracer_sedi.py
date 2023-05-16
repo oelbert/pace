@@ -190,7 +190,7 @@ class TracerSedimentation:
             )
 
             if self.config.do_sedi_melt:
-                (qice, qrain, column_rain, temperature, self._cvm.data[:],) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -281,13 +281,7 @@ class TracerSedimentation:
             )
 
             if self.config.do_sedi_melt:
-                (
-                    qsnow,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    self._cvm.data[:],
-                ) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -378,13 +372,7 @@ class TracerSedimentation:
             )
 
             if self.config.do_sedi_melt:
-                (
-                    qgraupel,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    self._cvm.data[:],
-                ) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
