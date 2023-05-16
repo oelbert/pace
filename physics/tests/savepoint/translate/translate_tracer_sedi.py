@@ -59,7 +59,6 @@ class TracerSedimentation:
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
-        self._icpk = make_quantity()
         self._cvm = make_quantity()
 
         if self._tracer == "qi":
@@ -146,6 +145,7 @@ class TracerSedimentation:
         z_surface,
         z_edge,
         z_terminal,
+        icpk,
     ):
         if self._tracer == "qi":
             # Terminal fall and melting of falling cloud ice into rain:
@@ -200,14 +200,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    z_edge.data[:],
-                    z_terminal.data[:],
-                    z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_imlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -291,14 +291,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    z_edge.data[:],
-                    z_terminal.data[:],
-                    z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_smlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -382,14 +382,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    z_edge.data[:],
-                    z_terminal.data[:],
-                    z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_gmlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -585,6 +585,7 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
             "z_edge": {"serialname": "ts_ze", "mp3": True},
             "z_terminal": {"serialname": "ts_zt", "mp3": True},
             "z_surface": {"serialname": "ts_zs", "mp3": True},
+            "icpk": {"serialname": "ts_ic", "mp3": True},
         }
         self.in_vars["parameters"] = ["dt"]
         self.out_vars = {
