@@ -253,7 +253,7 @@ class SediMelt:
     ):
         if self.config.do_sedi_melt:
             if mode == "ice":
-                (qice, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -284,7 +284,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "snow":
-                (qsnow, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -300,7 +300,7 @@ class SediMelt:
                     self._timestep,
                     vterminal,
                     column_rain,
-                    self.config.tau_imlt,
+                    self.config.tau_smlt,
                     icpk,
                     self.li00,
                     self.c1_vap,
@@ -315,7 +315,7 @@ class SediMelt:
                     mode,
                 )
             elif mode == "graupel":
-                (qgraupel, qrain, column_rain, temperature, cvm,) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -331,7 +331,7 @@ class SediMelt:
                     self._timestep,
                     vterminal,
                     column_rain,
-                    self.config.tau_imlt,
+                    self.config.tau_gmlt,
                     icpk,
                     self.li00,
                     self.c1_vap,
@@ -551,7 +551,7 @@ class TranslateSediMelt(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        inputs["mode"] = "ice"
+        inputs["mode"] = "snow"
 
         compute_func = SediMelt(
             self.stencil_factory,

@@ -10,7 +10,7 @@ from pace.physics.stencils.microphysics_v3.sedimentation import (
 )
 from pace.physics.stencils.microphysics_v3.terminal_fall import TerminalFall
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
-from pace.util import X_DIM, Y_DIM, Z_DIM, Z_INTERFACE_DIM
+from pace.util import X_DIM, Y_DIM, Z_DIM
 
 
 class TracerSedimentation:
@@ -59,14 +59,6 @@ class TracerSedimentation:
         def make_quantity():
             return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
 
-        self._z_surface = quantity_factory.zeros([X_DIM, Y_DIM], units="unknown")
-        self._z_edge = quantity_factory.zeros(
-            [X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown"
-        )
-        self._z_terminal = quantity_factory.zeros(
-            [X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown"
-        )
-        self._icpk = make_quantity()
         self._cvm = make_quantity()
 
         if self._tracer == "qi":
@@ -150,6 +142,10 @@ class TracerSedimentation:
         column_ice,
         column_snow,
         column_graupel,
+        z_surface,
+        z_edge,
+        z_terminal,
+        icpk,
     ):
         if self._tracer == "qi":
             # Terminal fall and melting of falling cloud ice into rain:
@@ -186,21 +182,15 @@ class TracerSedimentation:
                 )
 
             self._calc_edge_and_terminal_height(
-                self._z_surface,
-                self._z_edge,
-                self._z_terminal,
+                z_surface,
+                z_edge,
+                z_terminal,
                 delz,
                 vterminal_tracer,
             )
 
             if self.config.do_sedi_melt:
-                (
-                    qice,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    self._cvm.data[:],
-                ) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -210,14 +200,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    self._z_edge.data[:],
-                    self._z_terminal.data[:],
-                    self._z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_imlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -245,8 +235,8 @@ class TracerSedimentation:
                 delp,
                 delz,
                 vterminal_tracer,
-                self._z_edge,
-                self._z_terminal,
+                z_edge,
+                z_terminal,
                 preflux_tracer,
                 column_ice,
                 column_energy_change,
@@ -283,21 +273,15 @@ class TracerSedimentation:
                 )
 
             self._calc_edge_and_terminal_height(
-                self._z_surface,
-                self._z_edge,
-                self._z_terminal,
+                z_surface,
+                z_edge,
+                z_terminal,
                 delz,
                 vterminal_tracer,
             )
 
             if self.config.do_sedi_melt:
-                (
-                    qsnow,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    self._cvm.data[:],
-                ) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -307,14 +291,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    self._z_edge.data[:],
-                    self._z_terminal.data[:],
-                    self._z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_smlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -342,8 +326,8 @@ class TracerSedimentation:
                 delp,
                 delz,
                 vterminal_tracer,
-                self._z_edge,
-                self._z_terminal,
+                z_edge,
+                z_terminal,
                 preflux_tracer,
                 column_snow,
                 column_energy_change,
@@ -380,21 +364,15 @@ class TracerSedimentation:
                 )
 
             self._calc_edge_and_terminal_height(
-                self._z_surface,
-                self._z_edge,
-                self._z_terminal,
+                z_surface,
+                z_edge,
+                z_terminal,
                 delz,
                 vterminal_tracer,
             )
 
             if self.config.do_sedi_melt:
-                (
-                    qgraupel,
-                    qrain,
-                    column_rain,
-                    temperature,
-                    self._cvm.data[:],
-                ) = sedi_melt(
+                sedi_melt(
                     qvapor,
                     qliquid,
                     qrain,
@@ -404,14 +382,14 @@ class TracerSedimentation:
                     self._cvm.data[:],
                     temperature,
                     delp,
-                    self._z_edge.data[:],
-                    self._z_terminal.data[:],
-                    self._z_surface.data[:],
+                    z_edge,
+                    z_terminal,
+                    z_surface,
                     self._timestep,
                     vterminal_tracer,
                     column_rain,
                     self.config.tau_gmlt,
-                    self._icpk.data[:],
+                    icpk,
                     self.li00,
                     self.c1_vap,
                     self.c1_liq,
@@ -439,8 +417,8 @@ class TracerSedimentation:
                 delp,
                 delz,
                 vterminal_tracer,
-                self._z_edge,
-                self._z_terminal,
+                z_edge,
+                z_terminal,
                 preflux_tracer,
                 column_graupel,
                 column_energy_change,
@@ -478,9 +456,9 @@ class TracerSedimentation:
                     )
 
                 self._calc_edge_and_terminal_height(
-                    self._z_surface,
-                    self._z_edge,
-                    self._z_terminal,
+                    z_surface,
+                    z_edge,
+                    z_terminal,
                     delz,
                     vterminal_tracer,
                 )
@@ -499,8 +477,8 @@ class TracerSedimentation:
                     delp,
                     delz,
                     vterminal_tracer,
-                    self._z_edge,
-                    self._z_terminal,
+                    z_edge,
+                    z_terminal,
                     preflux_tracer,
                     column_water,
                     column_energy_change,
@@ -537,9 +515,9 @@ class TracerSedimentation:
                 )
 
             self._calc_edge_and_terminal_height(
-                self._z_surface,
-                self._z_edge,
-                self._z_terminal,
+                z_surface,
+                z_edge,
+                z_terminal,
                 delz,
                 vterminal_tracer,
             )
@@ -558,8 +536,8 @@ class TracerSedimentation:
                 delp,
                 delz,
                 vterminal_tracer,
-                self._z_edge,
-                self._z_terminal,
+                z_edge,
+                z_terminal,
                 preflux_tracer,
                 column_rain,
                 column_energy_change,
@@ -604,6 +582,10 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
             "column_ice": {"serialname": "ts_i1", "mp3": True},
             "column_snow": {"serialname": "ts_s1", "mp3": True},
             "column_graupel": {"serialname": "ts_g1", "mp3": True},
+            "z_edge": {"serialname": "ts_ze", "mp3": True},
+            "z_terminal": {"serialname": "ts_zt", "mp3": True},
+            "z_surface": {"serialname": "ts_zs", "mp3": True},
+            "icpk": {"serialname": "ts_ic", "mp3": True},
         }
         self.in_vars["parameters"] = ["dt"]
         self.out_vars = {
@@ -637,6 +619,13 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
                 "kend": namelist.npz,
                 "mp3": True,
             },
+            "z_edge": {"serialname": "ts_ze", "kend": namelist.npz + 1, "mp3": True},
+            "z_terminal": {
+                "serialname": "ts_zt",
+                "kend": namelist.npz + 1,
+                "mp3": True,
+            },
+            "z_surface": {"serialname": "ts_zs", "kend": namelist.npz + 1, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory

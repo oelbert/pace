@@ -1,5 +1,5 @@
 from gt4py.cartesian import gtscript
-from gt4py.cartesian.gtscript import exp, log, sqrt
+from gt4py.cartesian.gtscript import exp, floor, log, sqrt
 
 import pace.fv3core.stencils.basic_operations as basic
 import pace.util.constants as constants
@@ -249,7 +249,20 @@ def sat_spec_hum_water(temp, density):
     compute the saturated specific humidity, core function
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
-    dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+    # dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+    dqdt = (
+        10.0
+        * (
+            table0(temp + 0.1)
+            - table0(temp)
+            + (temp - floor(temp))
+            * (
+                (table0(temp + 0.2) - table0(temp + 0.1))
+                - (table0(temp + 0.1) - table0(temp))
+            )
+        )
+        / (constants.RVGAS * temp * density)
+    )
     return q, dqdt
 
 
@@ -258,14 +271,31 @@ def sat_spec_hum_water_ice(temp, density):
     if temp > constants.TICE0 + 102.0:
         temp = constants.TICE0 + 102.0
     q = table2(temp) / (constants.RVGAS * temp * density)
-    if temp < constants.TICE0:
-        dqdt = (
-            q * (constants.D2ICE0 + constants.LI2_0 / temp) / (constants.RVGAS * temp)
+    # if temp < constants.TICE0:
+    #     dqdt = (
+    #         q * (
+    #             constants.D2ICE0 + constants.LI2_0 / temp
+    #         ) / (constants.RVGAS * temp)
+    #     )
+    # else:
+    #     dqdt = (
+    #         q * (
+    #             constants.DC_VAP0 + constants.LV0_0 / temp
+    #         ) / (constants.RVGAS * temp)
+    #     )
+    dqdt = (
+        10.0
+        * (
+            table2(temp + 0.1)
+            - table2(temp)
+            + (temp - floor(temp))
+            * (
+                (table2(temp + 0.2) - table2(temp + 0.1))
+                - (table2(temp + 0.1) - table2(temp))
+            )
         )
-    else:
-        dqdt = (
-            q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
-        )
+        / (constants.RVGAS * temp * density)
+    )
     return q, dqdt
 
 

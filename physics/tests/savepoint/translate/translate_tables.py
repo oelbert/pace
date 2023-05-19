@@ -18,12 +18,30 @@ def init_tables(
         table2 = physfun.table2(temp)
 
 
-class InitTables:
+def calc_table_values(
+    temp: FloatField,
+    den: FloatField,
+    iqs: FloatField,
+    wqs: FloatField,
+    didt: FloatField,
+    dwdt: FloatField,
+):
+    with computation(FORWARD), interval(...):
+        wqs, dwdt = physfun.sat_spec_hum_water(temp, den)
+        iqs, didt = physfun.sat_spec_hum_water_ice(temp, den)
+
+
+class CalcTables:
     def __init__(self, stencil_factory: pace.dsl.StencilFactory, config):
         self._idx = stencil_factory.grid_indexing
         self.config = config
         self._init_tables = stencil_factory.from_origin_domain(
             func=init_tables,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
+        )
+        self._calc_table_values = stencil_factory.from_origin_domain(
+            func=calc_table_values,
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
@@ -33,11 +51,25 @@ class InitTables:
         temp: FloatField,
         table0: FloatField,
         table2: FloatField,
+        iqs: FloatField,
+        wqs: FloatField,
+        didt: FloatField,
+        dwdt: FloatField,
+        temp2: FloatField,
+        den: FloatField,
     ):
         self._init_tables(
             temp,
             table0,
             table2,
+        )
+        self._calc_table_values(
+            temp2,
+            den,
+            iqs,
+            wqs,
+            didt,
+            dwdt,
         )
 
 
@@ -54,11 +86,21 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
             "temp": {"serialname": "tc_temp", "mp3": True},
             "table0": {"serialname": "tc_t0", "mp3": True},
             "table2": {"serialname": "tc_t2", "mp3": True},
+            "wqs": {"serialname": "tab_wq", "mp3": True},
+            "dwdt": {"serialname": "tab_dwq", "mp3": True},
+            "iqs": {"serialname": "tab_iq", "mp3": True},
+            "didt": {"serialname": "tab_diq", "mp3": True},
+            "temp2": {"serialname": "tab_pt", "mp3": True},
+            "den": {"serialname": "tab_den", "mp3": True},
         }
 
         self.out_vars = {
             "table0": {"serialname": "tc_t0", "kend": namelist.npz, "mp3": True},
             "table2": {"serialname": "tc_t2", "kend": namelist.npz, "mp3": True},
+            "wqs": {"serialname": "tab_wq", "kend": namelist.npz, "mp3": True},
+            "dwdt": {"serialname": "tab_dwq", "kend": namelist.npz, "mp3": True},
+            "iqs": {"serialname": "tab_iq", "kend": namelist.npz, "mp3": True},
+            "didt": {"serialname": "tab_diq", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
@@ -68,7 +110,7 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        compute_func = InitTables(
+        compute_func = CalcTables(
             self.stencil_factory,
             self.config,
         )

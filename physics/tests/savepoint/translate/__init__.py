@@ -9,6 +9,7 @@ from .translate_fillgfs import TranslateFillGFS
 from .translate_fv_update_phys import TranslateFVUpdatePhys
 from .translate_gfs_physics_driver import TranslateGFSPhysicsDriver
 from .translate_ice_cloud import TranslateIceCloud
+from .translate_icesub import TranslateIceSubFunc
 from .translate_microphysics import TranslateMicroph
 from .translate_microphysics3 import TranslateMicrophysics3
 from .translate_mp_full import TranslateMPFull
