@@ -265,7 +265,30 @@ class IceFunction:
         tcp3: FloatField,
         di: FloatField,
     ):
-        ...
+        self._test_func_stencil(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                density,
+                density_factor,
+                vterminal_water,
+                vterminal_rain,
+                vterminal_ice,
+                vterminal_snow,
+                vterminal_graupel,
+                h_var,
+                cvm,
+                te8,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+                di,
+        )
 
 
 class TranslateIceSubFunc(TranslatePhysicsFortranData2Py):
