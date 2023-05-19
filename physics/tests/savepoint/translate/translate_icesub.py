@@ -68,65 +68,65 @@ def test_func_stencil(
             tcp3,
         )
 
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            cvm,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = freeze_cloud_water(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            density,
-            cvm,
-            te,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        )
+    #     (
+    #         qvapor,
+    #         qliquid,
+    #         qrain,
+    #         qice,
+    #         qsnow,
+    #         qgraupel,
+    #         temperature,
+    #         cvm,
+    #         lcpk,
+    #         icpk,
+    #         tcpk,
+    #         tcp3,
+    #     ) = freeze_cloud_water(
+    #         qvapor,
+    #         qliquid,
+    #         qrain,
+    #         qice,
+    #         qsnow,
+    #         qgraupel,
+    #         temperature,
+    #         density,
+    #         cvm,
+    #         te,
+    #         lcpk,
+    #         icpk,
+    #         tcpk,
+    #         tcp3,
+    #     )
 
-    with computation(FORWARD):
-        with interval(0, 1):
-            if __INLINED(z_slope_ice):
-                # linear_prof
-                di = 0.0
-        with interval(1, None):
-            if __INLINED(z_slope_ice):
-                dq = 0.5 * (qice - qice[0, 0, -1])
-    with computation(FORWARD):
-        with interval(1, -1):
-            if __INLINED(z_slope_ice):
-                # Use twice the strength of the
-                # positive definiteness limiter (lin et al 1994)
-                di = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qice[0, 0, 0])
-                if dq * dq[0, 0, +1] <= 0.0:
-                    if dq > 0.0:  # Local maximum
-                        di = min(di, min(dq, -dq[0, 0, +1]))
-                    else:  # Local minimum
-                        di = 0.0
-        with interval(-1, None):
-            if __INLINED(z_slope_ice):
-                di = 0.0
-    with computation(PARALLEL), interval(...):
-        if __INLINED(z_slope_ice):
-            # Impose a presumed background horizontal variability that is
-            # proportional to the value itself
-            di = max(di, max(0.0, h_var * qice))
-        else:
-            di = max(0.0, h_var * qice)
+    # with computation(FORWARD):
+    #     with interval(0, 1):
+    #         if __INLINED(z_slope_ice):
+    #             # linear_prof
+    #             di = 0.0
+    #     with interval(1, None):
+    #         if __INLINED(z_slope_ice):
+    #             dq = 0.5 * (qice - qice[0, 0, -1])
+    # with computation(FORWARD):
+    #     with interval(1, -1):
+    #         if __INLINED(z_slope_ice):
+    #             # Use twice the strength of the
+    #             # positive definiteness limiter (lin et al 1994)
+    #             di = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qice[0, 0, 0])
+    #             if dq * dq[0, 0, +1] <= 0.0:
+    #                 if dq > 0.0:  # Local maximum
+    #                     di = min(di, min(dq, -dq[0, 0, +1]))
+    #                 else:  # Local minimum
+    #                     di = 0.0
+    #     with interval(-1, None):
+    #         if __INLINED(z_slope_ice):
+    #             di = 0.0
+    # with computation(PARALLEL), interval(...):
+    #     if __INLINED(z_slope_ice):
+    #         # Impose a presumed background horizontal variability that is
+    #         # proportional to the value itself
+    #         di = max(di, max(0.0, h_var * qice))
+    #     else:
+    #         di = max(0.0, h_var * qice)
 
 
 class IceFunction:
