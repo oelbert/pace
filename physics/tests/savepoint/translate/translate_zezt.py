@@ -69,6 +69,7 @@ class TranslateZeZt(TranslatePhysicsFortranData2Py):
                 "kend": namelist.npz + 1,
                 "mp3": True,
             },
+            "z_surface": {"serialname": "zz_zs", "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
