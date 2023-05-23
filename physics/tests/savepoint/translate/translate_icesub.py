@@ -215,19 +215,19 @@ def test_func_stencil(
             vterminal_snow,
         )
 
-        # (qice, qsnow, di, temperature) = autoconvert_ice_to_snow(
-        #     qice, qsnow, temperature, density, di
-        # )
+        (qice, qsnow, di, temperature) = autoconvert_ice_to_snow(
+            qice, qsnow, temperature, density, di
+        )
 
-        # qice, qgraupel = accrete_graupel_with_ice(
-        #     qice,
-        #     qgraupel,
-        #     temperature,
-        #     density,
-        #     density_factor,
-        #     vterminal_ice,
-        #     vterminal_graupel,
-        # )
+        qice, qgraupel = accrete_graupel_with_ice(
+            qice,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_ice,
+            vterminal_graupel,
+        )
 
         # (
         #     qvapor,
