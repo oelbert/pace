@@ -384,6 +384,7 @@ class IceFunction:
                 "acco_0_9": config.acco[0][9],
                 "acco_1_9": config.acco[1][9],
                 "acco_2_9": config.acco[2][9],
+                "cracs": config.cracs,
                 "csacr": config.csacr,
                 "csacw": config.csacw,
                 "cgacw": config.cgacw,
