@@ -45,7 +45,7 @@ def melt_cloud_ice(
 
     # Todo: this can be done at compile time
     fac_imlt = 1.0 - exp(-timestep / tau_imlt)
-    
+
     tc = temperature - tice_mlt
     if (tc > 0.0) and (qice > constants.QCMIN):
         sink = fac_imlt * tc / icpk
@@ -304,7 +304,7 @@ def melt_snow(
                 cvm,
                 blins,
                 mus,
-                constants.C_LIQ,
+                constants.C_LIQ0,
                 csmlt_1,
                 csmlt_2,
                 csmlt_3,
@@ -471,7 +471,7 @@ def melt_graupel(
                 cvm,
                 bling,
                 mug,
-                constants.C_LIQ,
+                constants.C_LIQ0,
                 cgmlt_1,
                 cgmlt_2,
                 cgmlt_3,
