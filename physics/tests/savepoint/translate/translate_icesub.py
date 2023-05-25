@@ -19,6 +19,7 @@ from pace.physics.stencils.microphysics_v3.ice_cloud import (  # noqa
     accrete_snow_with_rain_and_freeze_to_graupel,
     autoconvert_ice_to_snow,
     autoconvert_snow_to_graupel,
+    melt_graupel,
     melt_snow,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
@@ -139,6 +140,39 @@ def test_func_stencil(
     #         di = max(0.0, h_var * qice)
 
     with computation(PARALLEL), interval(...):
+        # (
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     cvm,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        # ) = melt_snow(
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     density,
+        #     density_factor,
+        #     vterminal_water,
+        #     vterminal_rain,
+        #     vterminal_snow,
+        #     cvm,
+        #     te,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        # )
         (
             qvapor,
             qliquid,
@@ -152,7 +186,7 @@ def test_func_stencil(
             icpk,
             tcpk,
             tcp3,
-        ) = melt_snow(
+        ) = melt_graupel(
             qvapor,
             qliquid,
             qrain,
@@ -164,7 +198,7 @@ def test_func_stencil(
             density_factor,
             vterminal_water,
             vterminal_rain,
-            vterminal_snow,
+            vterminal_graupel,
             cvm,
             te,
             lcpk,
@@ -172,39 +206,6 @@ def test_func_stencil(
             tcpk,
             tcp3,
         )
-    #     (
-    #         qvapor,
-    #         qliquid,
-    #         qrain,
-    #         qice,
-    #         qsnow,
-    #         qgraupel,
-    #         temperature,
-    #         cvm,
-    #         lcpk,
-    #         icpk,
-    #         tcpk,
-    #         tcp3,
-    #     ) = melt_graupel(
-    #         qvapor,
-    #         qliquid,
-    #         qrain,
-    #         qice,
-    #         qsnow,
-    #         qgraupel,
-    #         temperature,
-    #         density,
-    #         density_factor,
-    #         vterminal_water,
-    #         vterminal_rain,
-    #         vterminal_graupel,
-    #         cvm,
-    #         te,
-    #         lcpk,
-    #         icpk,
-    #         tcpk,
-    #         tcp3,
-    #     )
     #     qice, qsnow = accrete_snow_with_ice(
     #         qice,
     #         qsnow,
