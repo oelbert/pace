@@ -205,28 +205,28 @@ def test_func_stencil(
     #     tcpk,
     #     tcp3,
     # )
-    with computation(PARALLEL), interval(...):
-        qice, qsnow = accrete_snow_with_ice(
-            qice,
-            qsnow,
-            temperature,
-            density,
-            density_factor,
-            vterminal_ice,
-            vterminal_snow,
-        )
-        (qice, qsnow, di, temperature) = autoconvert_ice_to_snow(
-            qice, qsnow, temperature, density, di
-        )
-    #     qice, qgraupel = accrete_graupel_with_ice(
+    #     qice, qsnow = accrete_snow_with_ice(
     #         qice,
-    #         qgraupel,
+    #         qsnow,
     #         temperature,
     #         density,
     #         density_factor,
     #         vterminal_ice,
-    #         vterminal_graupel,
+    #         vterminal_snow,
     #     )
+    #     (qice, qsnow, di, temperature) = autoconvert_ice_to_snow(
+    #         qice, qsnow, temperature, density, di
+    #     )
+    with computation(PARALLEL), interval(...):
+        qice, qgraupel = accrete_graupel_with_ice(
+            qice,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_ice,
+            vterminal_graupel,
+        )
 
     # with computation(PARALLEL), interval(...):
     #     (
