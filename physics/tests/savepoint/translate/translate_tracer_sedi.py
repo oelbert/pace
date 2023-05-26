@@ -648,7 +648,7 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        ts_q = "qs"
+        ts_q = "qi"
 
         compute_func = TracerSedimentation(
             self.stencil_factory,
