@@ -142,39 +142,39 @@ class RainFunction:
             reevap (inout):
             h_var (in):
         """
-        self._evaporate_rain(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            delp,
-            temperature,
-            density,
-            density_factor,
-            reevap,
-            h_var,
-        )
-
-        # self._accrete_rain(
+        # self._evaporate_rain(
+        #     qvapor,
         #     qliquid,
         #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     delp,
         #     temperature,
         #     density,
         #     density_factor,
-        #     vterminal_water,
-        #     vterminal_rain,
-        # )
-
-        # self._autoconvert_water_rain(
-        #     qliquid,
-        #     qrain,
-        #     cloud_condensation_nuclei,
-        #     temperature,
-        #     density,
+        #     reevap,
         #     h_var,
         # )
+
+        self._accrete_rain(
+            qliquid,
+            qrain,
+            temperature,
+            density,
+            density_factor,
+            vterminal_water,
+            vterminal_rain,
+        )
+
+        self._autoconvert_water_rain(
+            qliquid,
+            qrain,
+            cloud_condensation_nuclei,
+            temperature,
+            density,
+            h_var,
+        )
 
 
 class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
