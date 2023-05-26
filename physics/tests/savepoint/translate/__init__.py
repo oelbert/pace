@@ -33,4 +33,5 @@ from .translate_update_pressure_sfc_winds_phys import (
 )
 from .translate_update_tracers_phys import TranslatePhysUpdateTracers
 from .translate_warm_rain import TranslateWarmRain
+from .translate_wrain_sub import TranslateWRainSubFunc
 from .translate_zezt import TranslateZeZt
