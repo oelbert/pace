@@ -474,7 +474,7 @@ class TerminalFall:
                 "do_sedi_uv": config.do_sedi_uv,
                 "do_sedi_w": config.do_sedi_w,
                 "do_sedi_heat": config.do_sedi_heat,
-                "cw": constants.C_ICE,
+                "cw": constants.C_ICE0,
                 "c1_ice": config.c1_ice,
                 "c1_liq": config.c1_liq,
                 "c1_vap": config.c1_vap,

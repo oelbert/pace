@@ -45,7 +45,7 @@ def melt_cloud_ice(
 
     # Todo: this can be done at compile time
     fac_imlt = 1.0 - exp(-timestep / tau_imlt)
-    
+
     tc = temperature - tice_mlt
     if (tc > 0.0) and (qice > constants.QCMIN):
         sink = fac_imlt * tc / icpk
@@ -216,6 +216,7 @@ def melt_snow(
         acco_2_1,
         acco_2_6,
         blins,
+        cracs,
         csacr,
         csacw,
         csmlt_1,
@@ -277,7 +278,7 @@ def melt_snow(
                 vterminal_r,
                 vterminal_s,
                 density,
-                csacr,
+                cracs,
                 acco_0_0,
                 acco_1_0,
                 acco_2_0,
@@ -304,7 +305,7 @@ def melt_snow(
                 cvm,
                 blins,
                 mus,
-                constants.C_LIQ,
+                constants.C_LIQ0,
                 csmlt_1,
                 csmlt_2,
                 csmlt_3,
@@ -471,7 +472,7 @@ def melt_graupel(
                 cvm,
                 bling,
                 mug,
-                constants.C_LIQ,
+                constants.C_LIQ0,
                 cgmlt_1,
                 cgmlt_2,
                 cgmlt_3,
@@ -710,9 +711,9 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
     from __externals__ import (
         acc2,
         acc3,
-        acco_0_2,
-        acco_1_2,
-        acco_2_2,
+        acco_0_1,
+        acco_1_1,
+        acco_2_1,
         cgfr_1,
         cgfr_2,
         csacr,
@@ -732,9 +733,9 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
                 vterminal_r,
                 density,
                 csacr,
-                acco_0_2,
-                acco_1_2,
-                acco_2_2,
+                acco_0_1,
+                acco_1_1,
+                acco_2_1,
                 acc2,
                 acc3,
             )
@@ -1373,6 +1374,7 @@ class IceCloud:
                 "acco_0_9": config.acco[0][9],
                 "acco_1_9": config.acco[1][9],
                 "acco_2_9": config.acco[2][9],
+                "cracs": config.cracs,
                 "csacr": config.csacr,
                 "csacw": config.csacw,
                 "cgacw": config.cgacw,
