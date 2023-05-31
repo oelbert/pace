@@ -114,3 +114,25 @@ TerminalFall:
       tf_pfi: 1e-14
       tf_i1: 1e-14
       tf_dte: 1e-14
+
+SubgridZProc:
+  - backend: numpy
+    near_zero: 1.e-15
+    ignore_near_zero_errors:
+      - sz_qv
+      - sz_ql
+      - sz_qr
+      - sz_qi
+      - sz_qs
+      - sz_qg
+
+SubgridZSubs:
+  - backend: numpy
+    near_zero: 1.e-15
+    ignore_near_zero_errors:
+      - szs_qv
+      - szs_ql
+      - szs_qr
+      - szs_qi
+      - szs_qs
+      - szs_qg
