@@ -33,6 +33,11 @@ def vertical_subgrid_processes(
     cloud_condensation_nuclei: FloatField,
     cloud_ice_nuclei: FloatField,
     te: FloatField,
+    cvm: FloatField,
+    lcpk: FloatField,
+    icpk: FloatField,
+    tcpk: FloatField,
+    tcp3: FloatField,
     cond: FloatFieldIJ,
     dep: FloatFieldIJ,
     reevap: FloatFieldIJ,
@@ -443,6 +448,11 @@ class SubSubgridProcesses:
         reevap: FloatFieldIJ,
         sub: FloatFieldIJ,
         rh_adj: FloatFieldIJ,
+        cvm: FloatField,
+        lcpk: FloatField,
+        icpk: FloatField,
+        tcpk: FloatField,
+        tcp3: FloatField
     ):
         """
         Temperature sentive high vertical resolution processes
@@ -481,6 +491,11 @@ class SubSubgridProcesses:
             cloud_condensation_nuclei,
             cloud_ice_nuclei,
             te,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
             cond,
             dep,
             reevap,
@@ -516,6 +531,11 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "dep": {"serialname": "szs_dep", "mp3": True},
             "reevap": {"serialname": "szs_reevap", "mp3": True},
             "sub": {"serialname": "szs_sub", "mp3": True},
+            "cvm": {"serialname": "szs_cvm", "mp3": True},
+            "lcpk": {"serialname": "szs_lcpk", "mp3": True},
+            "icpk": {"serialname": "szs_icpk", "mp3": True},
+            "tcpk": {"serialname": "szs_tcpk", "mp3": True},
+            "tcp3": {"serialname": "szs_tcp3", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -544,6 +564,11 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "dep": {"serialname": "szs_dep", "kend": namelist.npz, "mp3": True},
             "reevap": {"serialname": "szs_reevap", "kend": namelist.npz, "mp3": True},
             "sub": {"serialname": "szs_sub", "kend": namelist.npz, "mp3": True},
+            "cvm": {"serialname": "szs_cvm", "kend": namelist.npz, "mp3": True},
+            "lcpk": {"serialname": "szs_lcpk", "kend": namelist.npz, "mp3": True},
+            "icpk": {"serialname": "szs_icpk", "kend": namelist.npz, "mp3": True},
+            "tcpk": {"serialname": "szs_tcpk", "kend": namelist.npz, "mp3": True},
+            "tcp3": {"serialname": "szs_tcp3", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
