@@ -250,15 +250,16 @@ def sat_spec_hum_water(temp, density):
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
     # dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+    it = floor(10.*(temp - 0.05))/10
     dqdt = (
         10.0
         * (
-            table0(temp + 0.1)
-            - table0(temp)
-            + (temp - floor(temp))
+            table0(it + 0.1)
+            - table0(it)
+            + (temp - it)
             * (
-                (table0(temp + 0.2) - table0(temp + 0.1))
-                - (table0(temp + 0.1) - table0(temp))
+                (table0(it + 0.2) - table0(it + 0.1))
+                - (table0(it + 0.1) - table0(it))
             )
         )
         / (constants.RVGAS * temp * density)
@@ -283,15 +284,16 @@ def sat_spec_hum_water_ice(temp, density):
     #             constants.DC_VAP0 + constants.LV0_0 / temp
     #         ) / (constants.RVGAS * temp)
     #     )
+    it = floor(10.*(temp - 0.05))/10
     dqdt = (
         10.0
         * (
-            table2(temp + 0.1)
-            - table2(temp)
-            + (temp - floor(temp))
+            table2(it + 0.1)
+            - table2(it)
+            + (temp - floor(it))
             * (
-                (table2(temp + 0.2) - table2(temp + 0.1))
-                - (table2(temp + 0.1) - table2(temp))
+                (table2(it + 0.2) - table2(it + 0.1))
+                - (table2(it + 0.1) - table2(it))
             )
         )
         / (constants.RVGAS * temp * density)
