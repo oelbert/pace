@@ -36,7 +36,7 @@ def perform_instant_processes(
     from __externals__ import c1_ice, c1_liq, c1_vap, li00, lv00, t_min, t_sub
 
     # Instant deposit all water vapor to cloud ice when temperature is super low
-    if temperature > t_min:
+    if temperature < t_min:
         sink = basic.dim(qvapor, constants.QCMIN)
         dep += sink * delp
 
