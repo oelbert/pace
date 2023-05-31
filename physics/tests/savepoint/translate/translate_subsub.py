@@ -32,6 +32,7 @@ def vertical_subgrid_processes(
     delp: FloatField,
     cloud_condensation_nuclei: FloatField,
     cloud_ice_nuclei: FloatField,
+    te: FloatField,
     cond: FloatFieldIJ,
     dep: FloatFieldIJ,
     reevap: FloatFieldIJ,
@@ -436,6 +437,7 @@ class SubSubgridProcesses:
         delp: FloatField,
         cloud_condensation_nuclei: FloatField,
         cloud_ice_nuclei: FloatField,
+        te: FloatField,
         cond: FloatFieldIJ,
         dep: FloatFieldIJ,
         reevap: FloatFieldIJ,
@@ -457,6 +459,7 @@ class SubSubgridProcesses:
             delp (in):
             cloud_condensation_nuclei (inout):
             cloud_ice_nuclei (inout):
+            te (in):
             cond (out):
             dep (out):
             reevap (out):
@@ -477,6 +480,7 @@ class SubSubgridProcesses:
             delp,
             cloud_condensation_nuclei,
             cloud_ice_nuclei,
+            te,
             cond,
             dep,
             reevap,
@@ -507,6 +511,7 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "rh_adj": {"serialname": "szs_rh_adj", "mp3": True},
             "cloud_condensation_nuclei": {"serialname": "szs_ccn", "mp3": True},
             "cloud_ice_nuclei": {"serialname": "szs_cin", "mp3": True},
+            "te": {"serialname": "szs_te", "mp3": True},
             "cond": {"serialname": "szs_cond", "mp3": True},
             "dep": {"serialname": "szs_dep", "mp3": True},
             "reevap": {"serialname": "szs_reevap", "mp3": True},
