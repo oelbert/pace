@@ -249,21 +249,21 @@ def sat_spec_hum_water(temp, density):
     compute the saturated specific humidity, core function
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
-    # dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
-    it = floor(10.*(temp - 0.05))/10
-    dqdt = (
-        10.0
-        * (
-            table0(it + 0.1)
-            - table0(it)
-            + (temp - it)
-            * (
-                (table0(it + 0.2) - table0(it + 0.1))
-                - (table0(it + 0.1) - table0(it))
-            )
-        )
-        / (constants.RVGAS * temp * density)
-    )
+    dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+    # it = floor(10.*(temp - 0.05))/10
+    # dqdt = (
+    #     10.0
+    #     * (
+    #         table0(it + 0.1)
+    #         - table0(it)
+    #         + (temp - it)
+    #         * (
+    #             (table0(it + 0.2) - table0(it + 0.1))
+    #             - (table0(it + 0.1) - table0(it))
+    #         )
+    #     )
+    #     / (constants.RVGAS * temp * density)
+    # )
     return q, dqdt
 
 
@@ -272,32 +272,32 @@ def sat_spec_hum_water_ice(temp, density):
     if temp > constants.TICE0 + 102.0:
         temp = constants.TICE0 + 102.0
     q = table2(temp) / (constants.RVGAS * temp * density)
-    # if temp < constants.TICE0:
-    #     dqdt = (
-    #         q * (
-    #             constants.D2ICE0 + constants.LI2_0 / temp
-    #         ) / (constants.RVGAS * temp)
-    #     )
-    # else:
-    #     dqdt = (
-    #         q * (
-    #             constants.DC_VAP0 + constants.LV0_0 / temp
-    #         ) / (constants.RVGAS * temp)
-    #     )
-    it = floor(10.*(temp - 0.05))/10
-    dqdt = (
-        10.0
-        * (
-            table2(it + 0.1)
-            - table2(it)
-            + (temp - floor(it))
-            * (
-                (table2(it + 0.2) - table2(it + 0.1))
-                - (table2(it + 0.1) - table2(it))
-            )
+    if temp < constants.TICE0:
+        dqdt = (
+            q * (
+                constants.D2ICE0 + constants.LI2_0 / temp
+            ) / (constants.RVGAS * temp)
         )
-        / (constants.RVGAS * temp * density)
-    )
+    else:
+        dqdt = (
+            q * (
+                constants.DC_VAP0 + constants.LV0_0 / temp
+            ) / (constants.RVGAS * temp)
+        )
+    # it = floor(10.*(temp - 0.05))/10
+    # dqdt = (
+    #     10.0
+    #     * (
+    #         table2(it + 0.1)
+    #         - table2(it)
+    #         + (temp - floor(it))
+    #         * (
+    #             (table2(it + 0.2) - table2(it + 0.1))
+    #             - (table2(it + 0.1) - table2(it))
+    #         )
+    #     )
+    #     / (constants.RVGAS * temp * density)
+    # )
     return q, dqdt
 
 
