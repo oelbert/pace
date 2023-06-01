@@ -9,6 +9,7 @@ from gt4py.cartesian.gtscript import (  # noqa
 )
 
 import pace.dsl
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.typing import FloatField, FloatFieldIJ
@@ -16,9 +17,156 @@ from pace.physics._config import PhysicsConfig
 from pace.physics.stencils.microphysics_v3.warm_rain import (  # noqa
     accrete_rain,
     autoconvert_water_rain,
-    evaporate_rain,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+def evaporate_rain(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    delp: FloatField,
+    temperature: FloatField,
+    density: FloatField,
+    density_factor: FloatField,
+    reevap: FloatFieldIJ,
+    h_var: FloatFieldIJ,
+):
+    """
+    Rain evaporation to form water vapor, Lin et al. (1983)
+    Fortran name is prevp
+    """
+    from __externals__ import (
+        blinr,
+        c1,
+        c1_ice,
+        c1_liq,
+        c1_vap,
+        c2,
+        c3,
+        c4,
+        c5,
+        fac_revap,
+        lookup_emulation,
+        lv00,
+        mur,
+        rhc_revap,
+        t_wfr,
+        timestep,
+        use_rhc_revap,
+    )
+
+    with computation(FORWARD), interval(-1, None):
+        reevap = 0.0
+
+    with computation(FORWARD), interval(...):
+        (
+            q_liq,
+            q_solid,
+            cvm,
+            te,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+        )
+
+        tin = (temperature * cvm - lv00 * qliquid) / (
+            1.0 + (qvapor + qliquid) * c1_vap + qrain * c1_liq + q_solid * c1_ice
+        )
+
+        # calculate supersaturation and subgrid variability of water
+        qpz = qvapor + qliquid
+        if __INLINED(lookup_emulation):
+            qsat, dqdt = physfun.wqs(tin, density)
+        else:
+            qsat, dqdt = physfun.sat_spec_hum_water(tin, density)
+        dqv = qsat - qvapor
+
+        dqh = max(qliquid, h_var * max(qpz, constants.QCMIN))
+        dqh = min(dqh, 0.2 * qpz)
+
+        q_minus = qpz - dqh
+        q_plus = qpz + dqh
+
+        rh_tem = qpz / qsat
+
+        if (
+            (temperature > t_wfr)
+            and (qrain > constants.QCMIN)
+            and (dqv > 0.0)
+            and (qsat > q_minus)
+        ):
+            if qsat > q_plus:
+                dq = qsat - qpz
+            else:
+                dq = 0.25 * (qsat - q_minus) ** 2 / dqh
+            qden = qrain * density
+            t2 = tin * tin
+            sink = physfun.sublimation_function(
+                t2,
+                dq,
+                qden,
+                qsat,
+                density,
+                density_factor,
+                lcpk,
+                cvm,
+                c1,
+                c2,
+                c3,
+                c4,
+                c5,
+                blinr,
+                mur,
+            )
+            sink = min(
+                qrain, min(timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
+            )
+            if (use_rhc_revap) and (rh_tem >= rhc_revap):
+                sink = 0
+
+            reevap += sink * delp
+
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temperature,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = physfun.update_hydrometeors_and_temperatures(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                sink,
+                0.0,
+                -sink,
+                0.0,
+                0.0,
+                0.0,
+                te,
+            )
 
 
 class RainFunction:
@@ -27,6 +175,7 @@ class RainFunction:
         stencil_factory,
         config,
         timestep: float,
+        lookup_emulation,
     ):
 
         self._idx = stencil_factory.grid_indexing
@@ -62,6 +211,7 @@ class RainFunction:
                 "c3": config.crevp_3,
                 "c4": config.crevp_4,
                 "c5": config.crevp_5,
+                "lookup_emulation": lookup_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -235,6 +385,7 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             self.stencil_factory,
             self.config,
             timestep=inputs.pop("dt"),
+            lookup_emulation=True,
         )
 
         compute_func(**inputs)

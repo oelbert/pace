@@ -249,20 +249,7 @@ def sat_spec_hum_water(temp, density):
     compute the saturated specific humidity, core function
     """
     q = table0(temp) / (constants.RVGAS * temp * density)
-    # dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
-    dqdt = (
-        10.0
-        * (
-            table0(temp + 0.1)
-            - table0(temp)
-            + (temp - floor(temp))
-            * (
-                (table0(temp + 0.2) - table0(temp + 0.1))
-                - (table0(temp + 0.1) - table0(temp))
-            )
-        )
-        / (constants.RVGAS * temp * density)
-    )
+    dqdt = q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
     return q, dqdt
 
 
@@ -271,32 +258,80 @@ def sat_spec_hum_water_ice(temp, density):
     if temp > constants.TICE0 + 102.0:
         temp = constants.TICE0 + 102.0
     q = table2(temp) / (constants.RVGAS * temp * density)
-    # if temp < constants.TICE0:
-    #     dqdt = (
-    #         q * (
-    #             constants.D2ICE0 + constants.LI2_0 / temp
-    #         ) / (constants.RVGAS * temp)
-    #     )
-    # else:
-    #     dqdt = (
-    #         q * (
-    #             constants.DC_VAP0 + constants.LV0_0 / temp
-    #         ) / (constants.RVGAS * temp)
-    #     )
+    if temp < constants.TICE0:
+        dqdt = (
+            q * (constants.D2ICE0 + constants.LI2_0 / temp) / (constants.RVGAS * temp)
+        )
+    else:
+        dqdt = (
+            q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+        )
+    return q, dqdt
+
+
+@gtscript.function
+def temperature_index(temperature):
+    return floor(10.0 * temperature) / 10.0
+
+
+@gtscript.function
+def table0_delta(int_temperature):
+    return max(0.0, table0(int_temperature + 0.1) - table0(int_temperature))
+
+
+@gtscript.function
+def lookup_0(temperature):
+    int_temperature = temperature_index(temperature)
+    return table0(int_temperature) + (temperature - int_temperature) * table0_delta(
+        int_temperature
+    )
+
+
+@gtscript.function
+def table2_delta(int_temperature):
+    return max(0.0, table2(int_temperature + 0.1) - table2(int_temperature))
+
+
+@gtscript.function
+def lookup_2(temperature):
+    int_temperature = temperature_index(temperature)
+    return table2(int_temperature) + (temperature - int_temperature) * table2_delta(
+        int_temperature
+    )
+
+
+@gtscript.function
+def wqs(temperature, density):
+    tmin = constants.TICE0 - 160.0
+    temp_limit = min(tmin + 262.1, max(tmin, temperature))
+    qsat = lookup_0(temperature) / (constants.RVGAS * temperature * density)
+    it = temperature_index(temp_limit - 0.05)
     dqdt = (
         10.0
         * (
-            table2(temp + 0.1)
-            - table2(temp)
-            + (temp - floor(temp))
-            * (
-                (table2(temp + 0.2) - table2(temp + 0.1))
-                - (table2(temp + 0.1) - table2(temp))
-            )
+            table0_delta(it)
+            + (temp_limit - it) * (table0_delta(it + 0.1) - table0_delta(it))
         )
-        / (constants.RVGAS * temp * density)
+        / (constants.RVGAS * temperature * density)
     )
-    return q, dqdt
+    return qsat, dqdt
+
+
+@gtscript.function
+def iqs(temperature, density):
+    tmin = constants.TICE0 - 160.0
+    temp_limit = min(tmin + 262.1, max(tmin, temperature))
+    qsat = lookup_2(temperature) / (constants.RVGAS * temperature * density)
+    it = temperature_index(temp_limit - 0.05)
+    dqdt = (
+        10.0
+        * (
+            table2_delta(it)
+            + (temp_limit - it) * (table2_delta(it + 0.1) - table2_delta(it))
+        )
+        / (constants.RVGAS * temperature * density)
+    )
+    return qsat, dqdt
 
 
 @gtscript.function
