@@ -254,17 +254,23 @@ def sat_spec_hum_water(temp, density):
 
 
 @gtscript.function
-def sat_spec_hum_water_ice(temp, density):
-    if temp > constants.TICE0 + 102.0:
+def sat_spec_hum_water_ice(temperature, density):
+    if temperature > constants.TICE0 + 102.0:
         temp = constants.TICE0 + 102.0
-    q = table2(temp) / (constants.RVGAS * temp * density)
+    if temperature < constants.TICE0 - 160.0:
+        temp = constants.TICE0 - 160.0
+    q = table2(temp) / (constants.RVGAS * temperature * density)
     if temp < constants.TICE0:
         dqdt = (
-            q * (constants.D2ICE0 + constants.LI2_0 / temp) / (constants.RVGAS * temp)
+            q
+            * (constants.D2ICE0 + constants.LI2_0 / temp)
+            / (constants.RVGAS * temperature)
         )
     else:
         dqdt = (
-            q * (constants.DC_VAP0 + constants.LV0_0 / temp) / (constants.RVGAS * temp)
+            q
+            * (constants.DC_VAP0 + constants.LV0_0 / temp)
+            / (constants.RVGAS * temperature)
         )
     return q, dqdt
 
@@ -381,7 +387,7 @@ def melting_function(
     """
     return (c1 / (icpk * cvm) * tc / density - c2 * lcpk / icpk * dq) * exp(
         (1 + mu) / (mu + 3) * log(6 * qden)
-    ) * vent_coeff(qden, c3, c4, density_factor, blin, mu) + c_liq / (
+    ) * vent_coeff(qden, density_factor, c3, c4, blin, mu) + c_liq / (
         icpk * cvm
     ) * tc * (
         pxacw + pxacr

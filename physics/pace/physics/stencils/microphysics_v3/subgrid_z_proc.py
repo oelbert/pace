@@ -579,7 +579,7 @@ def deposit_and_sublimate_ice(
             dep += sink * delp
         else:
             pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)
-            sink = max(pidep, tmp - qice)
+            sink = max(pidep, max(tmp, -qice))
             sub -= sink * delp
 
         (
