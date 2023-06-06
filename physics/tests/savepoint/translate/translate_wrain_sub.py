@@ -94,6 +94,9 @@ def evaporate_rain(
         )
 
         bool_check = 0.0
+        dq = -1.0
+        sink0 = 0.0
+        sink = 0.0
 
         # calculate supersaturation and subgrid variability of water
         qpz = qvapor + qliquid
