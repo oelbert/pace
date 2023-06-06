@@ -574,8 +574,7 @@ def deposit_and_sublimate_ice(
                 qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
             else:  # igflag == 4:
                 qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
-            sink = min(max(qi_crt - qice, pidep), tc / tcpk)
-            sink = min(tmp, sink)
+            sink = min(tmp, min(max(qi_crt - qice, pidep), tc / tcpk))
             dep += sink * delp
         else:
             pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)

@@ -34,6 +34,11 @@ def evaporate_rain(
     density_factor: FloatField,
     reevap: FloatFieldIJ,
     h_var: FloatFieldIJ,
+    tin: FloatField,
+    qsat: FloatField,
+    dqdt: FloatField,
+    dqh: FloatField,
+    bool_check: FloatField,
 ):
     """
     Rain evaporation to form water vapor, Lin et al. (1983)
@@ -50,7 +55,6 @@ def evaporate_rain(
         c4,
         c5,
         fac_revap,
-        lookup_emulation,
         lv00,
         mur,
         rhc_revap,
@@ -86,12 +90,11 @@ def evaporate_rain(
             1.0 + (qvapor + qliquid) * c1_vap + qrain * c1_liq + q_solid * c1_ice
         )
 
+        bool_check = 0.0
+
         # calculate supersaturation and subgrid variability of water
         qpz = qvapor + qliquid
-        if __INLINED(lookup_emulation):
-            qsat, dqdt = physfun.wqs(tin, density)
-        else:
-            qsat, dqdt = physfun.sat_spec_hum_water(tin, density)
+        qsat, dqdt = physfun.sat_spec_hum_water(tin, density)
         dqv = qsat - qvapor
 
         dqh = max(qliquid, h_var * max(qpz, constants.QCMIN))
@@ -108,6 +111,7 @@ def evaporate_rain(
             and (dqv > 0.0)
             and (qsat > q_minus)
         ):
+            bool_check = 1.0
             if qsat > q_plus:
                 dq = qsat - qpz
             else:
@@ -175,7 +179,6 @@ class RainFunction:
         stencil_factory,
         config,
         timestep: float,
-        lookup_emulation,
     ):
 
         self._idx = stencil_factory.grid_indexing
@@ -211,7 +214,6 @@ class RainFunction:
                 "c3": config.crevp_3,
                 "c4": config.crevp_4,
                 "c5": config.crevp_5,
-                "lookup_emulation": lookup_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -272,6 +274,11 @@ class RainFunction:
         cloud_condensation_nuclei: FloatField,
         reevap: FloatFieldIJ,
         h_var: FloatFieldIJ,
+        tin: FloatField,
+        qsat: FloatField,
+        dqdt: FloatField,
+        dqh: FloatField,
+        bool_check: FloatField,
     ):
         """
         Warm rain cloud microphysics
@@ -305,6 +312,11 @@ class RainFunction:
             density_factor,
             reevap,
             h_var,
+            tin,
+            qsat,
+            dqdt,
+            dqh,
+            bool_check,
         )
 
         # self._accrete_rain(
@@ -351,6 +363,11 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             "h_var": {"serialname": "ws_h_var", "mp3": True},
             "cloud_condensation_nuclei": {"serialname": "ws_ccn", "mp3": True},
             "reevap": {"serialname": "ws_reevap", "mp3": True},
+            "tin": {"serialname": "ws_tin", "mp3": True},
+            "qsat": {"serialname": "ws_qsat", "mp3": True},
+            "dqdt": {"serialname": "ws_dqdt", "mp3": True},
+            "dqh": {"serialname": "ws_dqh", "mp3": True},
+            "bool_check": {"serialname": "ws_bool_check", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -371,6 +388,15 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
                 "mp3": True,
             },
             "reevap": {"serialname": "ws_reevap", "mp3": True},
+            "tin": {"serialname": "ws_tin", "kend": namelist.npz, "mp3": True},
+            "qsat": {"serialname": "ws_qsat", "kend": namelist.npz, "mp3": True},
+            "dqdt": {"serialname": "ws_dqdt", "kend": namelist.npz, "mp3": True},
+            "dqh": {"serialname": "ws_dqh", "kend": namelist.npz, "mp3": True},
+            "bool_check": {
+                "serialname": "ws_bool_check",
+                "kend": namelist.npz,
+                "mp3": True,
+            },
         }
 
         self.stencil_factory = stencil_factory
@@ -385,7 +411,6 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             self.stencil_factory,
             self.config,
             timestep=inputs.pop("dt"),
-            lookup_emulation=True,
         )
 
         compute_func(**inputs)
