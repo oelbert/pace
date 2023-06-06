@@ -39,6 +39,9 @@ def evaporate_rain(
     dqdt: FloatField,
     dqh: FloatField,
     bool_check: FloatField,
+    dq: FloatField,
+    sink0: FloatField,
+    sink: FloatField,
 ):
     """
     Rain evaporation to form water vapor, Lin et al. (1983)
@@ -118,7 +121,7 @@ def evaporate_rain(
                 dq = 0.25 * (qsat - q_minus) ** 2 / dqh
             qden = qrain * density
             t2 = tin * tin
-            sink = physfun.sublimation_function(
+            sink0 = physfun.sublimation_function(
                 t2,
                 dq,
                 qden,
@@ -136,7 +139,7 @@ def evaporate_rain(
                 mur,
             )
             sink = min(
-                qrain, min(timestep * fac_revap * sink, dqv / (1.0 + lcpk * dqdt))
+                qrain, min(timestep * fac_revap * sink0, dqv / (1.0 + lcpk * dqdt))
             )
             if (use_rhc_revap) and (rh_tem >= rhc_revap):
                 sink = 0
@@ -279,6 +282,9 @@ class RainFunction:
         dqdt: FloatField,
         dqh: FloatField,
         bool_check: FloatField,
+        dq: FloatField,
+        sink0: FloatField,
+        sink: FloatField,
     ):
         """
         Warm rain cloud microphysics
@@ -317,6 +323,9 @@ class RainFunction:
             dqdt,
             dqh,
             bool_check,
+            dq,
+            sink0,
+            sink,
         )
 
         # self._accrete_rain(
@@ -368,6 +377,9 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             "dqdt": {"serialname": "ws_dqdt", "mp3": True},
             "dqh": {"serialname": "ws_dqh", "mp3": True},
             "bool_check": {"serialname": "ws_bool_check", "mp3": True},
+            "dq": {"serialname": "ws_dq", "mp3": True},
+            "sink0": {"serialname": "ws_sink0", "mp3": True},
+            "sink": {"serialname": "ws_sink", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -397,6 +409,9 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
                 "kend": namelist.npz,
                 "mp3": True,
             },
+            "dq": {"serialname": "ws_dq", "kend": namelist.npz, "mp3": True},
+            "sink0": {"serialname": "ws_sink0", "kend": namelist.npz, "mp3": True},
+            "sink": {"serialname": "ws_sink", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
