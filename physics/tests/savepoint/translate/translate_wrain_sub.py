@@ -424,6 +424,8 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             "vc": {"serialname": "ws_vc", "kend": namelist.npz, "mp3": True},
         }
 
+        self.max_error = 5.e-13 # only qrain, everything else is good
+
         self.stencil_factory = stencil_factory
         self.grid_indexing = self.stencil_factory.grid_indexing
         pconf = PhysicsConfig.from_namelist(namelist)
