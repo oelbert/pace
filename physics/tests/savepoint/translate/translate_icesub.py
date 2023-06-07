@@ -99,7 +99,7 @@ def melt_snow_test(
 
     psacw = 0.0
     psacr = 0.0
-    pracs - 0.0
+    pracs = 0.0
     qsi = 0.0
     dqdt = 0.0
     sink0 = 0.0
