@@ -42,6 +42,7 @@ def evaporate_rain(
     dq: FloatField,
     sink0: FloatField,
     sink: FloatField,
+    vc: FloatField,
 ):
     """
     Rain evaporation to form water vapor, Lin et al. (1983)
@@ -97,6 +98,7 @@ def evaporate_rain(
         dq = -1.0
         sink0 = 0.0
         sink = 0.0
+        vc = 0.0
 
         # calculate supersaturation and subgrid variability of water
         qpz = qvapor + qliquid
@@ -141,6 +143,7 @@ def evaporate_rain(
                 blinr,
                 mur,
             )
+            vc = physfun.vent_coeff(qden, density_factor, c2, c3, blinr, mur)
             sink = min(
                 qrain, min(timestep * fac_revap * sink0, dqv / (1.0 + lcpk * dqdt))
             )
@@ -288,6 +291,7 @@ class RainFunction:
         dq: FloatField,
         sink0: FloatField,
         sink: FloatField,
+        vc: FloatField,
     ):
         """
         Warm rain cloud microphysics
@@ -329,6 +333,7 @@ class RainFunction:
             dq,
             sink0,
             sink,
+            vc,
         )
 
         # self._accrete_rain(
@@ -383,6 +388,7 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             "dq": {"serialname": "ws_dq", "mp3": True},
             "sink0": {"serialname": "ws_sink0", "mp3": True},
             "sink": {"serialname": "ws_sink", "mp3": True},
+            "vc": {"serialname": "ws_vc", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -415,6 +421,7 @@ class TranslateWRainSubFunc(TranslatePhysicsFortranData2Py):
             "dq": {"serialname": "ws_dq", "kend": namelist.npz, "mp3": True},
             "sink0": {"serialname": "ws_sink0", "kend": namelist.npz, "mp3": True},
             "sink": {"serialname": "ws_sink", "kend": namelist.npz, "mp3": True},
+            "vc": {"serialname": "ws_vc", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
