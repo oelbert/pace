@@ -204,7 +204,7 @@ class RainFunction:
             externals={
                 "timestep": timestep,
                 "mur": config.mur,
-                "blinr": config.mur,
+                "blinr": config.blinr,
                 "c1_vap": config.c1_vap,
                 "c1_liq": config.c1_liq,
                 "c1_ice": config.c1_ice,

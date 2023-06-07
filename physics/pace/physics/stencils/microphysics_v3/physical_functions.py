@@ -356,9 +356,9 @@ def vent_coeff(qden, density_factor, c1, c2, blin, mu):
     Ventilation coefficient, Lin et al. (1983)
     """
 
-    return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
-        density_factor
-    ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
+    vc = c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(density_factor) / exp((1 + mu) / (mu + 3) * log(6 * qden))
+
+    return vc
 
 
 @gtscript.function
