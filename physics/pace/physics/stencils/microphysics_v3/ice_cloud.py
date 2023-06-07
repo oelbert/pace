@@ -237,10 +237,10 @@ def melt_snow(
         if qliquid > constants.QCMIN:
             if __INLINED(do_new_acc_water):
                 psacw = physfun.accretion_3d(
-                    qliquid,
-                    qsnow,
                     vterminal_s,
                     vterminal_w,
+                    qliquid,
+                    qsnow,
                     density,
                     csacw,
                     acco_0_6,
@@ -256,27 +256,25 @@ def melt_snow(
         psacr = 0.0
         pracs = 0.0
         if qrain > constants.QCMIN:
-            psacr = min(
-                qrain / timestep,
-                physfun.accretion_3d(
-                    qrain,
-                    qsnow,
-                    vterminal_s,
-                    vterminal_r,
-                    density,
-                    csacr,
-                    acco_0_1,
-                    acco_1_1,
-                    acco_2_1,
-                    acc2,
-                    acc3,
-                ),
-            )
-            pracs = physfun.accretion_3d(
-                qsnow,
+            psacr = physfun.accretion_3d(
+                vterminal_s,
+                vterminal_r,
                 qrain,
+                qsnow,
+                density,
+                csacr,
+                acco_0_1,
+                acco_1_1,
+                acco_2_1,
+                acc2,
+                acc3,
+            )
+            psacr = min(qrain / timestep, psacr)
+            pracs = physfun.accretion_3d(
                 vterminal_r,
                 vterminal_s,
+                qsnow,
+                qrain,
                 density,
                 cracs,
                 acco_0_0,
@@ -305,7 +303,6 @@ def melt_snow(
                 cvm,
                 blins,
                 mus,
-                constants.C_LIQ0,
                 csmlt_1,
                 csmlt_2,
                 csmlt_3,
@@ -418,10 +415,10 @@ def melt_graupel(
         if qliquid > constants.QCMIN:
             if __INLINED(do_new_acc_water):
                 pgacw = physfun.accretion_3d(
-                    qliquid,
-                    qgraupel,
                     vterminal_g,
                     vterminal_w,
+                    qliquid,
+                    qgraupel,
                     density,
                     cgacw,
                     acco_0_8,
@@ -439,10 +436,10 @@ def melt_graupel(
             pgacr = min(
                 qrain / timestep,
                 physfun.accretion_3d(
-                    qrain,
-                    qgraupel,
                     vterminal_g,
                     vterminal_r,
+                    qrain,
+                    qgraupel,
                     density,
                     cgacr,
                     acco_0_2,
@@ -472,7 +469,6 @@ def melt_graupel(
                 cvm,
                 bling,
                 mug,
-                constants.C_LIQ0,
                 cgmlt_1,
                 cgmlt_2,
                 cgmlt_3,
@@ -563,10 +559,10 @@ def accrete_snow_with_ice(
         if qsnow > constants.QCMIN:
             if __INLINED(do_new_acc_ice):
                 sink = timestep * physfun.accretion_3d(
-                    qice,
-                    qsnow,
                     vterminal_s,
                     vterminal_i,
+                    qice,
+                    qsnow,
                     density,
                     csaci,
                     acco_0_7,
@@ -659,10 +655,10 @@ def accrete_graupel_with_ice(
         if qgraupel > constants.QCMIN:
             if __INLINED(do_new_acc_ice):
                 sink = timestep * physfun.accretion_3d(
-                    qice,
-                    qgraupel,
                     vterminal_g,
                     vtermainal_i,
+                    qice,
+                    qgraupel,
                     density,
                     cgaci,
                     acco_0_9,
@@ -727,10 +723,10 @@ def accrete_snow_with_rain_and_freeze_to_graupel(
         psacr = 0.0
         if qsnow > constants.QCMIN:
             psacr = timestep * physfun.accretion_3d(
-                qrain,
-                qsnow,
                 vterminal_s,
                 vterminal_r,
+                qrain,
+                qsnow,
                 density,
                 csacr,
                 acco_0_1,
@@ -829,10 +825,10 @@ def accrete_graupel_with_snow(
         and (qgraupel > constants.QCMIN)
     ):
         sink = timestep * physfun.accretion_3d(
-            qsnow,
-            qgraupel,
             vterminal_g,
             vterminal_s,
+            qsnow,
+            qgraupel,
             density,
             cgacs,
             acco_0_3,
@@ -934,10 +930,10 @@ def accrete_graupel_with_cloud_water_and_rain(
             pgacr = min(
                 timestep
                 * physfun.accretion_3d(
-                    qrain,
-                    qgraupel,
                     vterminal_g,
                     vterminal_r,
+                    qrain,
+                    qgraupel,
                     density,
                     cgacr,
                     acco_0_2,

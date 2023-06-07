@@ -58,10 +58,10 @@ def accretion_2d(qden, denfac, c, blin, mu):
 
 @gtscript.function
 def accretion_3d(
-    q1,
-    q2,
     v1,
     v2,
+    q1,
+    q2,
     density,
     c,
     acco1,
@@ -356,9 +356,9 @@ def vent_coeff(qden, density_factor, c1, c2, blin, mu):
     Ventilation coefficient, Lin et al. (1983)
     """
 
-    vc = c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(density_factor) / exp((1 + mu) / (mu + 3) * log(6 * qden))
-
-    return vc
+    return c1 + c2 * exp((3 + 2 * mu + blin) / (mu + 3) / 2 * log(6 * qden)) * sqrt(
+        density_factor
+    ) / exp((1 + mu) / (mu + 3) * log(6 * qden))
 
 
 @gtscript.function
@@ -375,7 +375,6 @@ def melting_function(
     cvm,
     blin,
     mu,
-    c_liq,
     c1,
     c2,
     c3,
@@ -387,7 +386,7 @@ def melting_function(
     """
     return (c1 / (icpk * cvm) * tc / density - c2 * lcpk / icpk * dq) * exp(
         (1 + mu) / (mu + 3) * log(6 * qden)
-    ) * vent_coeff(qden, density_factor, c3, c4, blin, mu) + c_liq / (
+    ) * vent_coeff(qden, density_factor, c3, c4, blin, mu) + constants.C_LIQ0 / (
         icpk * cvm
     ) * tc * (
         pxacw + pxacr

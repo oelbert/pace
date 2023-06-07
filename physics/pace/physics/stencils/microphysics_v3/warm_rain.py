@@ -201,10 +201,10 @@ def accrete_rain(
 
             if __INLINED(do_new_acc_water):
                 sink = timestep * physfun.accretion_3d(
-                    qliquid,
-                    qrain,
                     vterminal_rain,
                     vterminal_water,
+                    qliquid,
+                    qrain,
                     density,
                     cracw,
                     acco0_4,

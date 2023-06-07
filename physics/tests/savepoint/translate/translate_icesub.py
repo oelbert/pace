@@ -1,3 +1,4 @@
+from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import (  # noqa
     __INLINED,
     FORWARD,
@@ -7,6 +8,8 @@ from gt4py.cartesian.gtscript import (  # noqa
 )
 
 import pace.dsl
+import pace.fv3core.stencils.basic_operations as basic
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.typing import FloatField, FloatFieldIJ
@@ -19,12 +22,211 @@ from pace.physics.stencils.microphysics_v3.ice_cloud import (  # noqa
     accrete_snow_with_rain_and_freeze_to_graupel,
     autoconvert_ice_to_snow,
     autoconvert_snow_to_graupel,
+    freeze_cloud_water,
+    melt_cloud_ice,
     melt_graupel,
     melt_snow,
-    melt_cloud_ice,
-    freeze_cloud_water
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+@gtscript.function
+def melt_snow_test(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    temperature,
+    density,
+    density_factor,
+    vterminal_w,
+    vterminal_r,
+    vterminal_s,
+    cvm,
+    te,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+    psacw,
+    psacr,
+    pracs,
+    qsi,
+    dqdt,
+    sink0,
+    sink,
+    tmp,
+):
+    """
+    Snow melting (includes snow accretion with cloud water and rain)
+    to form cloud water and rain, Lin et al. (1983)
+    Fortran name is psmlt
+    """
+
+    from __externals__ import (
+        acc0,
+        acc1,
+        acc2,
+        acc3,
+        acc12,
+        acc13,
+        acco_0_0,
+        acco_0_1,
+        acco_0_6,
+        acco_1_0,
+        acco_1_1,
+        acco_1_6,
+        acco_2_0,
+        acco_2_1,
+        acco_2_6,
+        blins,
+        cracs,
+        csacr,
+        csacw,
+        csmlt_1,
+        csmlt_2,
+        csmlt_3,
+        csmlt_4,
+        do_new_acc_water,
+        mus,
+        qs_mlt,
+        timestep,
+    )
+
+    tc = temperature - constants.TICE0
+
+    psacw = 0.0
+    psacr = 0.0
+    pracs - 0.0
+    qsi = 0.0
+    dqdt = 0.0
+    sink0 = 0.0
+    sink = 0.0
+
+    if (tc >= 0) and (qsnow > constants.QCMIN):
+        psacw = 0.0
+        qden = qsnow * density
+        if qliquid > constants.QCMIN:
+            if __INLINED(do_new_acc_water):
+                psacw = physfun.accretion_3d(
+                    vterminal_s,
+                    vterminal_w,
+                    qliquid,
+                    qsnow,
+                    density,
+                    csacw,
+                    acco_0_6,
+                    acco_1_6,
+                    acco_2_6,
+                    acc12,
+                    acc13,
+                )
+            else:
+                factor = physfun.accretion_2d(qden, density_factor, csacw, blins, mus)
+                psacw = factor / (1.0 + timestep * factor) * qliquid
+
+        psacr = 0.0
+        pracs = 0.0
+        if qrain > constants.QCMIN:
+            psacr = physfun.accretion_3d(
+                vterminal_s,
+                vterminal_r,
+                qrain,
+                qsnow,
+                density,
+                csacr,
+                acco_0_1,
+                acco_1_1,
+                acco_2_1,
+                acc2,
+                acc3,
+            )
+            psacr = min(qrain / timestep, psacr)
+            pracs = physfun.accretion_3d(
+                vterminal_r,
+                vterminal_s,
+                qsnow,
+                qrain,
+                density,
+                cracs,
+                acco_0_0,
+                acco_1_0,
+                acco_2_0,
+                acc0,
+                acc1,
+            )
+
+        tin = temperature
+        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        dq = qsi - qvapor
+
+        sink0 = physfun.melting_function(
+            tc,
+            dq,
+            qden,
+            psacw,
+            psacr,
+            density,
+            density_factor,
+            lcpk,
+            icpk,
+            cvm,
+            blins,
+            mus,
+            csmlt_1,
+            csmlt_2,
+            csmlt_3,
+            csmlt_4,
+        )
+        sink = max(0.0, sink0)
+        sink = min(qsnow, min((sink + pracs) * timestep, tc / icpk))
+        tmp = min(sink, basic.dim(qs_mlt, qliquid))
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temperature,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
+            -sink,
+            0.0,
+            te,
+        )
+
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+    )
 
 
 def test_func_stencil(
@@ -50,10 +252,105 @@ def test_func_stencil(
     tcpk: FloatField,
     tcp3: FloatField,
     di: FloatField,
+    psacw: FloatField,
+    psacr: FloatField,
+    pracs: FloatField,
+    qsi: FloatField,
+    dqdt: FloatField,
+    sink0: FloatField,
+    sink: FloatField,
+    tmp: FloatField,
 ):
     from __externals__ import z_slope_ice  # noqa
 
     with computation(PARALLEL), interval(...):
+        #     (
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         cvm,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     ) = melt_cloud_ice(
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         cvm,
+        #         te,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     )
+        #     (
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         cvm,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     ) = freeze_cloud_water(
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         density,
+        #         cvm,
+        #         te,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     )
+        # with computation(FORWARD):
+        #     with interval(0, 1):
+        #         if __INLINED(z_slope_ice):
+        #             # linear_prof
+        #             di = 0.0
+        #     with interval(1, None):
+        #         if __INLINED(z_slope_ice):
+        #             dq = 0.5 * (qice - qice[0, 0, -1])
+        # with computation(FORWARD):
+        #     with interval(1, -1):
+        #         if __INLINED(z_slope_ice):
+        #             # Use twice the strength of the
+        #             # positive definiteness limiter (lin et al 1994)
+        #             di = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qice[0, 0, 0])
+        #             if dq * dq[0, 0, +1] <= 0.0:
+        #                 if dq > 0.0:  # Local maximum
+        #                     di = min(di, min(dq, -dq[0, 0, +1]))
+        #                 else:  # Local minimum
+        #                     di = 0.0
+        #     with interval(-1, None):
+        #         if __INLINED(z_slope_ice):
+        #             di = 0.0
+        # with computation(PARALLEL), interval(...):
+        #     if __INLINED(z_slope_ice):
+        #         # Impose a presumed background horizontal variability that is
+        #         # proportional to the value itself
+        #         di = max(di, max(0.0, h_var * qice))
+        #     else:
+        #         di = max(0.0, h_var * qice)
+        # with computation(PARALLEL), interval(...):
         (
             qvapor,
             qliquid,
@@ -67,94 +364,7 @@ def test_func_stencil(
             icpk,
             tcpk,
             tcp3,
-        ) = melt_cloud_ice(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            cvm,
-            te,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        )
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            cvm,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = freeze_cloud_water(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            density,
-            cvm,
-            te,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        )
-    with computation(FORWARD):
-        with interval(0, 1):
-            if __INLINED(z_slope_ice):
-                # linear_prof
-                di = 0.0
-        with interval(1, None):
-            if __INLINED(z_slope_ice):
-                dq = 0.5 * (qice - qice[0, 0, -1])
-    with computation(FORWARD):
-        with interval(1, -1):
-            if __INLINED(z_slope_ice):
-                # Use twice the strength of the
-                # positive definiteness limiter (lin et al 1994)
-                di = 0.5 * min(abs(dq + dq[0, 0, +1]), 0.5 * qice[0, 0, 0])
-                if dq * dq[0, 0, +1] <= 0.0:
-                    if dq > 0.0:  # Local maximum
-                        di = min(di, min(dq, -dq[0, 0, +1]))
-                    else:  # Local minimum
-                        di = 0.0
-        with interval(-1, None):
-            if __INLINED(z_slope_ice):
-                di = 0.0
-    with computation(PARALLEL), interval(...):
-        if __INLINED(z_slope_ice):
-            # Impose a presumed background horizontal variability that is
-            # proportional to the value itself
-            di = max(di, max(0.0, h_var * qice))
-        else:
-            di = max(0.0, h_var * qice)
-    with computation(PARALLEL), interval(...):
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            cvm,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = melt_snow(
+        ) = melt_snow_test(
             qvapor,
             qliquid,
             qrain,
@@ -173,40 +383,48 @@ def test_func_stencil(
             icpk,
             tcpk,
             tcp3,
+            psacw,
+            psacr,
+            pracs,
+            qsi,
+            dqdt,
+            sink0,
+            sink,
+            tmp,
         )
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            cvm,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = melt_graupel(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            temperature,
-            density,
-            density_factor,
-            vterminal_water,
-            vterminal_rain,
-            vterminal_graupel,
-            cvm,
-            te,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        )
+        # (
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     cvm,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        # ) = melt_graupel(
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     density,
+        #     density_factor,
+        #     vterminal_water,
+        #     vterminal_rain,
+        #     vterminal_graupel,
+        #     cvm,
+        #     te,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        # )
     #     qice, qsnow = accrete_snow_with_ice(
     #         qice,
     #         qsnow,
@@ -444,6 +662,14 @@ class IceFunction:
         tcpk: FloatField,
         tcp3: FloatField,
         di: FloatField,
+        psacw: FloatField,
+        psacr: FloatField,
+        pracs: FloatField,
+        qsi: FloatField,
+        dqdt: FloatField,
+        sink0: FloatField,
+        sink: FloatField,
+        tmp: FloatField,
     ):
         self._test_func_stencil(
             qvapor,
@@ -468,6 +694,14 @@ class IceFunction:
             tcpk,
             tcp3,
             di,
+            psacw,
+            psacr,
+            pracs,
+            qsi,
+            dqdt,
+            sink0,
+            sink,
+            tmp,
         )
 
 
@@ -502,6 +736,14 @@ class TranslateIceSubFunc(TranslatePhysicsFortranData2Py):
             "tcpk": {"serialname": "isub_tcpk", "mp3": True},
             "tcp3": {"serialname": "isub_tcp3", "mp3": True},
             "di": {"serialname": "isub_di", "mp3": True},
+            "psacw": {"serialname": "is_psacw", "mp3": True},
+            "psacr": {"serialname": "is_psacr", "mp3": True},
+            "pracs": {"serialname": "is_pracs", "mp3": True},
+            "qsi": {"serialname": "is_qsi", "mp3": True},
+            "dqdt": {"serialname": "is_dqdt", "mp3": True},
+            "sink0": {"serialname": "is_sink0", "mp3": True},
+            "sink": {"serialname": "is_sink", "mp3": True},
+            "tmp": {"serialname": "is_tmp", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -523,6 +765,14 @@ class TranslateIceSubFunc(TranslatePhysicsFortranData2Py):
             "tcpk": {"serialname": "isub_tcpk", "kend": namelist.npz, "mp3": True},
             "tcp3": {"serialname": "isub_tcp3", "kend": namelist.npz, "mp3": True},
             "di": {"serialname": "isub_di", "kend": namelist.npz, "mp3": True},
+            "psacw": {"serialname": "is_psacw", "kend": namelist.npz, "mp3": True},
+            "psacr": {"serialname": "is_psacr", "kend": namelist.npz, "mp3": True},
+            "pracs": {"serialname": "is_pracs", "kend": namelist.npz, "mp3": True},
+            "qsi": {"serialname": "is_qsi", "kend": namelist.npz, "mp3": True},
+            "dqdt": {"serialname": "is_dqdt", "kend": namelist.npz, "mp3": True},
+            "sink0": {"serialname": "is_sink0", "kend": namelist.npz, "mp3": True},
+            "sink": {"serialname": "is_sink", "kend": namelist.npz, "mp3": True},
+            "tmp": {"serialname": "is_tmp", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
