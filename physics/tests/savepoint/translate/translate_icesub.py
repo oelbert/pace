@@ -260,51 +260,51 @@ def test_func_stencil(
             tcp3,
         )
 
-    # qsnow, qgraupel = accrete_graupel_with_snow(
-    #     qsnow,
-    #     qgraupel,
-    #     temperature,
-    #     density,
-    #     vterminal_snow,
-    #     vterminal_graupel,
-    # )
+        qsnow, qgraupel = accrete_graupel_with_snow(
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            vterminal_snow,
+            vterminal_graupel,
+        )
 
-    # qsnow, qgraupel = autoconvert_snow_to_graupel(
-    #     qsnow, qgraupel, temperature, density
-    # )
+        qsnow, qgraupel = autoconvert_snow_to_graupel(
+            qsnow, qgraupel, temperature, density
+        )
 
-    # (
-    #     qvapor,
-    #     qliquid,
-    #     qrain,
-    #     qice,
-    #     qsnow,
-    #     qgraupel,
-    #     temperature,
-    #     cvm,
-    #     lcpk,
-    #     icpk,
-    #     tcpk,
-    #     tcp3,
-    # ) = accrete_graupel_with_cloud_water_and_rain(
-    #     qvapor,
-    #     qliquid,
-    #     qrain,
-    #     qice,
-    #     qsnow,
-    #     qgraupel,
-    #     temperature,
-    #     density,
-    #     density_factor,
-    #     vterminal_rain,
-    #     vterminal_graupel,
-    #     te,
-    #     cvm,
-    #     lcpk,
-    #     icpk,
-    #     tcpk,
-    #     tcp3,
-    # )
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = accrete_graupel_with_cloud_water_and_rain(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            temperature,
+            density,
+            density_factor,
+            vterminal_rain,
+            vterminal_graupel,
+            te,
+            cvm,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        )
 
 
 class IceFunction:
