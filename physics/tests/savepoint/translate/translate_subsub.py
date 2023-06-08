@@ -49,6 +49,7 @@ def deposit_and_sublimate_ice_test(
     sz_qi_crt,
     sz_sink1,
     sz_sink2,
+    sz_tmp,
 ):
     """
     Cloud ice deposition and sublimation, Hong et al. (2004)
@@ -77,6 +78,7 @@ def deposit_and_sublimate_ice_test(
     sz_qi_crt = 0.
     sz_sink1 = 0.
     sz_sink2 = 0.
+    sz_tmp = 0.
 
     if temperature < tice:
         pidep = 0
@@ -85,6 +87,7 @@ def deposit_and_sublimate_ice_test(
         sz_dqdt = dqdt
         dq = qvapor - qsi
         tmp = dq / (1.0 + tcpk * dqdt)
+        sz_tmp = tmp
 
         if qice > constants.QCMIN:
             if not prog_ccn:
@@ -198,6 +201,7 @@ def deposit_and_sublimate_ice_test(
         sz_qi_crt,
         sz_sink1,
         sz_sink2,
+        sz_tmp,
     )
 
 
@@ -232,6 +236,7 @@ def vertical_subgrid_processes(
     qi_crt: FloatField,
     sink1: FloatField,
     sink2: FloatField,
+    tmp: FloatField,
     
 ):
     """"""
@@ -440,6 +445,7 @@ def vertical_subgrid_processes(
                 qi_crt,
                 sink1,
                 sink2,
+                tmp,
             ) = deposit_and_sublimate_ice_test(
                 qvapor,
                 qliquid,
@@ -466,6 +472,7 @@ def vertical_subgrid_processes(
                 qi_crt,
                 sink1,
                 sink2,
+                tmp,
             )
 
         #     (
@@ -663,6 +670,7 @@ class SubSubgridProcesses:
         qi_crt: FloatField,
         sink1: FloatField,
         sink2: FloatField,
+        tmp: FloatField,
     ):
         """
         Temperature sentive high vertical resolution processes
@@ -718,6 +726,7 @@ class SubSubgridProcesses:
             qi_crt,
             sink1,
             sink2,
+            tmp,
         )
 
 
@@ -760,6 +769,7 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "qi_crt": {"serialname": "szs_qi_crt", "mp3": True},
             "sink1": {"serialname": "szs_sink1", "mp3": True},
             "sink2": {"serialname": "szs_sink2", "mp3": True},
+            "tmp": {"serialname": "szs_tmp", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -800,6 +810,7 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "qi_crt": {"serialname": "szs_qi_crt", "kend": namelist.npz, "mp3": True},
             "sink1": {"serialname": "szs_sink1", "kend": namelist.npz, "mp3": True},
             "sink2": {"serialname": "szs_sink2", "kend": namelist.npz, "mp3": True},
+            "tmp": {"serialname": "szs_tmp", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
