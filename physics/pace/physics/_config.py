@@ -1202,8 +1202,8 @@ class MicroPhysicsConfig:
         10 - 11: raci (i - r)
         12 - 13: sacw (w - s)
         14 - 15: saci (i - s)
-        16 - 17: sacw (w - g)
-        18 - 19: saci (i - g)
+        16 - 17: gacw (w - g)
+        18 - 19: gaci (i - g)
         """
         act = []
         act.append(self.norms)
