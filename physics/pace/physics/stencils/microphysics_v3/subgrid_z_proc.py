@@ -326,9 +326,9 @@ def wegener_bergeron_findeisen(
     Fortran name is pwbf
     """
 
-    from __externals__ import qi0_crt, tau_wbf, tice, timestep
+    from __externals__ import qi0_crt, tau_wbf, timestep
 
-    tc = tice - temperature
+    tc = constants.TICE0 - temperature
     qsw, dqdt = physfun.sat_spec_hum_water(temperature, density)
     qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
 
@@ -413,9 +413,9 @@ def freeze_bigg(
     Bigg freezing mechanism, Bigg (1953)
     Fortran name is pbigg
     """
-    from __externals__ import do_psd_water_num, muw, pcaw, pcbw, tice, timestep
+    from __externals__ import do_psd_water_num, muw, pcaw, pcbw, timestep
 
-    tc = tice - temperature
+    tc = constants.TICE0 - temperature
     if (tc > 0.0) and (qliquid > constants.QCMIN):
         if do_psd_water_num:
             cloud_condensation_nuclei = physfun.calc_particle_concentration(
@@ -515,12 +515,11 @@ def deposit_and_sublimate_ice(
         prog_ccn,
         qi_lim,
         t_sub,
-        tice,
         timestep,
     )
 
-    if temperature < tice:
-        pidep = 0
+    if temperature < constants.TICE0:
+        pidep = 0.0
         qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
         dq = qvapor - qsi
         tmp = dq / (1.0 + tcpk * dqdt)
@@ -531,7 +530,7 @@ def deposit_and_sublimate_ice(
                     cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
                 elif inflag == 2:
                     cloud_ice_nuclei = (
-                        exp(-2.80 + 0.262 * (tice - temperature)) * 1000.0
+                        exp(-2.80 + 0.262 * (constants.TICE0 - temperature)) * 1000.0
                     )
                 elif inflag == 3:
                     cloud_ice_nuclei = (
@@ -539,10 +538,12 @@ def deposit_and_sublimate_ice(
                     )
                 elif inflag == 4:
                     cloud_ice_nuclei = (
-                        5.0e-3 * exp(0.304 * (tice - temperature)) * 1000.0
+                        5.0e-3 * exp(0.304 * (constants.TICE0 - temperature)) * 1000.0
                     )
                 else:  # inflag == 5:
-                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temperature)) * 1000.0
+                    cloud_ice_nuclei = (
+                        1.0e-5 * exp(0.5 * (constants.TICE0 - temperature)) * 1000.0
+                    )
             if do_psd_ice_num:
                 cloud_ice_nuclei = physfun.calc_particle_concentration(
                     qice, density, pcai, pcbi, mui
@@ -564,7 +565,7 @@ def deposit_and_sublimate_ice(
                 )
             )
         if dq > 0:
-            tc = tice - temperature
+            tc = constants.TICE0 - temperature
             qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
             if igflag == 1:
                 qi_crt = qi_gen / density
@@ -1228,7 +1229,6 @@ class VerticalSubgridProcesses:
                 "li20": config.li20,
                 "lv00": config.lv00,
                 "t_wfr": config.t_wfr,
-                "tice": constants.TICE0,
                 "t_min": config.t_min,
                 "t_sub": config.t_sub,
                 "do_cond_timescale": config.do_cond_timescale,

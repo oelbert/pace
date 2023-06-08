@@ -3,7 +3,7 @@ from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval  
 import pace.dsl
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun  # noqa
 import pace.util
-import pace.util.constants as constants
+import pace.util.constants as constants  # noqa
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
@@ -382,7 +382,6 @@ class SubSubgridProcesses:
                 "li20": config.li20,
                 "lv00": config.lv00,
                 "t_wfr": config.t_wfr,
-                "tice": constants.TICE0,
                 "t_min": config.t_min,
                 "t_sub": config.t_sub,
                 "do_cond_timescale": config.do_cond_timescale,
