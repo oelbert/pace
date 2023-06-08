@@ -1,7 +1,9 @@
-from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval  # noqa
+from gt4py.cartesian import gtscript  # noqa
+from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval, exp, log  # noqa
 
 import pace.dsl
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun  # noqa
+import pace.fv3core.stencils.basic_operations as basic  # noqa
 import pace.util
 import pace.util.constants as constants  # noqa
 from pace.dsl.stencil import GridIndexing, StencilFactory
@@ -18,6 +20,185 @@ from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (  # noqa
     wegener_bergeron_findeisen,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+@gtscript.function
+def deposit_and_sublimate_ice_test(
+    qvapor,
+    qliquid,
+    qrain,
+    qice,
+    qsnow,
+    qgraupel,
+    cloud_ice_nuclei,
+    temperature,
+    delp,
+    density,
+    cvm,
+    te,
+    dep,
+    sub,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
+    sz_qsi,
+    sz_dqdt,
+    sz_pidep0,
+    sz_pidep,
+    sz_qi_crt,
+    sz_sink1,
+    sz_sink2,
+):
+    """
+    Cloud ice deposition and sublimation, Hong et al. (2004)
+    Fortran name is pidep_pisub
+    """
+
+    from __externals__ import (
+        do_psd_ice_num,
+        igflag,
+        inflag,
+        is_fac,
+        mui,
+        pcai,
+        pcbi,
+        prog_ccn,
+        qi_lim,
+        t_sub,
+        tice,
+        timestep,
+    )
+
+    sz_qsi = 0.
+    sz_dqdt = 0.
+    sz_pidep0 = 0.
+    sz_pidep = 0.
+    sz_qi_crt = 0.
+    sz_sink1 = 0.
+    sz_sink2 = 0.
+
+    if temperature < tice:
+        pidep = 0
+        qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
+        sz_qsi = qsi
+        sz_dqdt = dqdt
+        dq = qvapor - qsi
+        tmp = dq / (1.0 + tcpk * dqdt)
+
+        if qice > constants.QCMIN:
+            if not prog_ccn:
+                if inflag == 1:
+                    cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
+                elif inflag == 2:
+                    cloud_ice_nuclei = (
+                        exp(-2.80 + 0.262 * (tice - temperature)) * 1000.0
+                    )
+                elif inflag == 3:
+                    cloud_ice_nuclei = (
+                        exp(-0.639 + 12.96 * (qvapor / qsi - 1.0)) * 1000.0
+                    )
+                elif inflag == 4:
+                    cloud_ice_nuclei = (
+                        5.0e-3 * exp(0.304 * (tice - temperature)) * 1000.0
+                    )
+                else:  # inflag == 5:
+                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temperature)) * 1000.0
+            if do_psd_ice_num:
+                cloud_ice_nuclei = physfun.calc_particle_concentration(
+                    qice, density, pcai, pcbi, mui
+                )
+                cloud_ice_nuclei = cloud_ice_nuclei / density
+
+            pidep = (
+                timestep
+                * dq
+                * 4.0
+                * 11.9
+                * exp(0.5 * log(qice * density * cloud_ice_nuclei))
+                / (
+                    qsi
+                    * density
+                    * (tcpk * cvm) ** 2
+                    / (constants.TCOND * constants.RVGAS * temperature ** 2)
+                    + 1.0 / constants.VDIFU
+                )
+            )
+            sz_pidep0 = pidep
+        if dq > 0:
+            tc = tice - temperature
+            qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
+            if igflag == 1:
+                qi_crt = qi_gen / density
+            elif igflag == 2:
+                qi_crt = qi_gen * min(qi_lim, 0.1 * tc) / density
+            elif igflag == 3:
+                qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
+            else:  # igflag == 4:
+                qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
+            sz_qi_crt = qi_crt
+            sink = min(tmp, min(max(qi_crt - qice, pidep), tc / tcpk))
+            sz_sink1 = sink
+            dep += sink * delp
+        else:
+            pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)
+            sz_pidep = pidep
+            sink = max(pidep, max(tmp, -qice))
+            sz_sink2 = sink
+            sub -= sink * delp
+
+        (
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            cvm,
+            temperature,
+            lcpk,
+            icpk,
+            tcpk,
+            tcp3,
+        ) = physfun.update_hydrometeors_and_temperatures(
+            qvapor,
+            qliquid,
+            qrain,
+            qice,
+            qsnow,
+            qgraupel,
+            -sink,
+            0.0,
+            0.0,
+            sink,
+            0.0,
+            0.0,
+            te,
+        )
+    return (
+        qvapor,
+        qliquid,
+        qrain,
+        qice,
+        qsnow,
+        qgraupel,
+        cloud_ice_nuclei,
+        temperature,
+        cvm,
+        lcpk,
+        icpk,
+        tcpk,
+        tcp3,
+        dep,
+        sub,
+        sz_qsi,
+        sz_dqdt,
+        sz_pidep0,
+        sz_pidep,
+        sz_qi_crt,
+        sz_sink1,
+        sz_sink2,
+    )
 
 
 def vertical_subgrid_processes(
@@ -44,6 +225,14 @@ def vertical_subgrid_processes(
     reevap: FloatFieldIJ,
     sub: FloatFieldIJ,
     rh_adj: FloatFieldIJ,
+    qsi: FloatField,
+    dqdt: FloatField,
+    pidep0: FloatField,
+    pidep: FloatField,
+    qi_crt: FloatField,
+    sink1: FloatField,
+    sink2: FloatField,
+    
 ):
     """"""
     from __externals__ import do_warm_rain_mp, do_wbf  # noqa
@@ -244,7 +433,14 @@ def vertical_subgrid_processes(
                 tcp3,
                 dep,
                 sub,
-            ) = deposit_and_sublimate_ice(
+                qsi,
+                dqdt,
+                pidep0,
+                pidep,
+                qi_crt,
+                sink1,
+                sink2,
+            ) = deposit_and_sublimate_ice_test(
                 qvapor,
                 qliquid,
                 qrain,
@@ -263,6 +459,13 @@ def vertical_subgrid_processes(
                 icpk,
                 tcpk,
                 tcp3,
+                qsi,
+                dqdt,
+                pidep0,
+                pidep,
+                qi_crt,
+                sink1,
+                sink2,
             )
 
         #     (
@@ -453,6 +656,13 @@ class SubSubgridProcesses:
         icpk: FloatField,
         tcpk: FloatField,
         tcp3: FloatField,
+        qsi: FloatField,
+        dqdt: FloatField,
+        pidep0: FloatField,
+        pidep: FloatField,
+        qi_crt: FloatField,
+        sink1: FloatField,
+        sink2: FloatField,
     ):
         """
         Temperature sentive high vertical resolution processes
@@ -501,6 +711,13 @@ class SubSubgridProcesses:
             reevap,
             sub,
             rh_adj,
+            qsi,
+            dqdt,
+            pidep0,
+            pidep,
+            qi_crt,
+            sink1,
+            sink2,
         )
 
 
@@ -536,6 +753,13 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "icpk": {"serialname": "szs_icpk", "mp3": True},
             "tcpk": {"serialname": "szs_tcpk", "mp3": True},
             "tcp3": {"serialname": "szs_tcp3", "mp3": True},
+            "qsi": {"serialname": "szs_qsi", "mp3": True},
+            "dqdt": {"serialname": "szs_dqdt", "mp3": True},
+            "pidep0": {"serialname": "szs_pidep0", "mp3": True},
+            "pidep": {"serialname": "szs_pidep", "mp3": True},
+            "qi_crt": {"serialname": "szs_qi_crt", "mp3": True},
+            "sink1": {"serialname": "szs_sink1", "mp3": True},
+            "sink2": {"serialname": "szs_sink2", "mp3": True},
         }
 
         self.in_vars["parameters"] = [
@@ -569,6 +793,13 @@ class TranslateSubgridZSubs(TranslatePhysicsFortranData2Py):
             "icpk": {"serialname": "szs_icpk", "kend": namelist.npz, "mp3": True},
             "tcpk": {"serialname": "szs_tcpk", "kend": namelist.npz, "mp3": True},
             "tcp3": {"serialname": "szs_tcp3", "kend": namelist.npz, "mp3": True},
+            "qsi": {"serialname": "szs_qsi", "kend": namelist.npz, "mp3": True},
+            "dqdt": {"serialname": "szs_dqdt", "kend": namelist.npz, "mp3": True},
+            "pidep0": {"serialname": "szs_pidep0", "kend": namelist.npz, "mp3": True},
+            "pidep": {"serialname": "szs_pidep", "kend": namelist.npz, "mp3": True},
+            "qi_crt": {"serialname": "szs_qi_crt", "kend": namelist.npz, "mp3": True},
+            "sink1": {"serialname": "szs_sink1", "kend": namelist.npz, "mp3": True},
+            "sink2": {"serialname": "szs_sink2", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
