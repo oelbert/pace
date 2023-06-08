@@ -67,7 +67,6 @@ def deposit_and_sublimate_ice_test(
         prog_ccn,
         qi_lim,
         t_sub,
-        tice,
         timestep,
     )
 
@@ -80,7 +79,7 @@ def deposit_and_sublimate_ice_test(
     sz_sink2 = 0.
     sz_tmp = 0.
 
-    if temperature < tice:
+    if temperature < constants.TICE0:
         pidep = 0
         qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
         sz_qsi = qsi
@@ -95,7 +94,7 @@ def deposit_and_sublimate_ice_test(
                     cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
                 elif inflag == 2:
                     cloud_ice_nuclei = (
-                        exp(-2.80 + 0.262 * (tice - temperature)) * 1000.0
+                        exp(-2.80 + 0.262 * (constants.TICE0 - temperature)) * 1000.0
                     )
                 elif inflag == 3:
                     cloud_ice_nuclei = (
@@ -103,10 +102,10 @@ def deposit_and_sublimate_ice_test(
                     )
                 elif inflag == 4:
                     cloud_ice_nuclei = (
-                        5.0e-3 * exp(0.304 * (tice - temperature)) * 1000.0
+                        5.0e-3 * exp(0.304 * (constants.TICE0 - temperature)) * 1000.0
                     )
                 else:  # inflag == 5:
-                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (tice - temperature)) * 1000.0
+                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (constants.TICE0 - temperature)) * 1000.0
             if do_psd_ice_num:
                 cloud_ice_nuclei = physfun.calc_particle_concentration(
                     qice, density, pcai, pcbi, mui
@@ -129,7 +128,7 @@ def deposit_and_sublimate_ice_test(
             )
             sz_pidep0 = pidep
         if dq > 0:
-            tc = tice - temperature
+            tc = constants.TICE0 - temperature
             qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
             if igflag == 1:
                 qi_crt = qi_gen / density
