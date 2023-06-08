@@ -103,6 +103,8 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
             "didt": {"serialname": "tab_diq", "kend": namelist.npz, "mp3": True},
         }
 
+        self.max_error = 1.5e-14  # 10^-25 absolute errors at the top of the tables
+
         self.stencil_factory = stencil_factory
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics

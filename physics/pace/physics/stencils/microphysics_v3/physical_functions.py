@@ -255,10 +255,12 @@ def sat_spec_hum_water(temp, density):
 
 @gtscript.function
 def sat_spec_hum_water_ice(temperature, density):
-    if temperature > constants.TICE0 + 102.0:
-        temp = constants.TICE0 + 102.0
-    if temperature < constants.TICE0 - 160.0:
-        temp = constants.TICE0 - 160.0
+    # temp = temperature
+    # if temp > constants.TICE0 + 102.0:
+    #     temp = constants.TICE0 + 102.0
+    # if temp < constants.TICE0 - 160.0:
+    #     temp = constants.TICE0 - 160.0
+    temp = max(constants.TICE0 - 160.0, min(temperature, constants.TICE0 + 102.0))
     q = table2(temp) / (constants.RVGAS * temperature * density)
     if temp < constants.TICE0:
         dqdt = (
