@@ -92,8 +92,8 @@ class LookupPython:
         temp: FloatField,
         den: FloatField,
     ):
-        table0.view[:] = self.sat_tables.table0[index.view[:]]
-        table2.view[:] = self.sat_tables.table2[index.view[:]]
+        table0.view[:] = self.sat_tables.table0[index.view[:] - 1]
+        table2.view[:] = self.sat_tables.table2[index.view[:] - 1]
         wqs.view[:], dwdt.view[:] = self.sat_tables.sat_water(temp.view[:], den.view[:])
         iqs.view[:], didt.view[:] = self.sat_tables.sat_ice_water(
             temp.view[:], den.view[:]
