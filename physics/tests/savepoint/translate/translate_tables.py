@@ -5,6 +5,9 @@ import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
 from pace.dsl.typing import FloatField
 from pace.physics._config import PhysicsConfig
+from pace.physics.stencils.microphysics_v3.humidity_tables import (
+    HumiditySaturationTables,
+)
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
@@ -71,6 +74,76 @@ class CalcTables:
             didt,
             dwdt,
         )
+
+
+class LookupPython:
+    def __init__(self, length):
+        self.sat_tables = HumiditySaturationTables(length)
+
+    def __call__(
+        self,
+        index: FloatField,
+        table0: FloatField,
+        table2: FloatField,
+        iqs: FloatField,
+        wqs: FloatField,
+        didt: FloatField,
+        dwdt: FloatField,
+        temp: FloatField,
+        den: FloatField,
+    ):
+        table0.view[:] = self.sat_tables.table0[index.view[:]]
+        table2.view[:] = self.sat_tables.table2[index.view[:]]
+        wqs.view[:], dwdt.view[:] = self.sat_tables.sat_water(temp.view[:], den.view[:])
+        iqs.view[:], didt.view[:] = self.sat_tables.sat_ice_water(
+            temp.view[:], den.view[:]
+        )
+
+
+class TranslatePythonTables(TranslatePhysicsFortranData2Py):
+    def __init__(
+        self,
+        grid,
+        namelist: pace.util.Namelist,
+        stencil_factory: pace.dsl.StencilFactory,
+    ):
+        super().__init__(grid, namelist, stencil_factory)
+
+        self.in_vars["data_vars"] = {
+            "index": {"serialname": "tc_index", "mp3": True},
+            "table0": {"serialname": "tc_t0", "mp3": True},
+            "table2": {"serialname": "tc_t2", "mp3": True},
+            "wqs": {"serialname": "tab_wq", "mp3": True},
+            "dwdt": {"serialname": "tab_dwq", "mp3": True},
+            "iqs": {"serialname": "tab_iq", "mp3": True},
+            "didt": {"serialname": "tab_diq", "mp3": True},
+            "temp": {"serialname": "tab_pt", "mp3": True},
+            "den": {"serialname": "tab_den", "mp3": True},
+        }
+
+        self.out_vars = {
+            "table0": {"serialname": "tc_t0", "kend": namelist.npz, "mp3": True},
+            "table2": {"serialname": "tc_t2", "kend": namelist.npz, "mp3": True},
+            "wqs": {"serialname": "tab_wq", "kend": namelist.npz, "mp3": True},
+            "dwdt": {"serialname": "tab_dwq", "kend": namelist.npz, "mp3": True},
+            "iqs": {"serialname": "tab_iq", "kend": namelist.npz, "mp3": True},
+            "didt": {"serialname": "tab_diq", "kend": namelist.npz, "mp3": True},
+        }
+
+        self.max_error = 1.5e-14  # 10^-25 absolute errors at the top of the tables
+
+        self.stencil_factory = stencil_factory
+        pconf = PhysicsConfig.from_namelist(namelist)
+        self.config = pconf.microphysics
+
+    def compute(self, inputs):
+        self.make_storage_data_input_vars(inputs)
+
+        compute_func = LookupPython(2621)
+
+        compute_func(**inputs)
+
+        return self.slice_output(inputs)
 
 
 class TranslateTableComputation(TranslatePhysicsFortranData2Py):
