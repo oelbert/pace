@@ -1,9 +1,17 @@
 from gt4py.cartesian import gtscript  # noqa
-from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval, exp, log  # noqa
+from gt4py.cartesian.gtscript import (  # noqa
+    __INLINED,
+    FORWARD,
+    PARALLEL,
+    computation,
+    exp,
+    interval,
+    log,
+)
 
 import pace.dsl
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun  # noqa
 import pace.fv3core.stencils.basic_operations as basic  # noqa
+import pace.physics.stencils.microphysics_v3.physical_functions as physfun  # noqa
 import pace.util
 import pace.util.constants as constants  # noqa
 from pace.dsl.stencil import GridIndexing, StencilFactory
@@ -71,15 +79,15 @@ def deposit_and_sublimate_ice_test(
         timestep,
     )
 
-    sz_qsi = 0.
-    sz_dqdt = 0.
-    sz_pidep0 = 0.
-    sz_pidep = 0.
-    sz_qi_crt = 0.
-    sz_sink1 = 0.
-    sz_sink2 = 0.
-    sz_tmp = 0.
-    sz_dq = 0.
+    sz_qsi = 0.0
+    sz_dqdt = 0.0
+    sz_pidep0 = 0.0
+    sz_pidep = 0.0
+    sz_qi_crt = 0.0
+    sz_sink1 = 0.0
+    sz_sink2 = 0.0
+    sz_tmp = 0.0
+    sz_dq = 0.0
 
     if temperature < constants.TICE0:
         pidep = 0
@@ -108,7 +116,9 @@ def deposit_and_sublimate_ice_test(
                         5.0e-3 * exp(0.304 * (constants.TICE0 - temperature)) * 1000.0
                     )
                 else:  # inflag == 5:
-                    cloud_ice_nuclei = 1.0e-5 * exp(0.5 * (constants.TICE0 - temperature)) * 1000.0
+                    cloud_ice_nuclei = (
+                        1.0e-5 * exp(0.5 * (constants.TICE0 - temperature)) * 1000.0
+                    )
             if do_psd_ice_num:
                 cloud_ice_nuclei = physfun.calc_particle_concentration(
                     qice, density, pcai, pcbi, mui
@@ -241,7 +251,6 @@ def vertical_subgrid_processes(
     sink2: FloatField,
     tmp: FloatField,
     dq: FloatField,
-    
 ):
     """"""
     from __externals__ import do_warm_rain_mp, do_wbf  # noqa
@@ -253,7 +262,7 @@ def vertical_subgrid_processes(
     #         reevap = 0
     #         sub = 0
 
-    with computation(FORWARD):
+    with computation(PARALLEL):
         with interval(...):
             # (
             #     q_liq,
