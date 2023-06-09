@@ -78,16 +78,6 @@ def deposit_and_sublimate_ice_test(
         timestep,
     )
 
-    sz_qsi = 0.0
-    sz_dqdt = 0.0
-    sz_pidep0 = 0.0
-    sz_pidep = 0.0
-    sz_qi_crt = 0.0
-    sz_sink1 = 0.0
-    sz_sink2 = 0.0
-    sz_tmp = 0.0
-    sz_dq = 0.0
-
     if temperature < constants.TICE0:
         pidep = 0
         qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
