@@ -2,7 +2,6 @@ from gt4py.cartesian import gtscript  # noqa
 from gt4py.cartesian.gtscript import (  # noqa
     __INLINED,
     FORWARD,
-    PARALLEL,
     computation,
     exp,
     interval,
@@ -50,15 +49,15 @@ def deposit_and_sublimate_ice_test(
     icpk,
     tcpk,
     tcp3,
-    sz_qsi,
-    sz_dqdt,
-    sz_pidep0,
-    sz_pidep,
-    sz_qi_crt,
-    sz_sink1,
-    sz_sink2,
-    sz_tmp,
-    sz_dq,
+    qsi,
+    dqdt,
+    pidep0,
+    pidep1,
+    qi_crt,
+    sink1,
+    sink2,
+    tmp,
+    dq,
 ):
     """
     Cloud ice deposition and sublimation, Hong et al. (2004)
@@ -92,12 +91,8 @@ def deposit_and_sublimate_ice_test(
     if temperature < constants.TICE0:
         pidep = 0
         qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
-        sz_qsi = qsi
-        sz_dqdt = dqdt
         dq = qvapor - qsi
-        sz_dq = dq
         tmp = dq / (1.0 + tcpk * dqdt)
-        sz_tmp = tmp
 
         if qice > constants.QCMIN:
             if not prog_ccn:
@@ -139,7 +134,7 @@ def deposit_and_sublimate_ice_test(
                     + 1.0 / constants.VDIFU
                 )
             )
-            sz_pidep0 = pidep
+            pidep0 = pidep
         if dq > 0:
             tc = constants.TICE0 - temperature
             qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
@@ -151,15 +146,14 @@ def deposit_and_sublimate_ice_test(
                 qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
             else:  # igflag == 4:
                 qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
-            sz_qi_crt = qi_crt
             sink = min(tmp, min(max(qi_crt - qice, pidep), tc / tcpk))
-            sz_sink1 = sink
+            sink1 = sink
             dep += sink * delp
         else:
             pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)
-            sz_pidep = pidep
+            pidep1 = pidep
             sink = max(pidep, max(tmp, -qice))
-            sz_sink2 = sink
+            sink2 = sink
             sub -= sink * delp
 
         (
@@ -206,15 +200,15 @@ def deposit_and_sublimate_ice_test(
         tcp3,
         dep,
         sub,
-        sz_qsi,
-        sz_dqdt,
-        sz_pidep0,
-        sz_pidep,
-        sz_qi_crt,
-        sz_sink1,
-        sz_sink2,
-        sz_tmp,
-        sz_dq,
+        qsi,
+        dqdt,
+        pidep0,
+        pidep1,
+        qi_crt,
+        sink1,
+        sink2,
+        tmp,
+        dq,
     )
 
 
@@ -262,7 +256,7 @@ def vertical_subgrid_processes(
     #         reevap = 0
     #         sub = 0
 
-    with computation(PARALLEL):
+    with computation(FORWARD):
         with interval(...):
             # (
             #     q_liq,
