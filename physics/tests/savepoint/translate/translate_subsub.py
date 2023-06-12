@@ -30,110 +30,34 @@ from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2
 
 
 @gtscript.function
-def deposit_and_sublimate_ice_test(
+def perform_instant_processes_test(
     qvapor,
     qliquid,
     qrain,
     qice,
     qsnow,
     qgraupel,
-    cloud_ice_nuclei,
     temperature,
-    delp,
     density,
-    cvm,
+    delp,
     te,
+    rh_adj,
     dep,
+    reevap,
     sub,
-    lcpk,
-    icpk,
-    tcpk,
-    tcp3,
     qsi,
     dqidt,
 ):
     """
-    Cloud ice deposition and sublimation, Hong et al. (2004)
-    Fortran name is pidep_pisub
+    Instant processes (include deposition, evaporation, and sublimation)
+    Fortran name is pinst
     """
+    from __externals__ import c1_ice, c1_liq, c1_vap, li00, lv00, t_min, t_sub
 
-    from __externals__ import (
-        do_psd_ice_num,
-        igflag,
-        inflag,
-        is_fac,
-        mui,
-        pcai,
-        pcbi,
-        prog_ccn,
-        qi_lim,
-        t_sub,
-        timestep,
-    )
-
-    if temperature < constants.TICE0:
-        pidep = 0.0
-        # qsi, dqidt = physfun.sat_spec_hum_water_ice(temperature, density)
-        dq = qvapor - qsi
-        tmp = dq / (1.0 + tcpk * dqidt)
-
-        if qice > constants.QCMIN:
-            if not prog_ccn:
-                if inflag == 1:
-                    cloud_ice_nuclei = 5.38e7 * exp(0.75 * log(qice * density))
-                elif inflag == 2:
-                    cloud_ice_nuclei = (
-                        exp(-2.80 + 0.262 * (constants.TICE0 - temperature)) * 1000.0
-                    )
-                elif inflag == 3:
-                    cloud_ice_nuclei = (
-                        exp(-0.639 + 12.96 * (qvapor / qsi - 1.0)) * 1000.0
-                    )
-                elif inflag == 4:
-                    cloud_ice_nuclei = (
-                        5.0e-3 * exp(0.304 * (constants.TICE0 - temperature)) * 1000.0
-                    )
-                else:  # inflag == 5:
-                    cloud_ice_nuclei = (
-                        1.0e-5 * exp(0.5 * (constants.TICE0 - temperature)) * 1000.0
-                    )
-            if do_psd_ice_num:
-                cloud_ice_nuclei = physfun.calc_particle_concentration(
-                    qice, density, pcai, pcbi, mui
-                )
-                cloud_ice_nuclei = cloud_ice_nuclei / density
-
-            pidep = (
-                timestep
-                * dq
-                * 4.0
-                * 11.9
-                * exp(0.5 * log(qice * density * cloud_ice_nuclei))
-                / (
-                    qsi
-                    * density
-                    * (tcpk * cvm) ** 2
-                    / (constants.TCOND * constants.RVGAS * temperature ** 2)
-                    + 1.0 / constants.VDIFU
-                )
-            )
-        if dq > 0:
-            tc = constants.TICE0 - temperature
-            qi_gen = 4.92e-11 * exp(1.33 * log(1.0e3 * exp(0.1 * tc)))
-            if igflag == 1:
-                qi_crt = qi_gen / density
-            elif igflag == 2:
-                qi_crt = qi_gen * min(qi_lim, 0.1 * tc) / density
-            elif igflag == 3:
-                qi_crt = 1.82e-6 * min(qi_lim, 0.1 * tc) / density
-            else:  # igflag == 4:
-                qi_crt = max(qi_gen, 1.82e-6) * min(qi_lim, 0.1 * tc) / density
-            sink = min(tmp, min(max(qi_crt - qice, pidep), tc / tcpk))
-            dep += sink * delp
-        else:
-            pidep = pidep * min(1, basic.dim(temperature, t_sub) * is_fac)
-            sink = max(pidep, max(tmp, -qice))
-            sub -= sink * delp
+    # Instant deposit all water vapor to cloud ice when temperature is super low
+    if temperature < t_min:
+        sink = basic.dim(qvapor, constants.QCMIN)
+        dep += sink * delp
 
         (
             qvapor,
@@ -163,6 +87,52 @@ def deposit_and_sublimate_ice_test(
             0.0,
             te,
         )
+
+    # Instant evaporation / sublimation of all clouds when rh < rh_adj
+    qpz = qvapor + qliquid + qice
+    tin = (te - lv00 * qpz + li00 * (qsnow + qgraupel)) / (
+        1.0 + qpz * c1_vap + qrain * c1_liq + (qsnow + qgraupel) * c1_ice
+    )
+
+    if tin > (t_sub + 6.0):
+        # qsi, dqidt = physfun.sat_spec_hum_water_ice(tin, density)
+        rh = qpz / qsi
+
+        if rh < rh_adj:
+            sink = qliquid
+            tmp = qice
+
+            reevap += sink * delp
+            sub += tmp * delp
+
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                cvm,
+                temperature,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = physfun.update_hydrometeors_and_temperatures(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                sink + tmp,
+                -sink,
+                0.0,
+                -tmp,
+                0,
+                0,
+                te,
+            )
     return (
         qvapor,
         qliquid,
@@ -170,7 +140,6 @@ def deposit_and_sublimate_ice_test(
         qice,
         qsnow,
         qgraupel,
-        cloud_ice_nuclei,
         temperature,
         cvm,
         lcpk,
@@ -178,6 +147,7 @@ def deposit_and_sublimate_ice_test(
         tcpk,
         tcp3,
         dep,
+        reevap,
         sub,
     )
 
@@ -237,163 +207,6 @@ def vertical_subgrid_processes(
             # )
 
             # if __INLINED(not do_warm_rain_mp):
-            #     (
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         cvm,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #         dep,
-            #         reevap,
-            #         sub,
-            #     ) = perform_instant_processes(
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         density,
-            #         delp,
-            #         te,
-            #         rh_adj,
-            #         dep,
-            #         reevap,
-            #         sub,
-            #     )
-
-            # (
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     cvm,
-            #     lcpk,
-            #     icpk,
-            #     tcpk,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            # ) = cloud_condensation_evaporation(
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     delp,
-            #     density,
-            #     te,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            # )
-
-            # if __INLINED(not do_warm_rain_mp):
-            #     (
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         cvm,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #     ) = complete_freeze(
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         cvm,
-            #         te,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #     )
-
-            #     if __INLINED(do_wbf):
-            #         (
-            #             qvapor,
-            #             qliquid,
-            #             qrain,
-            #             qice,
-            #             qsnow,
-            #             qgraupel,
-            #             temperature,
-            #             cvm,
-            #             lcpk,
-            #             icpk,
-            #             tcpk,
-            #             tcp3,
-            #         ) = wegener_bergeron_findeisen(
-            #             qvapor,
-            #             qliquid,
-            #             qrain,
-            #             qice,
-            #             qsnow,
-            #             qgraupel,
-            #             temperature,
-            #             density,
-            #             cvm,
-            #             te,
-            #             lcpk,
-            #             icpk,
-            #             tcpk,
-            #             tcp3,
-            #         )
-
-            #     (
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         cloud_condensation_nuclei,
-            #         temperature,
-            #         cvm,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #     ) = freeze_bigg(
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         cloud_condensation_nuclei,
-            #         temperature,
-            #         density,
-            #         cvm,
-            #         te,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #     )
-
             (
                 qvapor,
                 qliquid,
@@ -401,7 +214,6 @@ def vertical_subgrid_processes(
                 qice,
                 qsnow,
                 qgraupel,
-                cloud_ice_nuclei,
                 temperature,
                 cvm,
                 lcpk,
@@ -409,29 +221,189 @@ def vertical_subgrid_processes(
                 tcpk,
                 tcp3,
                 dep,
+                reevap,
                 sub,
-            ) = deposit_and_sublimate_ice_test(
+            ) = perform_instant_processes_test(
                 qvapor,
                 qliquid,
                 qrain,
                 qice,
                 qsnow,
                 qgraupel,
-                cloud_ice_nuclei,
                 temperature,
-                delp,
                 density,
-                cvm,
+                delp,
                 te,
+                rh_adj,
                 dep,
+                reevap,
                 sub,
-                lcpk,
-                icpk,
-                tcpk,
-                tcp3,
                 qsi,
                 dqidt,
             )
+
+        # (
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     cvm,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        #     cond,
+        #     reevap,
+        # ) = cloud_condensation_evaporation(
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     temperature,
+        #     delp,
+        #     density,
+        #     te,
+        #     tcp3,
+        #     cond,
+        #     reevap,
+        # )
+
+        # if __INLINED(not do_warm_rain_mp):
+        #     (
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         cvm,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     ) = complete_freeze(
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         temperature,
+        #         cvm,
+        #         te,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     )
+
+        #     if __INLINED(do_wbf):
+        #         (
+        #             qvapor,
+        #             qliquid,
+        #             qrain,
+        #             qice,
+        #             qsnow,
+        #             qgraupel,
+        #             temperature,
+        #             cvm,
+        #             lcpk,
+        #             icpk,
+        #             tcpk,
+        #             tcp3,
+        #         ) = wegener_bergeron_findeisen(
+        #             qvapor,
+        #             qliquid,
+        #             qrain,
+        #             qice,
+        #             qsnow,
+        #             qgraupel,
+        #             temperature,
+        #             density,
+        #             cvm,
+        #             te,
+        #             lcpk,
+        #             icpk,
+        #             tcpk,
+        #             tcp3,
+        #         )
+
+        #     (
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         cloud_condensation_nuclei,
+        #         temperature,
+        #         cvm,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     ) = freeze_bigg(
+        #         qvapor,
+        #         qliquid,
+        #         qrain,
+        #         qice,
+        #         qsnow,
+        #         qgraupel,
+        #         cloud_condensation_nuclei,
+        #         temperature,
+        #         density,
+        #         cvm,
+        #         te,
+        #         lcpk,
+        #         icpk,
+        #         tcpk,
+        #         tcp3,
+        #     )
+
+        # (
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     cloud_ice_nuclei,
+        #     temperature,
+        #     cvm,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        #     dep,
+        #     sub,
+        # ) = deposit_and_sublimate_ice_test(
+        #     qvapor,
+        #     qliquid,
+        #     qrain,
+        #     qice,
+        #     qsnow,
+        #     qgraupel,
+        #     cloud_ice_nuclei,
+        #     temperature,
+        #     delp,
+        #     density,
+        #     cvm,
+        #     te,
+        #     dep,
+        #     sub,
+        #     lcpk,
+        #     icpk,
+        #     tcpk,
+        #     tcp3,
+        #     qsi,
+        #     dqidt,
+        # )
 
         #     (
         #         qvapor,
