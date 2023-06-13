@@ -186,7 +186,6 @@ def cloud_fraction(
     temperature: FloatField,
     density: FloatField,
     pz: FloatField,
-    te: FloatField,
     h_var: FloatFieldIJ,
     gsize: FloatFieldIJ,
 ):
@@ -295,12 +294,9 @@ class CloudFraction:
     def __init__(
         self,
         stencil_factory: StencilFactory,
-        quantity_factory: pace.util.QuantityFactory,
         config: MicroPhysicsConfig,
     ):
         self._idx: GridIndexing = stencil_factory.grid_indexing
-
-        self._te = quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
         self._cloud_fraction = stencil_factory.from_origin_domain(
             func=cloud_fraction,
@@ -375,7 +371,6 @@ class CloudFraction:
             temperature,
             density,
             pz,
-            self._te,
             h_var,
             gsize,
         )
