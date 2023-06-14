@@ -153,7 +153,7 @@ def perform_instant_processes_test(
 
 
 @gtscript.function
-def deposit_and_sublimate_graupel_test(
+def wegener_bergeron_findeisen_test(
     qvapor,
     qliquid,
     qrain,
@@ -161,73 +161,40 @@ def deposit_and_sublimate_graupel_test(
     qsnow,
     qgraupel,
     temperature,
-    delp,
     density,
-    density_factor,
     cvm,
     te,
-    dep,
-    sub,
     lcpk,
     icpk,
     tcpk,
     tcp3,
     qsi,
-    dqdt
+    dqidt,
+    qsw,
+    dqwdt,
 ):
     """
-    Graupel deposition and sublimation, Lin et al. (1983)
-    Fortran name is pgdep_pgsub
+    Wegener Bergeron Findeisen process, Storelvmo and Tan (2015)
+    Fortran name is pwbf
     """
-    from __externals__ import (
-        bling,
-        cgsub_1,
-        cgsub_2,
-        cgsub_3,
-        cgsub_4,
-        cgsub_5,
-        gs_fac,
-        mug,
-        t_sub,
-        timestep,
-    )
 
-    if qgraupel > constants.QCMIN:
-        tin = temperature
-        qden = qgraupel * density
-        t2 = temperature * temperature
-        dq = qsi - qvapor
-        pgsub = physfun.sublimation_function(
-            t2,
-            dq,
-            qden,
-            qsi,
-            density,
-            density_factor,
-            tcpk,
-            cvm,
-            cgsub_1,
-            cgsub_2,
-            cgsub_3,
-            cgsub_4,
-            cgsub_5,
-            bling,
-            mug,
-        )
-        pgsub *= timestep
-        dq = dq / (1 + tcpk * dqdt)
+    from __externals__ import qi0_crt, tau_wbf, timestep
 
-        if pgsub > 0:
-            sink = min(
-                pgsub * min(1.0, basic.dim(temperature, t_sub) * gs_fac), qgraupel
-            )
-            sub += sink * delp
-        else:
-            sink = 0.0
-            if temperature <= constants.TICE0:
-                sink = max(dq, (temperature - constants.TICE0) / tcpk)
-                sink = max(pgsub, sink)
-            dep -= sink * delp
+    tc = constants.TICE0 - temperature
+
+    if (
+        (tc > 0.0)
+        and (qliquid > constants.QCMIN)
+        and (qice > constants.QCMIN)
+        and (qvapor > qsi)
+        and (qvapor < qsw)
+    ):
+        # TODO: This can be moved to compile-time
+        fac_wbf = 1.0 - exp(-timestep / tau_wbf)
+
+        sink = min(fac_wbf * qliquid, tc / icpk)
+        qim = qi0_crt / density
+        tmp = min(sink, basic.dim(qim, qice))
 
         (
             qvapor,
@@ -249,12 +216,12 @@ def deposit_and_sublimate_graupel_test(
             qice,
             qsnow,
             qgraupel,
-            sink,
-            0.0,
-            0.0,
-            0.0,
             0.0,
             -sink,
+            0.0,
+            tmp,
+            sink - tmp,
+            0.0,
             te,
         )
 
@@ -271,8 +238,6 @@ def deposit_and_sublimate_graupel_test(
         icpk,
         tcpk,
         tcp3,
-        dep,
-        sub,
     )
 
 
@@ -429,36 +394,40 @@ def vertical_subgrid_processes(
             #         tcp3,
             #     )
 
-                # if __INLINED(do_wbf):
-                #     (
-                #         qvapor,
-                #         qliquid,
-                #         qrain,
-                #         qice,
-                #         qsnow,
-                #         qgraupel,
-                #         temperature,
-                #         cvm,
-                #         lcpk,
-                #         icpk,
-                #         tcpk,
-                #         tcp3,
-                #     ) = wegener_bergeron_findeisen(
-                #         qvapor,
-                #         qliquid,
-                #         qrain,
-                #         qice,
-                #         qsnow,
-                #         qgraupel,
-                #         temperature,
-                #         density,
-                #         cvm,
-                #         te,
-                #         lcpk,
-                #         icpk,
-                #         tcpk,
-                #         tcp3,
-                #     )
+                if __INLINED(do_wbf):
+                    (
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        cvm,
+                        lcpk,
+                        icpk,
+                        tcpk,
+                        tcp3,
+                    ) = wegener_bergeron_findeisen_test(
+                        qvapor,
+                        qliquid,
+                        qrain,
+                        qice,
+                        qsnow,
+                        qgraupel,
+                        temperature,
+                        density,
+                        cvm,
+                        te,
+                        lcpk,
+                        icpk,
+                        tcpk,
+                        tcp3,
+                        qsi,
+                        dqidt,
+                        qsw,
+                        dqwdt,
+                    )
 
                 # (
                 #     qvapor,
@@ -569,43 +538,43 @@ def vertical_subgrid_processes(
                 #     dqidt,
                 # )
 
-                (
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temperature,
-                    cvm,
-                    lcpk,
-                    icpk,
-                    tcpk,
-                    tcp3,
-                    dep,
-                    sub,
-                ) = deposit_and_sublimate_graupel_test(
-                    qvapor,
-                    qliquid,
-                    qrain,
-                    qice,
-                    qsnow,
-                    qgraupel,
-                    temperature,
-                    delp,
-                    density,
-                    density_factor,
-                    cvm,
-                    te,
-                    dep,
-                    sub,
-                    lcpk,
-                    icpk,
-                    tcpk,
-                    tcp3,
-                    qsi,
-                    dqidt,
-                )
+                # (
+                #     qvapor,
+                #     qliquid,
+                #     qrain,
+                #     qice,
+                #     qsnow,
+                #     qgraupel,
+                #     temperature,
+                #     cvm,
+                #     lcpk,
+                #     icpk,
+                #     tcpk,
+                #     tcp3,
+                #     dep,
+                #     sub,
+                # ) = deposit_and_sublimate_graupel_test(
+                #     qvapor,
+                #     qliquid,
+                #     qrain,
+                #     qice,
+                #     qsnow,
+                #     qgraupel,
+                #     temperature,
+                #     delp,
+                #     density,
+                #     density_factor,
+                #     cvm,
+                #     te,
+                #     dep,
+                #     sub,
+                #     lcpk,
+                #     icpk,
+                #     tcpk,
+                #     tcp3,
+                #     qsi,
+                #     dqidt,
+                # )
 
 
 class SubSubgridProcesses:
