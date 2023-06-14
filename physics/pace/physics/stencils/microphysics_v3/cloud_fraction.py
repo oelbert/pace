@@ -9,13 +9,11 @@ from gt4py.cartesian.gtscript import (
 )
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
-import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig
 
