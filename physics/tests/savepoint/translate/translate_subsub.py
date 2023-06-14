@@ -153,7 +153,7 @@ def perform_instant_processes_test(
 
 
 @gtscript.function
-def deposit_and_sublimate_snow_test(
+def deposit_and_sublimate_graupel_test(
     qvapor,
     qliquid,
     qrain,
@@ -173,31 +173,31 @@ def deposit_and_sublimate_snow_test(
     tcpk,
     tcp3,
     qsi,
-    dqdt,
+    dqdt
 ):
     """
-    Snow deposition and sublimation, Lin et al. (1983)
-    Fortran name is psdep_pssub
+    Graupel deposition and sublimation, Lin et al. (1983)
+    Fortran name is pgdep_pgsub
     """
     from __externals__ import (
-        blins,
-        cssub_1,
-        cssub_2,
-        cssub_3,
-        cssub_4,
-        cssub_5,
-        mus,
-        ss_fac,
+        bling,
+        cgsub_1,
+        cgsub_2,
+        cgsub_3,
+        cgsub_4,
+        cgsub_5,
+        gs_fac,
+        mug,
         t_sub,
         timestep,
     )
 
-    if qsnow > constants.QCMIN:
+    if qgraupel > constants.QCMIN:
         tin = temperature
-        qden = qsnow * density
+        qden = qgraupel * density
         t2 = temperature * temperature
         dq = qsi - qvapor
-        pssub = physfun.sublimation_function(
+        pgsub = physfun.sublimation_function(
             t2,
             dq,
             qden,
@@ -206,25 +206,27 @@ def deposit_and_sublimate_snow_test(
             density_factor,
             tcpk,
             cvm,
-            cssub_1,
-            cssub_2,
-            cssub_3,
-            cssub_4,
-            cssub_5,
-            blins,
-            mus,
+            cgsub_1,
+            cgsub_2,
+            cgsub_3,
+            cgsub_4,
+            cgsub_5,
+            bling,
+            mug,
         )
-        pssub *= timestep
+        pgsub *= timestep
         dq = dq / (1 + tcpk * dqdt)
 
-        if pssub > 0:
-            sink = min(pssub * min(1.0, basic.dim(temperature, t_sub) * ss_fac), qsnow)
+        if pgsub > 0:
+            sink = min(
+                pgsub * min(1.0, basic.dim(temperature, t_sub) * gs_fac), qgraupel
+            )
             sub += sink * delp
         else:
             sink = 0.0
             if temperature <= constants.TICE0:
                 sink = max(dq, (temperature - constants.TICE0) / tcpk)
-                sink = max(pssub, sink)
+                sink = max(pgsub, sink)
             dep -= sink * delp
 
         (
@@ -251,8 +253,8 @@ def deposit_and_sublimate_snow_test(
             0.0,
             0.0,
             0.0,
-            -sink,
             0.0,
+            -sink,
             te,
         )
 
@@ -529,6 +531,44 @@ def vertical_subgrid_processes(
                 #     dqidt,
                 # )
 
+                # (
+                #     qvapor,
+                #     qliquid,
+                #     qrain,
+                #     qice,
+                #     qsnow,
+                #     qgraupel,
+                #     temperature,
+                #     cvm,
+                #     lcpk,
+                #     icpk,
+                #     tcpk,
+                #     tcp3,
+                #     dep,
+                #     sub,
+                # ) = deposit_and_sublimate_snow_test(
+                #     qvapor,
+                #     qliquid,
+                #     qrain,
+                #     qice,
+                #     qsnow,
+                #     qgraupel,
+                #     temperature,
+                #     delp,
+                #     density,
+                #     density_factor,
+                #     cvm,
+                #     te,
+                #     dep,
+                #     sub,
+                #     lcpk,
+                #     icpk,
+                #     tcpk,
+                #     tcp3,
+                #     qsi,
+                #     dqidt,
+                # )
+
                 (
                     qvapor,
                     qliquid,
@@ -544,7 +584,7 @@ def vertical_subgrid_processes(
                     tcp3,
                     dep,
                     sub,
-                ) = deposit_and_sublimate_snow_test(
+                ) = deposit_and_sublimate_graupel_test(
                     qvapor,
                     qliquid,
                     qrain,
@@ -566,42 +606,6 @@ def vertical_subgrid_processes(
                     qsi,
                     dqidt,
                 )
-
-                # (
-                #     qvapor,
-                #     qliquid,
-                #     qrain,
-                #     qice,
-                #     qsnow,
-                #     qgraupel,
-                #     temperature,
-                #     cvm,
-                #     lcpk,
-                #     icpk,
-                #     tcpk,
-                #     tcp3,
-                #     dep,
-                #     sub,
-                # ) = deposit_and_sublimate_graupel(
-                #     qvapor,
-                #     qliquid,
-                #     qrain,
-                #     qice,
-                #     qsnow,
-                #     qgraupel,
-                #     temperature,
-                #     delp,
-                #     density,
-                #     density_factor,
-                #     cvm,
-                #     te,
-                #     dep,
-                #     sub,
-                #     lcpk,
-                #     icpk,
-                #     tcpk,
-                #     tcp3,
-                # )
 
 
 class SubSubgridProcesses:
