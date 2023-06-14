@@ -47,6 +47,11 @@ def perform_instant_processes_test(
     sub,
     qsi,
     dqidt,
+    cvm,
+    lcpk,
+    icpk,
+    tcpk,
+    tcp3,
 ):
     """
     Instant processes (include deposition, evaporation, and sublimation)
@@ -240,6 +245,11 @@ def vertical_subgrid_processes(
                     sub,
                     qsi,
                     dqidt,
+                    cvm,
+                    lcpk,
+                    icpk,
+                    tcpk,
+                    tcp3,
                 )
 
             # (
