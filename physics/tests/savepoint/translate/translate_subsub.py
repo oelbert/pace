@@ -152,95 +152,6 @@ def perform_instant_processes_test(
     )
 
 
-@gtscript.function
-def wegener_bergeron_findeisen_test(
-    qvapor,
-    qliquid,
-    qrain,
-    qice,
-    qsnow,
-    qgraupel,
-    temperature,
-    density,
-    cvm,
-    te,
-    lcpk,
-    icpk,
-    tcpk,
-    tcp3,
-    qsi,
-    dqidt,
-    qsw,
-    dqwdt,
-):
-    """
-    Wegener Bergeron Findeisen process, Storelvmo and Tan (2015)
-    Fortran name is pwbf
-    """
-
-    from __externals__ import qi0_crt, tau_wbf, timestep
-
-    tc = constants.TICE0 - temperature
-
-    if (
-        (tc > 0.0)
-        and (qliquid > constants.QCMIN)
-        and (qice > constants.QCMIN)
-        and (qvapor > qsi)
-        and (qvapor < qsw)
-    ):
-        # TODO: This can be moved to compile-time
-        fac_wbf = 1.0 - exp(-timestep / tau_wbf)
-
-        sink = min(fac_wbf * qliquid, tc / icpk)
-        qim = qi0_crt / density
-        tmp = min(sink, basic.dim(qim, qice))
-
-        (
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            cvm,
-            temperature,
-            lcpk,
-            icpk,
-            tcpk,
-            tcp3,
-        ) = physfun.update_hydrometeors_and_temperatures(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            0.0,
-            -sink,
-            0.0,
-            tmp,
-            sink - tmp,
-            0.0,
-            te,
-        )
-
-    return (
-        qvapor,
-        qliquid,
-        qrain,
-        qice,
-        qsnow,
-        qgraupel,
-        temperature,
-        cvm,
-        lcpk,
-        icpk,
-        tcpk,
-        tcp3,
-    )
-
-
 def vertical_subgrid_processes(
     qvapor: FloatField,
     qliquid: FloatField,
@@ -295,41 +206,41 @@ def vertical_subgrid_processes(
             #     qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
             # )
 
-            # if __INLINED(not do_warm_rain_mp):
-            #     (
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         cvm,
-            #         lcpk,
-            #         icpk,
-            #         tcpk,
-            #         tcp3,
-            #         dep,
-            #         reevap,
-            #         sub,
-            #     ) = perform_instant_processes_test(
-            #         qvapor,
-            #         qliquid,
-            #         qrain,
-            #         qice,
-            #         qsnow,
-            #         qgraupel,
-            #         temperature,
-            #         density,
-            #         delp,
-            #         te,
-            #         rh_adj,
-            #         dep,
-            #         reevap,
-            #         sub,
-            #         qsi,
-            #         dqidt,
-            #     )
+            if __INLINED(not do_warm_rain_mp):
+                (
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    temperature,
+                    cvm,
+                    lcpk,
+                    icpk,
+                    tcpk,
+                    tcp3,
+                    dep,
+                    reevap,
+                    sub,
+                ) = perform_instant_processes_test(
+                    qvapor,
+                    qliquid,
+                    qrain,
+                    qice,
+                    qsnow,
+                    qgraupel,
+                    temperature,
+                    density,
+                    delp,
+                    te,
+                    rh_adj,
+                    dep,
+                    reevap,
+                    sub,
+                    qsi,
+                    dqidt,
+                )
 
             # (
             #     qvapor,
@@ -364,7 +275,7 @@ def vertical_subgrid_processes(
             #     dqwdt
             # )
 
-            if __INLINED(not do_warm_rain_mp):
+            # if __INLINED(not do_warm_rain_mp):
             #     (
             #         qvapor,
             #         qliquid,
@@ -394,40 +305,40 @@ def vertical_subgrid_processes(
             #         tcp3,
             #     )
 
-                if __INLINED(do_wbf):
-                    (
-                        qvapor,
-                        qliquid,
-                        qrain,
-                        qice,
-                        qsnow,
-                        qgraupel,
-                        temperature,
-                        cvm,
-                        lcpk,
-                        icpk,
-                        tcpk,
-                        tcp3,
-                    ) = wegener_bergeron_findeisen_test(
-                        qvapor,
-                        qliquid,
-                        qrain,
-                        qice,
-                        qsnow,
-                        qgraupel,
-                        temperature,
-                        density,
-                        cvm,
-                        te,
-                        lcpk,
-                        icpk,
-                        tcpk,
-                        tcp3,
-                        qsi,
-                        dqidt,
-                        qsw,
-                        dqwdt,
-                    )
+                # if __INLINED(do_wbf):
+                #     (
+                #         qvapor,
+                #         qliquid,
+                #         qrain,
+                #         qice,
+                #         qsnow,
+                #         qgraupel,
+                #         temperature,
+                #         cvm,
+                #         lcpk,
+                #         icpk,
+                #         tcpk,
+                #         tcp3,
+                #     ) = wegener_bergeron_findeisen_test(
+                #         qvapor,
+                #         qliquid,
+                #         qrain,
+                #         qice,
+                #         qsnow,
+                #         qgraupel,
+                #         temperature,
+                #         density,
+                #         cvm,
+                #         te,
+                #         lcpk,
+                #         icpk,
+                #         tcpk,
+                #         tcp3,
+                #         qsi,
+                #         dqidt,
+                #         qsw,
+                #         dqwdt,
+                #     )
 
                 # (
                 #     qvapor,
