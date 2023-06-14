@@ -193,6 +193,10 @@ class CloudFractionTest:
         pz: FloatField,
         h_var: FloatFieldIJ,
         gsize: FloatFieldIJ,
+        qsi: FloatField,
+        dqidt: FloatField,
+        qsw: FloatField,
+        dqwdt: FloatField,
     ):
         """
         Calculates cloud fraction diagnostic.
@@ -224,6 +228,10 @@ class CloudFractionTest:
             self._te,
             h_var,
             gsize,
+            qsi,
+            dqidt,
+            qsw,
+            dqwdt,
         )
 
 
