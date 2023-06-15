@@ -58,7 +58,6 @@ class TranslateMPFull(TranslatePhysicsFortranData2Py):
             "qice": {"serialname": "mpf_qi", "kend": namelist.npz, "mp3": True},
             "qsnow": {"serialname": "mpf_qs", "kend": namelist.npz, "mp3": True},
             "qgraupel": {"serialname": "mpf_qg", "kend": namelist.npz, "mp3": True},
-            "qa": {"serialname": "mpf_qa", "kend": namelist.npz, "mp3": True},
             "ua": {"serialname": "mpf_u", "kend": namelist.npz, "mp3": True},
             "va": {"serialname": "mpf_v", "kend": namelist.npz, "mp3": True},
             "wa": {"serialname": "mpf_w", "kend": namelist.npz, "mp3": True},
