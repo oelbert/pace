@@ -1,10 +1,12 @@
 import pace.dsl
 import pace.util
 from pace.dsl.stencil import StencilFactory
-from pace.physics._config import PhysicsConfig, MicroPhysicsConfig
-from pace.physics.stencils.microphysics_v3.microphysics_v3 import calculate_particle_properties
-from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 from pace.dsl.typing import FloatField
+from pace.physics._config import MicroPhysicsConfig, PhysicsConfig
+from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
+    calculate_particle_properties,
+)
+from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
 class CalcParticleProperties:
@@ -13,7 +15,8 @@ class CalcParticleProperties:
         stencil_factory: StencilFactory,
         config: MicroPhysicsConfig,
     ):
-        
+        self._idx = stencil_factory.grid_indexing
+
         if config.do_hail:
             pcag = config.pcah
             pcbg = config.pcbh
@@ -40,7 +43,7 @@ class CalcParticleProperties:
             tvbg = config.tvbg
             mug = config.mug
             bling = config.bling
-    
+
         self._calculate_particle_properties = stencil_factory.from_origin_domain(
             func=calculate_particle_properties,
             externals={

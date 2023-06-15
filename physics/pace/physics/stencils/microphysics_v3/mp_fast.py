@@ -122,7 +122,7 @@ def melt_snow_simple(
     Fortran name is psmlt_simp
     """
 
-    from __externals__ import qs_mlt, fac_smlt, tice
+    from __externals__ import fac_smlt, qs_mlt, tice
 
     tc = temp - tice
     if (tc > 0.0) and (qsnow > constants.QCMIN):
@@ -186,7 +186,7 @@ def autoconvert_water_to_rain_simple(
     Fortran name is praut_simp
     """
 
-    from __externals__ import ql0_max, t_wfr, fac_l2r
+    from __externals__ import fac_l2r, ql0_max, t_wfr
 
     tc = temp - t_wfr
     if (tc > 0) and (qliquid > ql0_max):
@@ -203,7 +203,7 @@ def autoconvert_ice_to_snow_simple(qice, qsnow, temp, density):
     Cloud ice to snow autoconversion, simple version
     Fortran name is psaut_simp
     """
-    from __externals__ import qi0_max, fac_i2s, tice
+    from __externals__ import fac_i2s, qi0_max, tice
 
     tc = temp - tice
     qim = qi0_max / density

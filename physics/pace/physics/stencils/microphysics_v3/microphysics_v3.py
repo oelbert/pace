@@ -1013,9 +1013,7 @@ class Microphysics:
             )
 
         if self.do_qa:
-            self._cloud_fraction = CloudFraction(
-                stencil_factory, quantity_factory, config
-            )
+            self._cloud_fraction = CloudFraction(stencil_factory, config)
 
         self._calculate_particle_properties = stencil_factory.from_origin_domain(
             func=calculate_particle_properties,
