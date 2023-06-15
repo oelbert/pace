@@ -771,6 +771,7 @@ class Microphysics:
         quantity_factory: pace.util.QuantityFactory,
         grid_data: GridData,
         config: MicroPhysicsConfig,
+        full_timestep: float,
         do_mp_fast: bool = False,
         do_mp_full: bool = True,
         consv_te: bool = False,
@@ -884,8 +885,8 @@ class Microphysics:
 
         self._gsize.data[:] = np.sqrt(grid_data.area.data[:])
 
-        self._set_timestepping(self.config.dt_atmos)  # will change from dt_atmos
-        # when we inline microphysics
+        self._update_timestep_if_needed(full_timestep)  # will change from dt_atmos
+        # for inline microphysics
 
         self._convert_mm_day = 86400.0 * constants.RGRAV / self.config.dt_split
 
@@ -930,7 +931,7 @@ class Microphysics:
                     "lv00": self.config.lv00,
                     "li00": self.config.li00,
                     "c_air": self.config.c_air,
-                    "timestep": self.config.dt_atmos,
+                    "timestep": self.config.dt_full,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -947,7 +948,7 @@ class Microphysics:
                     "lv00": self.config.lv00,
                     "li00": self.config.li00,
                     "c_air": self.config.c_air,
-                    "timestep": self.config.dt_atmos,
+                    "timestep": self.config.dt_full,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -998,7 +999,7 @@ class Microphysics:
             self._mp_fast = FastMicrophysics(
                 stencil_factory,
                 self.config.fastmp,
-                self.config.dt_atmos,
+                self.config.dt_full,
                 self._convert_mm_day,
             )
 
@@ -1135,7 +1136,7 @@ class Microphysics:
         )
 
     def _update_timestep_if_needed(self, timestep: float):
-        if timestep != self.config.dt_atmos:
+        if timestep != self.config.dt_full:
             self._set_timestepping(timestep)
 
     def _set_timestepping(self, full_timestep: float):
@@ -1151,16 +1152,14 @@ class Microphysics:
             )
         )
         self.config.dt_split = full_timestep / self.config.ntimes
-        self.config.dt_atmos = full_timestep
+        self.config.dt_full = full_timestep
 
     def __call__(
         self,
         state: MicrophysicsState,
-        timestep: float,
         last_step: bool,
         timer: Timer = pace.util.NullTimer(),
     ):
-        self._update_timestep_if_needed(timestep)
 
         self._reset_initial_values_and_make_copies(
             state.adj_vmr,

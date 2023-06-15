@@ -82,7 +82,7 @@ class FastMPConfig:
 
 @dataclasses.dataclass
 class MicroPhysicsConfig:
-    dt_atmos: float
+    dt_full: float
     dt_split: float = dataclasses.field(init=False)
     ntimes: int
     hydrostatic: bool
@@ -492,9 +492,9 @@ class MicroPhysicsConfig:
         split_timestep is equivalent to dts
         """
         self.ntimes = int(
-            max(self.ntimes, self.dt_atmos / min(self.dt_atmos, self.mp_time))
+            max(self.ntimes, self.dt_full / min(self.dt_full, self.mp_time))
         )
-        self.dt_split = self.dt_atmos / self.ntimes
+        self.dt_split = self.dt_full / self.ntimes
 
     def _calculate_particle_parameters(self):
         """
@@ -1774,7 +1774,7 @@ class PhysicsConfig:
     @property
     def microphysics(self) -> MicroPhysicsConfig:
         return MicroPhysicsConfig(
-            dt_atmos=self.dt_atmos,
+            dt_full=self.dt_atmos,
             ntimes=self.ntimes,
             hydrostatic=self.hydrostatic,
             npx=self.npx,

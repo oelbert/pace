@@ -36,3 +36,5 @@ from .translate_update_tracers_phys import TranslatePhysUpdateTracers
 from .translate_warm_rain import TranslateWarmRain
 from .translate_wrain_sub import TranslateWRainSubFunc
 from .translate_zezt import TranslateZeZt
+from .translate_preliminary_mp import TranslatePreliminaryCalculations
+from .translate_particle_properties import TranslateParticleProperties
