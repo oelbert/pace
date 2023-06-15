@@ -50,9 +50,8 @@ def freeze_rain_to_graupel_simple(
     Fortran name is pgfr_simp
     """
 
-    from __externals__ import tau_r2g, tice, timestep
+    from __externals__ import fac_r2g, tice
 
-    fac_r2g = 1.0 - exp(-timestep / tau_r2g)
     tc = temp - tice
     if (tc < 0.0) and (qrain > constants.QCMIN):
         sink = (-tc * 0.025) ** 2 * qrain
@@ -123,9 +122,7 @@ def melt_snow_simple(
     Fortran name is psmlt_simp
     """
 
-    from __externals__ import qs_mlt, tau_smlt, tice, timestep
-
-    fac_smlt = 1.0 - exp(-timestep / tau_smlt)
+    from __externals__ import qs_mlt, fac_smlt, tice
 
     tc = temp - tice
     if (tc > 0.0) and (qsnow > constants.QCMIN):
@@ -189,9 +186,7 @@ def autoconvert_water_to_rain_simple(
     Fortran name is praut_simp
     """
 
-    from __externals__ import ql0_max, t_wfr, tau_l2r, timestep
-
-    fac_l2r = 1.0 - exp(-timestep / tau_l2r)
+    from __externals__ import ql0_max, t_wfr, fac_l2r
 
     tc = temp - t_wfr
     if (tc > 0) and (qliquid > ql0_max):
@@ -208,9 +203,7 @@ def autoconvert_ice_to_snow_simple(qice, qsnow, temp, density):
     Cloud ice to snow autoconversion, simple version
     Fortran name is psaut_simp
     """
-    from __externals__ import qi0_max, tau_i2s, tice, timestep
-
-    fac_i2s = 1.0 - exp(-timestep / tau_i2s)
+    from __externals__ import qi0_max, fac_i2s, tice
 
     tc = temp - tice
     qim = qi0_max / density
@@ -562,6 +555,10 @@ class FastMicrophysics:
     ):
 
         self._idx: GridIndexing = stencil_factory.grid_indexing
+        fac_r2g = 1.0 - exp(-timestep / config.tau_r2g)
+        fac_smlt = 1.0 - exp(-timestep / config.tau_smlt)
+        fac_l2r = 1.0 - exp(-timestep / config.tau_l2r)
+        fac_i2s = 1.0 - exp(-timestep / config.tau_i2s)
 
         self._fast_microphysics = stencil_factory.from_origin_domain(
             func=fast_microphysics,
@@ -589,9 +586,9 @@ class FastMicrophysics:
                 "rhc_cevap": config.rhc_cevap,
                 "tau_l2v": config.tau_l2v,
                 "tau_v2l": config.tau_v2l,
-                "tau_r2g": config.tau_r2g,
-                "tau_smlt": config.tau_smlt,
-                "tau_l2r": config.tau_l2r,
+                "fac_r2g": fac_r2g,
+                "fac_smlt": fac_smlt,
+                "fac_l2r": fac_l2r,
                 "use_rhc_cevap": config.use_rhc_cevap,
                 "qi0_crt": config.qi0_crt,
                 "qi0_max": config.qi0_max,
@@ -611,7 +608,7 @@ class FastMicrophysics:
                 "qi_lim": config.qi_lim,
                 "t_sub": config.t_sub,
                 "is_fac": config.is_fac,
-                "tau_i2s": config.tau_i2s,
+                "fac_i2s": fac_i2s,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
