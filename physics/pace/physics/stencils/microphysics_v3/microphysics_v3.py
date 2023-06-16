@@ -211,7 +211,7 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
     temperature: FloatField,
     density: FloatField,
     pz: FloatField,
-    density_factor: FloatField,
+    bottom_density: FloatFieldIJ,
 ):
     from __externals__ import do_inline_mp
 
@@ -234,9 +234,14 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
         pz = density * constants.RDGAS * temperature
     with computation(FORWARD), interval(-1, None):
         bottom_density = density
-        density_factor = sqrt(bottom_density / density)
 
-    with computation(BACKWARD), interval(0, -1):
+
+def calculate_density_factor(
+    density: FloatField,
+    density_factor: FloatField,
+    bottom_density: FloatFieldIJ,
+):
+    with computation(BACKWARD), interval(...):
         density_factor = sqrt(bottom_density / density)
 
 
@@ -827,6 +832,7 @@ class Microphysics:
             return quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
 
         self._tot_energy_change = make_quantity2d()
+        self._bottom_density = make_quantity2d()
 
         self._adj_vmr = quantity_factory.ones(
             dims=[X_DIM, Y_DIM, Z_DIM], units="unknown"
@@ -969,6 +975,12 @@ class Microphysics:
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
             )
+        )
+
+        self._calculate_density_factor = stencil_factory.from_origin_domain(
+            func=calculate_density_factor,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
         )
 
         self._cloud_nuclei_subgrid_and_relative_humidity = (
@@ -1240,7 +1252,13 @@ class Microphysics:
             state.pt,
             self._density,
             self._pz,
+            self._bottom_density,
+        )
+
+        self._calculate_density_factor(
+            self._density,
             self._density_factor,
+            self._bottom_density,
         )
 
         if self.consv_checker:

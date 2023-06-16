@@ -3,6 +3,7 @@ import pace.fv3core.stencils.basic_operations as basic
 import pace.util
 from pace.physics._config import PhysicsConfig
 from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
+    calculate_density_factor,
     cloud_nuclei_subgrid_and_relative_humidity,
     convert_specific_to_mass_mixing_ratios_and_calculate_densities,
     convert_virtual_to_true_temperature_and_calc_total_energy,
@@ -10,12 +11,14 @@ from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
     reset_initial_values_and_make_copies,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+from pace.util import X_DIM, Y_DIM
 
 
 class PrelimCalcs:
     def __init__(
         self,
         stencil_factory,
+        quantity_factory,
         config,
         consv_te,
     ):
@@ -29,6 +32,12 @@ class PrelimCalcs:
         self.fix_negative = config.fix_negative
         self._te_err = config.te_err
         self._tw_err = config.tw_err
+
+        def make_quantity2d(**kwargs):
+            return quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
+
+        self._tot_energy_change = make_quantity2d()
+        self._bottom_density = make_quantity2d()
 
         self._copy_stencil = stencil_factory.from_origin_domain(
             basic.copy_defn,
@@ -103,6 +112,12 @@ class PrelimCalcs:
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
             )
+        )
+
+        self._calculate_density_factor = stencil_factory.from_origin_domain(
+            func=calculate_density_factor,
+            origin=self._idx.origin_compute(),
+            domain=self._idx.domain_compute(),
         )
 
         self._cloud_nuclei_subgrid_and_relative_humidity = (
@@ -258,7 +273,13 @@ class PrelimCalcs:
             pt,
             density,
             pz,
+            self._bottom_density,
+        )
+
+        self._calculate_density_factor(
+            density,
             density_factor,
+            self._bottom_density,
         )
 
         if self.consv_checker:
@@ -461,7 +482,9 @@ class TranslatePreliminaryCalculations(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        compute_func = PrelimCalcs(self.stencil_factory, self.config, consv_te=False)
+        compute_func = PrelimCalcs(
+            self.stencil_factory, self.quantity_factory, self.config, consv_te=False
+        )
 
         compute_func(**inputs)
 
