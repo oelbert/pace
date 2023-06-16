@@ -190,7 +190,6 @@ class TranslateParticleProperties(TranslatePhysicsFortranData2Py):
     ):
         super().__init__(grid, namelist, stencil_factory)
         self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "pp_qv", "mp3": True},
             "qliquid": {"serialname": "pp_ql", "mp3": True},
             "qrain": {"serialname": "pp_qr", "mp3": True},
             "qice": {"serialname": "pp_qi", "mp3": True},
