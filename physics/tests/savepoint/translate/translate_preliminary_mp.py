@@ -461,10 +461,7 @@ class TranslatePreliminaryCalculations(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        compute_func = PrelimCalcs(
-            self.stencil_factory,
-            self.config,
-        )
+        compute_func = PrelimCalcs(self.stencil_factory, self.config, consv_te=False)
 
         compute_func(**inputs)
 
