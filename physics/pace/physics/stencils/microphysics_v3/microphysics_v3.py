@@ -230,7 +230,7 @@ def convert_specific_to_mass_mixing_ratios_and_calculate_densities(
         qgraupel = qgraupel * rcon_r8
 
         # Dry air density and layer-mean pressure thickness
-        density = -delp * (constants.GRAV * delz)
+        density = -delp / (constants.GRAV * delz)
         pz = density * constants.RDGAS * temperature
     with computation(FORWARD), interval(-1, None):
         bottom_density = density
