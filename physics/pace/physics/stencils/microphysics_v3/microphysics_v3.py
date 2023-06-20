@@ -504,7 +504,7 @@ def update_temperature_pre_delp_q(
                 + (qliquid + qrain) * c1_liq
                 + (qice + qsnow + qgraupel) * c1_ice
             ) * c_air
-            tzuv = 0.5 * (ua ** 2 + va ** 2 - (u0 ** 2 + v0 ** 2)) / c8
+            tzuv = 0.5 * (u0 ** 2 + v0 ** 2 - (ua ** 2 + va ** 2)) / c8
             temperature += tzuv
 
         if __INLINED(do_sedi_w):
@@ -514,7 +514,7 @@ def update_temperature_pre_delp_q(
                 + (qliquid + qrain) * c1_liq
                 + (qice + qsnow + qgraupel) * c1_ice
             ) * c_air
-            tzw = 0.5 * (wa ** 2 - w0 ** 2) / c8
+            tzw = 0.5 * (w0 ** 2 - wa ** 2) / c8
             temperature += tzw
 
 
@@ -577,8 +577,8 @@ def convert_mass_mixing_to_specific_ratios_and_update_temperatures(
         qsnow = qsnow * con
         qgraupel = qgraupel * con
 
-        q1 = qvapor + qliquid + qrain + qice + qsnow + qgraupel
-        q2 = qvapor0 + qliquid0 + qrain0 + qice0 + qsnow0 + qgraupel0
+        q1 = qvapor0 + qliquid0 + qrain0 + qice0 + qsnow0 + qgraupel0
+        q2 = qvapor + qliquid + qrain + qice + qsnow + qgraupel
         adj_vmr = ((1.0 - q1) / (1.0 - q2)) / (1.0 + q2 - q1)
 
         # calculate some more variables needed outside
