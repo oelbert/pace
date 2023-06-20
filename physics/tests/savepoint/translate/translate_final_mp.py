@@ -19,7 +19,6 @@ class FinalCalcs:
         config,
         consv_te,
     ):
-        self.config = config
         self._idx = stencil_factory.grid_indexing
         self.consv_te = consv_te
         self.do_qa = config.do_qa
@@ -29,20 +28,22 @@ class FinalCalcs:
         self.fix_negative = config.fix_negative
         self._te_err = config.te_err
         self._tw_err = config.tw_err
+        self.do_sedi_uv = config.do_sedi_uv
+        self.do_sedi_w = config.do_sedi_w
 
-        if self.config.consv_checker:
+        if config.consv_checker:
             self._moist_total_energy_and_water_mq = stencil_factory.from_origin_domain(
                 func=moist_total_energy_and_water,
                 externals={
-                    "hydrostatic": self.config.hydrostatic,
+                    "hydrostatic": config.hydrostatic,
                     "moist_q": True,
-                    "c1_vap": self.config.c1_vap,
-                    "c1_liq": self.config.c1_liq,
-                    "c1_ice": self.config.c1_ice,
-                    "lv00": self.config.lv00,
-                    "li00": self.config.li00,
-                    "c_air": self.config.c_air,
-                    "timestep": self.config.dt_full,
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                    "lv00": config.lv00,
+                    "li00": config.li00,
+                    "c_air": config.c_air,
+                    "timestep": config.dt_full,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
@@ -51,15 +52,15 @@ class FinalCalcs:
             self._moist_total_energy_and_water = stencil_factory.from_origin_domain(
                 func=moist_total_energy_and_water,
                 externals={
-                    "hydrostatic": self.config.hydrostatic,
+                    "hydrostatic": config.hydrostatic,
                     "moist_q": False,
-                    "c1_vap": self.config.c1_vap,
-                    "c1_liq": self.config.c1_liq,
-                    "c1_ice": self.config.c1_ice,
-                    "lv00": self.config.lv00,
-                    "li00": self.config.li00,
-                    "c_air": self.config.c_air,
-                    "timestep": self.config.dt_full,
+                    "c1_vap": config.c1_vap,
+                    "c1_liq": config.c1_liq,
+                    "c1_ice": config.c1_ice,
+                    "lv00": config.lv00,
+                    "li00": config.li00,
+                    "c_air": config.c_air,
+                    "timestep": config.dt_full,
                 },
                 origin=self._idx.origin_compute(),
                 domain=self._idx.domain_compute(),
