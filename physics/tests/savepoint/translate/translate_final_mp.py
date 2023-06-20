@@ -1,5 +1,13 @@
 import pace.dsl
 import pace.util
+from gt4py.cartesian.gtscript import (
+    __INLINED,
+    PARALLEL,
+    computation,
+    interval,
+)
+import pace.util.constants as constants
+from pace.dsl.typing import FloatField
 from pace.physics._config import PhysicsConfig
 from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
     calc_sedimentation_energy_loss,
@@ -10,6 +18,66 @@ from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
     update_temperature_pre_delp_q,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+
+
+def test_temp_calc(
+    qvapor: FloatField,
+    qliquid: FloatField,
+    qrain: FloatField,
+    qice: FloatField,
+    qsnow: FloatField,
+    qgraupel: FloatField,
+    ua: FloatField,
+    va: FloatField,
+    wa: FloatField,
+    delp: FloatField,
+    u0: FloatField,
+    v0: FloatField,
+    w0: FloatField,
+    dp0: FloatField,
+    temperature: FloatField,
+    tzuv: FloatField,
+    tzw: FloatField,
+):
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vap,
+        c_air,
+        do_sedi_uv,
+        do_sedi_w,
+    )
+
+    with computation(PARALLEL), interval(...):
+        q_liq = qliquid + qrain
+        q_sol = qice + qsnow + qgraupel
+        q_cond = q_liq + q_sol
+        con_r8 = 1.0 - (qvapor + q_cond)
+        c8 = (con_r8 + qvapor * c1_vap + q_liq * c1_liq + q_sol * c1_ice) * c_air
+
+        # ifdef USE_COND
+        q_con = q_cond
+        # endif
+        # ifdef MOIST_CAPPA
+        tmp = constants.RDGAS * (1.0 + constants.ZVIR * qvapor)
+        cappa = tmp / (tmp + c8)
+        # endif
+
+        # momentum transportation during sedimentation
+        # update temperature after delp and q update
+        if __INLINED(do_sedi_uv):
+            temperature = temperature - tzuv
+            tzuv = (
+                (0.5 * (u0 ** 2 + v0 ** 2) * dp0 - 0.5 * (ua ** 2 + va ** 2) * delp)
+                / c8
+                / delp
+            )
+            temperature = temperature + tzuv
+
+        if __INLINED(do_sedi_w):
+            temperature = temperature - tzw
+            tzw = (0.5 * (w0 ** 2) * dp0 - 0.5 * (wa ** 2) * delp) / c8 / delp
+            temperature = temperature + tzw
 
 
 class TempUpdate:
@@ -25,9 +93,9 @@ class TempUpdate:
         self.do_sedi_uv = config.do_sedi_uv
         self.do_sedi_w = config.do_sedi_w
 
-        self._convert_mass_mixing_to_specific_ratios_and_update_temperatures = (
+        self._test_temp_calc = (
             stencil_factory.from_origin_domain(
-                func=convert_mass_mixing_to_specific_ratios_and_update_temperatures,
+                func=test_temp_calc,
                 externals={
                     "do_inline_mp": config.do_inline_mp,
                     "c_air": config.c_air,
@@ -44,32 +112,25 @@ class TempUpdate:
     
     def __call__(
         self,
-        qvapor,
-        qliquid,
-        qrain,
-        qice,
-        qsnow,
-        qgraupel,
-        ua,
-        va,
-        wa,
-        delp,
-        qvapor0,
-        qliquid0,
-        qrain0,
-        qice0,
-        qsnow0,
-        qgraupel0,
-        u0,
-        v0,
-        w0,
-        dp0,
-        pt,
-        tzuv,
-        tzw,
-        adj_vmr,
+        qvapor: FloatField,
+        qliquid: FloatField,
+        qrain: FloatField,
+        qice: FloatField,
+        qsnow: FloatField,
+        qgraupel: FloatField,
+        ua: FloatField,
+        va: FloatField,
+        wa: FloatField,
+        delp: FloatField,
+        u0: FloatField,
+        v0: FloatField,
+        w0: FloatField,
+        dp0: FloatField,
+        pt: FloatField,
+        tzuv: FloatField,
+        tzw: FloatField,
     ):
-        self._convert_mass_mixing_to_specific_ratios_and_update_temperatures(
+        self._test_temp_calc(
             qvapor,
             qliquid,
             qrain,
@@ -80,12 +141,6 @@ class TempUpdate:
             va,
             wa,
             delp,
-            qvapor0,
-            qliquid0,
-            qrain0,
-            qice0,
-            qsnow0,
-            qgraupel0,
             u0,
             v0,
             w0,
@@ -93,7 +148,6 @@ class TempUpdate:
             pt,
             tzuv,
             tzw,
-            adj_vmr,
         )
 
 
@@ -566,34 +620,16 @@ class TranslateFinalTempUpdate(TranslatePhysicsFortranData2Py):
             "ua": {"serialname": "ftu_ua", "mp3": True},
             "va": {"serialname": "ftu_va", "mp3": True},
             "wa": {"serialname": "ftu_wa", "mp3": True},
-            "qvapor0": {"serialname": "ftu_qv0", "mp3": True},
-            "qliquid0": {"serialname": "ftu_ql0", "mp3": True},
-            "qrain0": {"serialname": "ftu_qr0", "mp3": True},
-            "qice0": {"serialname": "ftu_qi0", "mp3": True},
-            "qsnow0": {"serialname": "ftu_qs0", "mp3": True},
-            "qgraupel0": {"serialname": "ftu_qg0", "mp3": True},
             "dp0": {"serialname": "ftu_dp0", "mp3": True},
             "u0": {"serialname": "ftu_u0", "mp3": True},
             "v0": {"serialname": "ftu_v0", "mp3": True},
             "w0": {"serialname": "ftu_w0", "mp3": True},
-            "adj_vmr": {"serialname": "ftu_adj_vmr", "mp3": True},
             "tzuv": {"serialname": "ftu_tzuv", "mp3": True},
             "tzw": {"serialname": "ftu_tzw", "mp3": True},
         }
 
         self.out_vars = {
-            "qvapor": {"serialname": "ftu_qv", "kend": namelist.npz, "mp3": True},
-            "qliquid": {"serialname": "ftu_ql", "kend": namelist.npz, "mp3": True},
-            "qrain": {"serialname": "ftu_qr", "kend": namelist.npz, "mp3": True},
-            "qice": {"serialname": "ftu_qi", "kend": namelist.npz, "mp3": True},
-            "qsnow": {"serialname": "ftu_qs", "kend": namelist.npz, "mp3": True},
-            "qgraupel": {"serialname": "ftu_qg", "kend": namelist.npz, "mp3": True},
-            "delp": {"serialname": "ftu_delp", "kend": namelist.npz, "mp3": True},
             "pt": {"serialname": "ftu_pt", "kend": namelist.npz, "mp3": True},
-            "ua": {"serialname": "ftu_ua", "kend": namelist.npz, "mp3": True},
-            "va": {"serialname": "ftu_va", "kend": namelist.npz, "mp3": True},
-            "wa": {"serialname": "ftu_wa", "kend": namelist.npz, "mp3": True},
-            "adj_vmr": {"serialname": "ftu_adj_vmr", "kend": namelist.npz, "mp3": True},
             "tzuv": {"serialname": "ftu_tzuv", "kend": namelist.npz, "mp3": True},
             "tzw": {"serialname": "ftu_tzw", "kend": namelist.npz, "mp3": True},
         }
