@@ -6,7 +6,7 @@ from .translate_cloud_frac import TranslateCloudFrac
 from .translate_config_init import TranslateConfigInit
 from .translate_driver import TranslateDriver
 from .translate_fillgfs import TranslateFillGFS
-from .translate_final_mp import TranslateFinalCalculations, TranslateFinalTempUpdate
+from .translate_final_mp import TranslateFinalCalculations
 from .translate_fv_update_phys import TranslateFVUpdatePhys
 from .translate_gfs_physics_driver import TranslateGFSPhysicsDriver
 from .translate_ice_cloud import TranslateIceCloud
