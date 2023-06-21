@@ -198,6 +198,7 @@ def cloud_fraction(
         rad_graupel,
         rad_rain,
         rad_snow,
+        do_mp_table_emulation,
         t_wfr,
     )
 
@@ -240,12 +241,22 @@ def cloud_fraction(
         )
 
         if tin <= t_wfr:
-            qstar, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+            if __INLINED(do_mp_table_emulation):
+                qstar, dqdt = physfun.iqs(tin, density)
+            else:
+                qstar, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         elif tin >= constants.TICE0:
-            qstar, dqdt = physfun.sat_spec_hum_water(tin, density)
+            if __INLINED(do_mp_table_emulation):
+                qstar, dqdt = physfun.wqs(tin, density)
+            else:
+                qstar, dqdt = physfun.sat_spec_hum_water(tin, density)
         else:
-            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
-            qsw, dqdt = physfun.sat_spec_hum_water(tin, density)
+            if __INLINED(do_mp_table_emulation):
+                qsi, dqdt = physfun.iqs(tin, density)
+                qsw, dqdt = physfun.wqs(tin, density)
+            else:
+                qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+                qsw, dqdt = physfun.sat_spec_hum_water(tin, density)
             if q_cond > constants.QCMIN:
                 rqi = q_solid / q_cond
             else:
@@ -322,6 +333,7 @@ class CloudFraction:
                 "xr_a": config.xr_a,
                 "xr_b": config.xr_b,
                 "xr_c": config.xr_c,
+                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

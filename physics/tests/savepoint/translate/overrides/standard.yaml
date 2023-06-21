@@ -136,3 +136,34 @@ SubgridZSubs:
       - szs_qi
       - szs_qs
       - szs_qg
+
+MPFull:
+  - backend: numpy
+    near_zero: 1.e-20
+    ignore_near_zero_errors:
+      - mpf_qv
+      - mpf_ql
+      - mpf_qr
+      - mpf_qi
+      - mpf_qs
+      - mpf_qg
+      - mpf_ua
+      - mpf_va
+      - mpf_wa
+      - mpf_ccn
+      - mpf_cin
+      - mpf_pfw
+      - mpf_pfr
+      - mpf_pfi
+      - mpf_pfs
+      - mpf_pfg
+      - mpf_dte
+      - mpf_water
+      - mpf_rain
+      - mpf_ice
+      - mpf_snow
+      - mpf_graupel
+      - mpf_cond
+      - mpf_dep
+      - mpf_evap
+      - mpf_sub

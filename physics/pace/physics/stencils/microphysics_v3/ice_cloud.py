@@ -227,6 +227,7 @@ def melt_snow(
         mus,
         qs_mlt,
         timestep,
+        do_mp_table_emulation,
     )
 
     tc = temperature - constants.TICE0
@@ -285,7 +286,10 @@ def melt_snow(
             )
 
         tin = temperature
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(tin, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         dq = qsi - qvapor
 
         sink = max(
@@ -405,6 +409,7 @@ def melt_graupel(
         do_new_acc_water,
         mug,
         timestep,
+        do_mp_table_emulation,
     )
 
     tc = temperature - constants.TICE0
@@ -451,7 +456,10 @@ def melt_graupel(
             )
 
         tin = temperature
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(tin, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         dq = qsi - qvapor
 
         sink = max(
@@ -1400,6 +1408,7 @@ class IceCloud:
                 "fi2s_fac": config.fi2s_fac,
                 "fi2g_fac": config.fi2g_fac,
                 "fs2g_fac": config.fs2g_fac,
+                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

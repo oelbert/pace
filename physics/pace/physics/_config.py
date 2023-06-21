@@ -247,6 +247,7 @@ class MicroPhysicsConfig:
     ifflag: int
     sedflag: int
     vdiffflag: int
+    do_mp_table_emulation: bool
     c_air: float = dataclasses.field(init=False)
     c_vap: float = dataclasses.field(init=False)
     d0_vap: float = dataclasses.field(init=False)
@@ -1587,6 +1588,7 @@ class PhysicsConfig:
     ifflag: int = NamelistDefaults.ifflag
     sedflag: int = NamelistDefaults.sedflag
     vdiffflag: int = NamelistDefaults.vdiffflag
+    do_mp_table_emulation: bool = NamelistDefaults.do_mp_table_emulation
 
     namelist_override: Optional[str] = None
 
@@ -1769,6 +1771,7 @@ class PhysicsConfig:
             vdiffflag=namelist.vdiffflag,
             ntimes=namelist.ntimes,
             do_inline_mp=namelist.do_inline_mp,
+            do_mp_table_emulation=namelist.do_mp_table_emulation,
         )
 
     @property
@@ -1935,4 +1938,5 @@ class PhysicsConfig:
             ifflag=self.ifflag,
             sedflag=self.sedflag,
             vdiffflag=self.vdiffflag,
+            do_mp_table_emulation=self.do_mp_table_emulation,
         )

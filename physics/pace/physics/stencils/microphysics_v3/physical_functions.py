@@ -255,11 +255,6 @@ def sat_spec_hum_water(temp, density):
 
 @gtscript.function
 def sat_spec_hum_water_ice(temperature, density):
-    # temp = temperature
-    # if temp > constants.TICE0 + 102.0:
-    #     temp = constants.TICE0 + 102.0
-    # if temp < constants.TICE0 - 160.0:
-    #     temp = constants.TICE0 - 160.0
     temp = max(constants.TICE0 - 160.0, min(temperature, constants.TICE0 + 102.0))
     q = table2(temp) / (constants.RVGAS * temperature * density)
     if temp < constants.TICE0:
@@ -290,7 +285,7 @@ def table0_delta(int_temperature):
 @gtscript.function
 def lookup_0(temperature):
     int_temperature = temperature_index(temperature)
-    return table0(int_temperature) + (temperature - int_temperature) * table0_delta(
+    return table0(int_temperature) + 10. * (temperature - int_temperature) * table0_delta(
         int_temperature
     )
 
@@ -303,9 +298,7 @@ def table2_delta(int_temperature):
 @gtscript.function
 def lookup_2(temperature):
     int_temperature = temperature_index(temperature)
-    return table2(int_temperature) + (temperature - int_temperature) * table2_delta(
-        int_temperature
-    )
+    return table2(int_temperature) + 10. * (temperature - int_temperature) * table2_delta(int_temperature)
 
 
 @gtscript.function
@@ -318,7 +311,7 @@ def wqs(temperature, density):
         10.0
         * (
             table0_delta(it)
-            + (temp_limit - it) * (table0_delta(it + 0.1) - table0_delta(it))
+            + 10. * (temp_limit - it) * (table0_delta(it + 0.1) - table0_delta(it))
         )
         / (constants.RVGAS * temperature * density)
     )
@@ -335,7 +328,7 @@ def iqs(temperature, density):
         10.0
         * (
             table2_delta(it)
-            + (temp_limit - it) * (table2_delta(it + 0.1) - table2_delta(it))
+            + 10. * (temp_limit - it) * (table2_delta(it + 0.1) - table2_delta(it))
         )
         / (constants.RVGAS * temperature * density)
     )

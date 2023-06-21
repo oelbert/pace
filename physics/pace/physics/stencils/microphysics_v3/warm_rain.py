@@ -55,6 +55,7 @@ def evaporate_rain(
         t_wfr,
         timestep,
         use_rhc_revap,
+        do_mp_table_emulation
     )
 
     with computation(FORWARD), interval(-1, None):
@@ -86,7 +87,10 @@ def evaporate_rain(
 
         # calculate supersaturation and subgrid variability of water
         qpz = qvapor + qliquid
-        qsat, dqdt = physfun.sat_spec_hum_water(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsat, dqdt = physfun.wqs(tin, density)
+        else:
+            qsat, dqdt = physfun.sat_spec_hum_water(tin, density)
         dqv = qsat - qvapor
 
         dqh = max(qliquid, h_var * max(qpz, constants.QCMIN))
@@ -373,6 +377,7 @@ class WarmRain:
                 "c3": config.crevp_3,
                 "c4": config.crevp_4,
                 "c5": config.crevp_5,
+                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),

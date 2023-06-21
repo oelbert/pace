@@ -33,7 +33,7 @@ def perform_instant_processes(
     Instant processes (include deposition, evaporation, and sublimation)
     Fortran name is pinst
     """
-    from __externals__ import c1_ice, c1_liq, c1_vap, li00, lv00, t_min, t_sub
+    from __externals__ import c1_ice, c1_liq, c1_vap, li00, lv00, t_min, t_sub, do_mp_table_emulation
 
     # Instant deposit all water vapor to cloud ice when temperature is super low
     if temperature < t_min:
@@ -76,7 +76,10 @@ def perform_instant_processes(
     )
 
     if tin > (t_sub + 6.0):
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(tin, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         rh = qpz / qsi
 
         if rh < rh_adj:
@@ -158,6 +161,7 @@ def cloud_condensation_evaporation(
         do_cond_timescale,
         rh_fac,
         rhc_cevap,
+        do_mp_table_emulation,
         tau_l2v,
         tau_v2l,
         timestep,
@@ -168,7 +172,10 @@ def cloud_condensation_evaporation(
     fac_l2v = 1.0 - exp(-timestep / tau_l2v)
     fac_v2l = 1.0 - exp(-timestep / tau_v2l)
 
-    qsw, dqdt = physfun.sat_spec_hum_water(temperature, density)
+    if __INLINED(do_mp_table_emulation):
+        qsw, dqdt = physfun.wqs(temperature, density)
+    else:
+        qsw, dqdt = physfun.sat_spec_hum_water(temperature, density)
     qpz = qvapor + qliquid + qice
     rh_tem = qpz / qsw
     dq = qsw - qvapor
@@ -326,11 +333,15 @@ def wegener_bergeron_findeisen(
     Fortran name is pwbf
     """
 
-    from __externals__ import qi0_crt, tau_wbf, timestep
+    from __externals__ import qi0_crt, tau_wbf, timestep, do_mp_table_emulation
 
     tc = constants.TICE0 - temperature
-    qsw, dqdt = physfun.sat_spec_hum_water(temperature, density)
-    qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
+    if __INLINED(do_mp_table_emulation):
+        qsw, dqdt = physfun.wqs(temperature, density)
+        qsi, dqdt = physfun.iqs(temperature, density)
+    else:
+        qsw, dqdt = physfun.sat_spec_hum_water(temperature, density)
+        qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
 
     if (
         (tc > 0.0)
@@ -515,12 +526,16 @@ def deposit_and_sublimate_ice(
         prog_ccn,
         qi_lim,
         t_sub,
+        do_mp_table_emulation,
         timestep,
     )
 
     if temperature < constants.TICE0:
         pidep = 0.0
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(temperature, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(temperature, density)
         dq = qvapor - qsi
         tmp = dq / (1.0 + tcpk * dqdt)
 
@@ -664,12 +679,16 @@ def deposit_and_sublimate_snow(
         mus,
         ss_fac,
         t_sub,
+        do_mp_table_emulation,
         timestep,
     )
 
     if qsnow > constants.QCMIN:
         tin = temperature
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(tin, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         qden = qsnow * density
         t2 = temperature * temperature
         dq = qsi - qvapor
@@ -785,12 +804,16 @@ def deposit_and_sublimate_graupel(
         gs_fac,
         mug,
         t_sub,
+        do_mp_table_emulation,
         timestep,
     )
 
     if qgraupel > constants.QCMIN:
         tin = temperature
-        qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
+        if __INLINED(do_mp_table_emulation):
+            qsi, dqdt = physfun.iqs(tin, density)
+        else:
+            qsi, dqdt = physfun.sat_spec_hum_water_ice(tin, density)
         qden = qgraupel * density
         t2 = temperature * temperature
         dq = qsi - qvapor
@@ -1270,6 +1293,7 @@ class VerticalSubgridProcesses:
                 "gs_fac": config.gs_fac,
                 "do_warm_rain_mp": config.do_warm_rain_mp,
                 "do_wbf": config.do_wbf,
+                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
