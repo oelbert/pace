@@ -20,129 +20,6 @@ from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 
-def test_temp_calc(
-    qvapor: FloatField,
-    qliquid: FloatField,
-    qrain: FloatField,
-    qice: FloatField,
-    qsnow: FloatField,
-    qgraupel: FloatField,
-    ua: FloatField,
-    va: FloatField,
-    wa: FloatField,
-    delp: FloatField,
-    u0: FloatField,
-    v0: FloatField,
-    w0: FloatField,
-    dp0: FloatField,
-    temperature: FloatField,
-    tzuv: FloatField,
-    tzw: FloatField,
-):
-    from __externals__ import (
-        c1_ice,
-        c1_liq,
-        c1_vap,
-        c_air,
-        do_sedi_uv,
-        do_sedi_w,
-    )
-
-    with computation(PARALLEL), interval(...):
-        q_liq = qliquid + qrain
-        q_sol = qice + qsnow + qgraupel
-        q_cond = q_liq + q_sol
-        con_r8 = 1.0 - (qvapor + q_cond)
-        c8 = (con_r8 + qvapor * c1_vap + q_liq * c1_liq + q_sol * c1_ice) * c_air
-
-        # momentum transportation during sedimentation
-        # update temperature after delp and q update
-        if __INLINED(do_sedi_uv):
-            temperature = temperature - tzuv
-            tzuv = (
-                (0.5 * (u0 ** 2 + v0 ** 2) * dp0 - 0.5 * (ua ** 2 + va ** 2) * delp)
-                / c8
-                / delp
-            )
-            temperature = temperature + tzuv
-
-        if __INLINED(do_sedi_w):
-            temperature = temperature - tzw
-            tzw = (0.5 * (w0 ** 2) * dp0 - 0.5 * (wa ** 2) * delp) / c8 / delp
-            temperature = temperature + tzw
-
-
-class TempUpdate:
-    def __init__(
-        self,
-        stencil_factory,
-        config,
-        consv_te,
-    ):
-        self._idx = stencil_factory.grid_indexing
-        self.consv_te = consv_te
-        self.hydrostatic = config.hydrostatic
-        self.do_sedi_uv = config.do_sedi_uv
-        self.do_sedi_w = config.do_sedi_w
-
-        self._test_temp_calc = (
-            stencil_factory.from_origin_domain(
-                func=test_temp_calc,
-                externals={
-                    "do_inline_mp": config.do_inline_mp,
-                    "c_air": config.c_air,
-                    "c1_vap": config.c1_vap,
-                    "c1_liq": config.c1_liq,
-                    "c1_ice": config.c1_ice,
-                    "do_sedi_uv": config.do_sedi_uv,
-                    "do_sedi_w": config.do_sedi_w,
-                },
-                origin=self._idx.origin_compute(),
-                domain=self._idx.domain_compute(),
-            )
-        )
-    
-    def __call__(
-        self,
-        qvapor: FloatField,
-        qliquid: FloatField,
-        qrain: FloatField,
-        qice: FloatField,
-        qsnow: FloatField,
-        qgraupel: FloatField,
-        ua: FloatField,
-        va: FloatField,
-        wa: FloatField,
-        delp: FloatField,
-        u0: FloatField,
-        v0: FloatField,
-        w0: FloatField,
-        dp0: FloatField,
-        pt: FloatField,
-        tzuv: FloatField,
-        tzw: FloatField,
-    ):
-        self._test_temp_calc(
-            qvapor,
-            qliquid,
-            qrain,
-            qice,
-            qsnow,
-            qgraupel,
-            ua,
-            va,
-            wa,
-            delp,
-            u0,
-            v0,
-            w0,
-            dp0,
-            pt,
-            tzuv,
-            tzw,
-        )
-
-
 class FinalCalcs:
     def __init__(
         self,
@@ -558,8 +435,6 @@ class TranslateFinalCalculations(TranslatePhysicsFortranData2Py):
             },
             "total_energy_bot_dry_end": {"serialname": "fin_bed", "mp3": True},
             "total_water_bot_dry_end": {"serialname": "fin_bwd", "mp3": True},
-            "tzuv": {"serialname": "fin_tzuv", "kend": namelist.npz, "mp3": True},
-            "tzw": {"serialname": "fin_tzw", "kend": namelist.npz, "mp3": True},
             "total_energy": {"serialname": "fin_te", "kend": namelist.npz, "mp3": True},
             "column_energy_loss": {"serialname": "fin_te_loss", "mp3": True},
         }
@@ -586,68 +461,6 @@ class TranslateFinalCalculations(TranslatePhysicsFortranData2Py):
         self.make_storage_data_input_vars(inputs)
 
         compute_func = FinalCalcs(self.stencil_factory, self.config, consv_te=False)
-
-        compute_func(**inputs)
-
-        return self.slice_output(inputs)
-    
-
-class TranslateFinalTempUpdate(TranslatePhysicsFortranData2Py):
-    def __init__(
-        self,
-        grid,
-        namelist: pace.util.Namelist,
-        stencil_factory: pace.dsl.StencilFactory,
-    ):
-        super().__init__(grid, namelist, stencil_factory)
-        self.in_vars["data_vars"] = {
-            "qvapor": {"serialname": "ftu_qv", "mp3": True},
-            "qliquid": {"serialname": "ftu_ql", "mp3": True},
-            "qrain": {"serialname": "ftu_qr", "mp3": True},
-            "qice": {"serialname": "ftu_qi", "mp3": True},
-            "qsnow": {"serialname": "ftu_qs", "mp3": True},
-            "qgraupel": {"serialname": "ftu_qg", "mp3": True},
-            "delp": {"serialname": "ftu_delp", "mp3": True},
-            "pt": {"serialname": "ftu_pt", "mp3": True},
-            "ua": {"serialname": "ftu_ua", "mp3": True},
-            "va": {"serialname": "ftu_va", "mp3": True},
-            "wa": {"serialname": "ftu_wa", "mp3": True},
-            "dp0": {"serialname": "ftu_dp0", "mp3": True},
-            "u0": {"serialname": "ftu_u0", "mp3": True},
-            "v0": {"serialname": "ftu_v0", "mp3": True},
-            "w0": {"serialname": "ftu_w0", "mp3": True},
-            "tzuv": {"serialname": "ftu_tzuv", "mp3": True},
-            "tzw": {"serialname": "ftu_tzw", "mp3": True},
-        }
-
-        self.out_vars = {
-            "pt": {"serialname": "ftu_pt", "kend": namelist.npz, "mp3": True},
-            "tzuv": {"serialname": "ftu_tzuv", "kend": namelist.npz, "mp3": True},
-            "tzw": {"serialname": "ftu_tzw", "kend": namelist.npz, "mp3": True},
-        }
-
-        self.stencil_factory = stencil_factory
-        self.grid_indexing = self.stencil_factory.grid_indexing
-        pconf = PhysicsConfig.from_namelist(namelist)
-        self.config = pconf.microphysics
-
-        self.sizer = pace.util.SubtileGridSizer.from_tile_params(
-            nx_tile=self.namelist.npx - 1,
-            ny_tile=self.namelist.npy - 1,
-            nz=self.namelist.npz,
-            n_halo=3,
-            extra_dim_lengths={},
-            layout=self.namelist.layout,
-        )
-
-        self.quantity_factory = pace.util.QuantityFactory.from_backend(
-            self.sizer, self.stencil_factory.backend
-        )
-
-    def compute(self, inputs):
-        self.make_storage_data_input_vars(inputs)
-
-        compute_func = TempUpdate(self.stencil_factory, self.config, consv_te=False)
 
         compute_func(**inputs)
 
