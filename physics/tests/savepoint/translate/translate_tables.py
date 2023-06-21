@@ -1,4 +1,4 @@
-from gt4py.cartesian.gtscript import FORWARD, computation, interval
+from gt4py.cartesian.gtscript import FORWARD, computation, interval, __INLINED
 
 import pace.dsl
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
@@ -29,9 +29,14 @@ def calc_table_values(
     didt: FloatField,
     dwdt: FloatField,
 ):
+    from __externals__ import do_mp_table_emulation
     with computation(FORWARD), interval(...):
-        wqs, dwdt = physfun.sat_spec_hum_water(temp, den)
-        iqs, didt = physfun.sat_spec_hum_water_ice(temp, den)
+        if __INLINED(do_mp_table_emulation):
+            wqs, dwdt = physfun.wqs(temp, den)
+            iqs, didt = physfun.iqs(temp, den)
+        else:
+            wqs, dwdt = physfun.sat_spec_hum_water(temp, den)
+            iqs, didt = physfun.sat_spec_hum_water_ice(temp, den)
 
 
 class CalcTables:
