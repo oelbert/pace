@@ -50,6 +50,9 @@ class CalcTables:
         )
         self._calc_table_values = stencil_factory.from_origin_domain(
             func=calc_table_values,
+            externals={
+                "do_mp_table_emulation": config.do_mp_table_emulation,
+            },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
         )
