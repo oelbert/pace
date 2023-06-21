@@ -707,21 +707,21 @@ def calculate_total_energy_change_and_convert_temp(
 
 def total_energy_check(
     total_energy_dry_end,
-    total_energy_wet_end,
+    total_energy_moist_end,
     total_water_dry_end,
-    total_water_wet_end,
+    total_water_moist_end,
     total_energy_dry_begin,
-    total_energy_wet_begin,
+    total_energy_moist_begin,
     total_water_dry_begin,
-    total_water_wet_begin,
+    total_water_moist_begin,
     total_energy_bot_dry_end,
-    total_energy_bot_wet_end,
+    total_energy_bot_moist_end,
     total_water_bot_dry_end,
-    total_water_bot_wet_end,
+    total_water_bot_moist_end,
     total_energy_bot_dry_begin,
-    total_energy_bot_wet_begin,
+    total_energy_bot_moist_begin,
     total_water_bot_dry_begin,
-    total_water_bot_wet_begin,
+    total_water_bot_moist_begin,
     i_start,
     i_end,
     j_start,
@@ -739,34 +739,34 @@ def total_energy_check(
                 sum(total_energy_dry_end[i, j, :])
                 + total_energy_bot_dry_end[i, j]
                 - sum(total_energy_dry_begin[i, j, :])
-                - total_energy_bot_dry_begin
-            ) / (sum(total_energy_dry_begin[i, j, :]) + total_energy_bot_dry_begin)
+                - total_energy_bot_dry_begin[i, j]
+            ) / (sum(total_energy_dry_begin[i, j, :]) + total_energy_bot_dry_begin[i, j])
             if dry_energy_change > te_err:
                 print(f"GFDL-MP-DRY TE: {dry_energy_change}")
-            wet_energy_change = abs(
-                sum(total_energy_wet_end[i, j, :])
-                + total_energy_bot_wet_end[i, j]
-                - sum(total_energy_wet_begin[i, j, :])
-                - total_energy_bot_wet_begin
-            ) / (sum(total_energy_wet_begin[i, j, :]) + total_energy_bot_wet_begin)
-            if wet_energy_change > te_err:
-                print(f"GFDL-MP-WET TE: {wet_energy_change}")
+            moist_energy_change = abs(
+                sum(total_energy_moist_end[i, j, :])
+                + total_energy_bot_moist_end[i, j]
+                - sum(total_energy_moist_begin[i, j, :])
+                - total_energy_bot_moist_begin[i, j]
+            ) / (sum(total_energy_moist_begin[i, j, :]) + total_energy_bot_moist_begin[i, j])
+            if moist_energy_change > te_err:
+                print(f"GFDL-MP-MOIST TE: {moist_energy_change}")
             dry_water_change = abs(
                 sum(total_water_dry_end[i, j, :])
                 + total_water_bot_dry_end[i, j]
                 - sum(total_water_dry_begin[i, j, :])
-                - total_water_bot_dry_begin
-            ) / (sum(total_water_dry_begin[i, j, :]) + total_water_bot_dry_begin)
+                - total_water_bot_dry_begin[i, j]
+            ) / (sum(total_water_dry_begin[i, j, :]) + total_water_bot_dry_begin[i, j])
             if dry_water_change > tw_err:
                 print(f"GFDL-MP-DRY TW: {dry_water_change}")
-            wet_water_change = abs(
-                sum(total_water_wet_end[i, j, :])
-                + total_water_bot_wet_end[i, j]
-                - sum(total_water_wet_begin[i, j, :])
-                - total_water_bot_wet_begin
-            ) / (sum(total_water_wet_begin[i, j, :]) + total_water_bot_wet_begin)
-            if wet_water_change > tw_err:
-                print(f"GFDL-MP-WET TW: {wet_water_change}")
+            moist_water_change = abs(
+                sum(total_water_moist_end[i, j, :])
+                + total_water_bot_moist_end[i, j]
+                - sum(total_water_moist_begin[i, j, :])
+                - total_water_bot_moist_begin[i, j]
+            ) / (sum(total_water_moist_begin[i, j, :]) + total_water_bot_moist_begin[i, j])
+            if moist_water_change > tw_err:
+                print(f"GFDL-MP-MOIST TW: {moist_water_change}")
 
 
 class Microphysics:
@@ -866,21 +866,21 @@ class Microphysics:
             self._column_vapor = make_quantity2d()  # Needed for mtetw
             self._column_energy_loss = make_quantity2d()
             self._total_energy_dry_end = make_quantity()
-            self._total_energy_wet_end = make_quantity()
+            self._total_energy_moist_end = make_quantity()
             self._total_water_dry_end = make_quantity()
-            self._total_water_wet_end = make_quantity()
+            self._total_water_moist_end = make_quantity()
             self._total_energy_dry_begin = make_quantity()
-            self._total_energy_wet_begin = make_quantity()
+            self._total_energy_moist_begin = make_quantity()
             self._total_water_dry_begin = make_quantity()
-            self._total_water_wet_begin = make_quantity()
+            self._total_water_moist_begin = make_quantity()
             self._total_energy_bot_dry_end = make_quantity()
-            self._total_energy_bot_wet_end = make_quantity()
+            self._total_energy_bot_moist_end = make_quantity()
             self._total_water_bot_dry_end = make_quantity()
-            self._total_water_bot_wet_end = make_quantity()
+            self._total_water_bot_moist_end = make_quantity()
             self._total_energy_bot_dry_begin = make_quantity()
-            self._total_energy_bot_wet_begin = make_quantity()
+            self._total_energy_bot_moist_begin = make_quantity()
             self._total_water_bot_dry_begin = make_quantity()
-            self._total_water_bot_wet_begin = make_quantity()
+            self._total_water_bot_moist_begin = make_quantity()
 
         self._h_var = make_quantity2d()
         self._rh_adj = make_quantity2d()
@@ -1234,10 +1234,10 @@ class Microphysics:
                 state.column_graupel,
                 0.0,
                 0.0,
-                self._total_energy_wet_begin,
-                self._total_water_wet_begin,
-                self._total_energy_bot_wet_begin,
-                self._total_water_bot_wet_begin,
+                self._total_energy_moist_begin,
+                self._total_water_moist_begin,
+                self._total_energy_bot_moist_begin,
+                self._total_water_bot_moist_begin,
             )
 
         self._convert_specific_to_mass_mixing_ratios_and_calculate_densities(
@@ -1523,10 +1523,10 @@ class Microphysics:
                 state.column_graupel,
                 0.0,
                 0.0,
-                self._total_energy_wet_end,
-                self._total_water_wet_end,
-                self._total_energy_bot_wet_end,
-                self._total_water_bot_wet_end,
+                self._total_energy_moist_end,
+                self._total_water_moist_end,
+                self._total_energy_bot_moist_end,
+                self._total_water_bot_moist_end,
             )
 
         self._calculate_total_energy_change_and_convert_temp(
@@ -1546,21 +1546,21 @@ class Microphysics:
         if self.consv_checker:
             total_energy_check(
                 self._total_energy_dry_end,
-                self._total_energy_wet_end,
+                self._total_energy_moist_end,
                 self._total_water_dry_end,
-                self._total_water_wet_end,
+                self._total_water_moist_end,
                 self._total_energy_dry_begin,
-                self._total_energy_wet_begin,
+                self._total_energy_moist_begin,
                 self._total_water_dry_begin,
-                self._total_water_wet_begin,
+                self._total_water_moist_begin,
                 self._total_energy_bot_dry_end,
-                self._total_energy_bot_wet_end,
+                self._total_energy_bot_moist_end,
                 self._total_water_bot_dry_end,
-                self._total_water_bot_wet_end,
+                self._total_water_bot_moist_end,
                 self._total_energy_bot_dry_begin,
-                self._total_energy_bot_wet_begin,
+                self._total_energy_bot_moist_begin,
                 self._total_water_bot_dry_begin,
-                self._total_water_bot_wet_begin,
+                self._total_water_bot_moist_begin,
                 self._idx.isc,
                 self._idx.iec,
                 self._idx.jsc,
