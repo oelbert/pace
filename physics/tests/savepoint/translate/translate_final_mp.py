@@ -55,14 +55,6 @@ def test_temp_calc(
         con_r8 = 1.0 - (qvapor + q_cond)
         c8 = (con_r8 + qvapor * c1_vap + q_liq * c1_liq + q_sol * c1_ice) * c_air
 
-        # ifdef USE_COND
-        q_con = q_cond
-        # endif
-        # ifdef MOIST_CAPPA
-        tmp = constants.RDGAS * (1.0 + constants.ZVIR * qvapor)
-        cappa = tmp / (tmp + c8)
-        # endif
-
         # momentum transportation during sedimentation
         # update temperature after delp and q update
         if __INLINED(do_sedi_uv):
