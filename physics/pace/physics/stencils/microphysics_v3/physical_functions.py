@@ -274,31 +274,35 @@ def sat_spec_hum_water_ice(temperature, density):
 
 @gtscript.function
 def temperature_index(temperature):
-    return floor(10.0 * temperature) / 10.0
+    return floor(10.0 * temperature) / 10.0 + 0.05
 
 
 @gtscript.function
 def table0_delta(int_temperature):
+    tmax = constants.TICE0 - 160.0 + 262.0
+    int_temperature = min(int_temperature, tmax)
     return max(0.0, table0(int_temperature + 0.1) - table0(int_temperature))
 
 
 @gtscript.function
 def lookup_0(temperature):
     int_temperature = temperature_index(temperature)
-    return table0(int_temperature) + 10. * (temperature - int_temperature) * table0_delta(
+    return table0(int_temperature) + 10 * (temperature - int_temperature) * table0_delta(
         int_temperature
     )
 
 
 @gtscript.function
 def table2_delta(int_temperature):
+    tmax = constants.TICE0 - 160.0 + 262.0
+    int_temperature = min(int_temperature, tmax)
     return max(0.0, table2(int_temperature + 0.1) - table2(int_temperature))
 
 
 @gtscript.function
 def lookup_2(temperature):
     int_temperature = temperature_index(temperature)
-    return table2(int_temperature) + 10. * (temperature - int_temperature) * table2_delta(int_temperature)
+    return table2(int_temperature) + 10 * (temperature - int_temperature) * table2_delta(int_temperature)
 
 
 @gtscript.function
@@ -311,7 +315,7 @@ def wqs(temperature, density):
         10.0
         * (
             table0_delta(it)
-            + 10. * (temp_limit - it) * (table0_delta(it + 0.1) - table0_delta(it))
+            + 10 * (temp_limit - it) * (table0_delta(it + 0.1) - table0_delta(it))
         )
         / (constants.RVGAS * temperature * density)
     )
@@ -328,7 +332,7 @@ def iqs(temperature, density):
         10.0
         * (
             table2_delta(it)
-            + 10. * (temp_limit - it) * (table2_delta(it + 0.1) - table2_delta(it))
+            + 10 * (temp_limit - it) * (table2_delta(it + 0.1) - table2_delta(it))
         )
         / (constants.RVGAS * temperature * density)
     )

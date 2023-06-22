@@ -17,8 +17,9 @@ def init_tables(
     table2: FloatField,
 ):
     with computation(FORWARD), interval(...):
-        table0 = physfun.table0(temp)
-        table2 = physfun.table2(temp)
+        it = physfun.temperature_index(temp)
+        table0 = physfun.table0(it)
+        table2 = physfun.table2(it)
 
 
 def calc_table_values(
