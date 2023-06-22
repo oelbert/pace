@@ -309,7 +309,7 @@ def lookup_2(temperature):
 def wqs(temperature, density):
     tmin = constants.TICE0 - 160.0
     temp_limit = min(tmin + 262.1, max(tmin, temperature))
-    qsat = lookup_0(temperature) / (constants.RVGAS * temperature * density)
+    qsat = lookup_0(temp_limit) / (constants.RVGAS * temperature * density)
     it = temperature_index(temp_limit - 0.05)
     dqdt = (
         10.0
@@ -326,7 +326,7 @@ def wqs(temperature, density):
 def iqs(temperature, density):
     tmin = constants.TICE0 - 160.0
     temp_limit = min(tmin + 262.1, max(tmin, temperature))
-    qsat = lookup_2(temperature) / (constants.RVGAS * temperature * density)
+    qsat = lookup_2(temp_limit) / (constants.RVGAS * temperature * density)
     it = temperature_index(temp_limit - 0.05)
     dqdt = (
         10.0
