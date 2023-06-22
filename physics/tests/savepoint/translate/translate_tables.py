@@ -187,6 +187,7 @@ class TranslateTableComputation(TranslatePhysicsFortranData2Py):
         self.stencil_factory = stencil_factory
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics
+        self.config.do_mp_table_emulation = True
 
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
