@@ -13,14 +13,14 @@ class HumiditySaturationTables:
         self.n_min = 1600
         self._t0_init = False
         self._t2_init = False
-        self._initialize_table0
-        self._initialize_table2
-        ...
-
-    def _initialize_table0(self):
         self.table0 = np.zeros(self.length)
         self.des0 = np.zeros(self.length)
+        self.table2 = np.zeros(self.length)
+        self.des2 = np.zeros(self.length)
+        self._initialize_table0
+        self._initialize_table2
 
+    def _initialize_table0(self):
         tmin = constants.TICE0 - 160.0
 
         for i in range(self.length):
@@ -40,9 +40,6 @@ class HumiditySaturationTables:
     def _initialize_table2(self):
         if not self._t0_init:
             self._initialize_table0
-
-        self.table2 = np.zeros(self.length)
-        self.des2 = np.zeros(self.length)
 
         tmin = constants.TICE0 - self.n_min * self.delt
 
