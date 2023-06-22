@@ -3,12 +3,13 @@ from gt4py.cartesian.gtscript import FORWARD, computation, interval, __INLINED
 import pace.dsl
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
-from pace.dsl.typing import FloatField
+from pace.dsl.typing import FloatField, IntField
 from pace.physics._config import PhysicsConfig
 from pace.physics.stencils.microphysics_v3.humidity_tables import (
     HumiditySaturationTables,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
+import pace.util.constants as constants
 
 
 def init_tables(
@@ -29,6 +30,9 @@ def calc_table_values(
     wqs: FloatField,
     didt: FloatField,
     dwdt: FloatField,
+    ap1: FloatField,
+    it1: IntField,
+    it2: IntField,
 ):
     from __externals__ import do_mp_table_emulation
     with computation(FORWARD), interval(...):
@@ -38,6 +42,11 @@ def calc_table_values(
         else:
             wqs, dwdt = physfun.sat_spec_hum_water(temp, den)
             iqs, didt = physfun.sat_spec_hum_water_ice(temp, den)
+
+        ap1 = 10. * max(temp - (constants.TICE0 - 160.)) + 1
+        ap1 = min(ap1, 2621.)
+        it1 = ap1
+        it2 = ap1 - 0.5
 
 
 class CalcTables:
@@ -69,6 +78,9 @@ class CalcTables:
         dwdt: FloatField,
         temp2: FloatField,
         den: FloatField,
+        ap1: FloatField,
+        it1: IntField,
+        it2: IntField,
     ):
         self._init_tables(
             temp,
@@ -82,6 +94,9 @@ class CalcTables:
             wqs,
             didt,
             dwdt,
+            ap1,
+            it1,
+            it2
         )
 
 
@@ -126,6 +141,9 @@ class TranslatePythonTables(TranslatePhysicsFortranData2Py):
             "didt": {"serialname": "tab_diq", "mp3": True},
             "temp": {"serialname": "tab_pt", "mp3": True},
             "den": {"serialname": "tab_den", "mp3": True},
+            "ap1": {"serialname": "tc_ap1", "mp3": True},
+            "it1": {"serialname": "tc_it1", "mp3": True},
+            "it2": {"serialname": "tc_it2", "mp3": True},
         }
 
         self.out_vars = {
@@ -135,6 +153,9 @@ class TranslatePythonTables(TranslatePhysicsFortranData2Py):
             "dwdt": {"serialname": "tab_dwq", "kend": namelist.npz, "mp3": True},
             "iqs": {"serialname": "tab_iq", "kend": namelist.npz, "mp3": True},
             "didt": {"serialname": "tab_diq", "kend": namelist.npz, "mp3": True},
+            "ap1": {"serialname": "tc_ap1", "kend": namelist.npz, "mp3": True},
+            "it1": {"serialname": "tc_it1", "kend": namelist.npz, "mp3": True},
+            "it2": {"serialname": "tc_it2", "kend": namelist.npz, "mp3": True},
         }
 
         self.stencil_factory = stencil_factory
