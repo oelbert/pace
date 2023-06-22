@@ -66,8 +66,8 @@ class HumiditySaturationTables:
         tmin = constants.TICE0 - 160.0
         ap1 = 10.0 * np.maximum(0, temperature - tmin) + 1.0
         ap1 = np.minimum(self.length, ap1) - 1.0
-        it = int(ap1 - 0.5)
-        it2 = int(ap1)
+        it = (ap1 - 0.5).astype(int)
+        it2 = ap1.astype(int)
 
         if table not in [0, 2]:
             raise ValueError(f"table {table} not in [0, 2]")
