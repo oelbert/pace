@@ -21,6 +21,7 @@ class HumiditySaturationTables:
         self._initialize_table2()
 
     def _initialize_table0(self):
+        #TODO: numpy-ify these init methods?
         tmin = constants.TICE0 - 160.0
 
         for i in range(self.length):
@@ -63,8 +64,8 @@ class HumiditySaturationTables:
 
     def _saturation(self, temperature, density, table: int):
         tmin = constants.TICE0 - 160.0
-        ap1 = 10.0 * max(0, temperature - tmin) + 1.0
-        ap1 = min(self.length, ap1) - 1.0
+        ap1 = 10.0 * np.maximum(0, temperature - tmin) + 1.0
+        ap1 = np.minimum(self.length, ap1) - 1.0
         it = int(ap1 - 0.5)
         it2 = int(ap1)
 
