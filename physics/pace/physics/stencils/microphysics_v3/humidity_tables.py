@@ -17,8 +17,8 @@ class HumiditySaturationTables:
         self.des0 = np.zeros(self.length)
         self.table2 = np.zeros(self.length)
         self.des2 = np.zeros(self.length)
-        self._initialize_table0
-        self._initialize_table2
+        self._initialize_table0()
+        self._initialize_table2()
 
     def _initialize_table0(self):
         tmin = constants.TICE0 - 160.0
