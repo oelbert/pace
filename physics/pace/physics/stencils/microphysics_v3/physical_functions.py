@@ -274,7 +274,8 @@ def sat_spec_hum_water_ice(temperature, density):
 
 @gtscript.function
 def temperature_index(temperature):
-    return floor(10.0 * temperature) / 10.0 + 0.05
+    tmin = constants.TICE0 - 160.0
+    return floor(10.0 * (temperature - tmin)) / 10.0 + tmin
 
 
 @gtscript.function
