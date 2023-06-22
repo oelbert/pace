@@ -344,10 +344,6 @@ def vertical_subgrid_processes(
                         icpk,
                         tcpk,
                         tcp3,
-                        qsi,
-                        dqidt,
-                        qsw,
-                        dqwdt,
                     )
 
                 (
