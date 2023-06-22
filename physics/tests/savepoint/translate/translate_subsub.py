@@ -329,7 +329,7 @@ def vertical_subgrid_processes(
                         icpk,
                         tcpk,
                         tcp3,
-                    ) = wegener_bergeron_findeisen_test(
+                    ) = wegener_bergeron_findeisen(
                         qvapor,
                         qliquid,
                         qrain,
