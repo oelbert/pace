@@ -100,9 +100,9 @@ class HumiditySaturationTables:
         return qs_core, dqdt
 
     def sat_water(self, temperature, density):
-        wqs, dqdt = self._saturation(self, temperature, density, 0)
+        wqs, dqdt = self._saturation(temperature, density, 0)
         return wqs, dqdt
 
     def sat_ice_water(self, temperature, density):
-        iqs, dqdt = self._saturation(self, temperature, density, 2)
+        iqs, dqdt = self._saturation(temperature, density, 2)
         return iqs, dqdt
