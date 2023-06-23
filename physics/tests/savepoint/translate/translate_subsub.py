@@ -189,27 +189,27 @@ def vertical_subgrid_processes(
     """"""
     from __externals__ import do_warm_rain_mp, do_wbf  # noqa
 
-    # with computation(FORWARD):
-    #     with interval(-1, None):
-    #         cond = 0
-    #         dep = 0
-    #         reevap = 0
-    #         sub = 0
+    with computation(FORWARD):
+        with interval(-1, None):
+            cond = 0
+            dep = 0
+            reevap = 0
+            sub = 0
 
     with computation(FORWARD):
         with interval(...):
-            # (
-            #     q_liq,
-            #     q_solid,
-            #     cvm,
-            #     te,
-            #     lcpk,
-            #     icpk,
-            #     tcpk,
-            #     tcp3,
-            # ) = physfun.calc_heat_cap_and_latent_heat_coeff(
-            #     qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
-            # )
+            (
+                q_liq,
+                q_solid,
+                cvm,
+                te,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+            ) = physfun.calc_heat_cap_and_latent_heat_coeff(
+                qvapor, qliquid, qrain, qice, qsnow, qgraupel, temperature
+            )
 
             if __INLINED(not do_warm_rain_mp):
                 (
@@ -245,36 +245,36 @@ def vertical_subgrid_processes(
                     sub,
                 )
 
-            # (
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     cvm,
-            #     lcpk,
-            #     icpk,
-            #     tcpk,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            # ) = cloud_condensation_evaporation(
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     delp,
-            #     density,
-            #     te,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            # )
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                cvm,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+                cond,
+                reevap,
+            ) = cloud_condensation_evaporation(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                delp,
+                density,
+                te,
+                tcp3,
+                cond,
+                reevap,
+            )
 
             # if __INLINED(not do_warm_rain_mp):
             #     (
