@@ -228,7 +228,7 @@ def vertical_subgrid_processes(
                     dep,
                     reevap,
                     sub,
-                ) = perform_instant_processes_test(
+                ) = perform_instant_processes(
                     qvapor,
                     qliquid,
                     qrain,
@@ -243,13 +243,6 @@ def vertical_subgrid_processes(
                     dep,
                     reevap,
                     sub,
-                    qsi,
-                    dqidt,
-                    cvm,
-                    lcpk,
-                    icpk,
-                    tcpk,
-                    tcp3,
                 )
 
             (
