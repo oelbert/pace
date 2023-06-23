@@ -252,38 +252,36 @@ def vertical_subgrid_processes(
             #         tcp3,
             #     )
 
-            # (
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     cvm,
-            #     lcpk,
-            #     icpk,
-            #     tcpk,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            # ) = cloud_condensation_evaporation_test(
-            #     qvapor,
-            #     qliquid,
-            #     qrain,
-            #     qice,
-            #     qsnow,
-            #     qgraupel,
-            #     temperature,
-            #     delp,
-            #     density,
-            #     te,
-            #     tcp3,
-            #     cond,
-            #     reevap,
-            #     qsw,
-            #     dqwdt
-            # )
+            (
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                cvm,
+                lcpk,
+                icpk,
+                tcpk,
+                tcp3,
+                cond,
+                reevap,
+            ) = cloud_condensation_evaporation(
+                qvapor,
+                qliquid,
+                qrain,
+                qice,
+                qsnow,
+                qgraupel,
+                temperature,
+                delp,
+                density,
+                te,
+                tcp3,
+                cond,
+                reevap,
+            )
 
             if __INLINED(not do_warm_rain_mp):
                 (
