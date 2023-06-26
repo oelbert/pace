@@ -223,11 +223,11 @@ def melt_snow(
         csmlt_2,
         csmlt_3,
         csmlt_4,
+        do_mp_table_emulation,
         do_new_acc_water,
         mus,
         qs_mlt,
         timestep,
-        do_mp_table_emulation,
     )
 
     tc = temperature - constants.TICE0
@@ -406,10 +406,10 @@ def melt_graupel(
         cgmlt_2,
         cgmlt_3,
         cgmlt_4,
+        do_mp_table_emulation,
         do_new_acc_water,
         mug,
         timestep,
-        do_mp_table_emulation,
     )
 
     tc = temperature - constants.TICE0

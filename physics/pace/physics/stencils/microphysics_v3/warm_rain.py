@@ -48,6 +48,7 @@ def evaporate_rain(
         c3,
         c4,
         c5,
+        do_mp_table_emulation,
         fac_revap,
         lv00,
         mur,
@@ -55,7 +56,6 @@ def evaporate_rain(
         t_wfr,
         timestep,
         use_rhc_revap,
-        do_mp_table_emulation
     )
 
     with computation(FORWARD), interval(-1, None):

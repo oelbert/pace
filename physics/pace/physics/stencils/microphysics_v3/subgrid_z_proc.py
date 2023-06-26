@@ -33,7 +33,16 @@ def perform_instant_processes(
     Instant processes (include deposition, evaporation, and sublimation)
     Fortran name is pinst
     """
-    from __externals__ import c1_ice, c1_liq, c1_vap, li00, lv00, t_min, t_sub, do_mp_table_emulation
+    from __externals__ import (
+        c1_ice,
+        c1_liq,
+        c1_vap,
+        do_mp_table_emulation,
+        li00,
+        lv00,
+        t_min,
+        t_sub,
+    )
 
     # Instant deposit all water vapor to cloud ice when temperature is super low
     if temperature < t_min:
@@ -159,9 +168,9 @@ def cloud_condensation_evaporation(
 
     from __externals__ import (
         do_cond_timescale,
+        do_mp_table_emulation,
         rh_fac,
         rhc_cevap,
-        do_mp_table_emulation,
         tau_l2v,
         tau_v2l,
         timestep,
@@ -333,7 +342,7 @@ def wegener_bergeron_findeisen(
     Fortran name is pwbf
     """
 
-    from __externals__ import qi0_crt, tau_wbf, timestep, do_mp_table_emulation
+    from __externals__ import do_mp_table_emulation, qi0_crt, tau_wbf, timestep
 
     tc = constants.TICE0 - temperature
     if __INLINED(do_mp_table_emulation):
@@ -516,6 +525,7 @@ def deposit_and_sublimate_ice(
     """
 
     from __externals__ import (
+        do_mp_table_emulation,
         do_psd_ice_num,
         igflag,
         inflag,
@@ -526,7 +536,6 @@ def deposit_and_sublimate_ice(
         prog_ccn,
         qi_lim,
         t_sub,
-        do_mp_table_emulation,
         timestep,
     )
 
@@ -676,10 +685,10 @@ def deposit_and_sublimate_snow(
         cssub_3,
         cssub_4,
         cssub_5,
+        do_mp_table_emulation,
         mus,
         ss_fac,
         t_sub,
-        do_mp_table_emulation,
         timestep,
     )
 
@@ -801,10 +810,10 @@ def deposit_and_sublimate_graupel(
         cgsub_3,
         cgsub_4,
         cgsub_5,
+        do_mp_table_emulation,
         gs_fac,
         mug,
         t_sub,
-        do_mp_table_emulation,
         timestep,
     )
 

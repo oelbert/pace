@@ -288,9 +288,9 @@ def table0_delta(int_temperature):
 @gtscript.function
 def lookup_0(temperature):
     int_temperature = temperature_index(temperature)
-    return table0(int_temperature) + 10 * (temperature - int_temperature) * table0_delta(
-        int_temperature
-    )
+    return table0(int_temperature) + 10 * (
+        temperature - int_temperature
+    ) * table0_delta(int_temperature)
 
 
 @gtscript.function
@@ -303,7 +303,9 @@ def table2_delta(int_temperature):
 @gtscript.function
 def lookup_2(temperature):
     int_temperature = temperature_index(temperature)
-    return table2(int_temperature) + 10 * (temperature - int_temperature) * table2_delta(int_temperature)
+    return table2(int_temperature) + 10 * (
+        temperature - int_temperature
+    ) * table2_delta(int_temperature)
 
 
 @gtscript.function

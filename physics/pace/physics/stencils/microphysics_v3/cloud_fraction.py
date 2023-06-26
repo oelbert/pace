@@ -193,12 +193,12 @@ def cloud_fraction(
         c1_liq,
         c1_vap,
         cfflag,
+        do_mp_table_emulation,
         li00,
         lv00,
         rad_graupel,
         rad_rain,
         rad_snow,
-        do_mp_table_emulation,
         t_wfr,
     )
 

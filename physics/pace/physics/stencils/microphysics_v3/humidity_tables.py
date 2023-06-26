@@ -21,7 +21,7 @@ class HumiditySaturationTables:
         self._initialize_table2()
 
     def _initialize_table0(self):
-        #TODO: numpy-ify these init methods?
+        # TODO: numpy-ify these init methods?
         tmin = constants.TICE0 - 160.0
 
         for i in range(self.length):

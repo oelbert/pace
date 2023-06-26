@@ -1,15 +1,15 @@
-from gt4py.cartesian.gtscript import FORWARD, computation, interval, __INLINED
+from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval
 
 import pace.dsl
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
 import pace.util
+import pace.util.constants as constants
 from pace.dsl.typing import FloatField, IntField
 from pace.physics._config import PhysicsConfig
 from pace.physics.stencils.microphysics_v3.humidity_tables import (
     HumiditySaturationTables,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
-import pace.util.constants as constants
 
 
 def init_tables(
@@ -35,6 +35,7 @@ def calc_table_values(
     it2: IntField,
 ):
     from __externals__ import do_mp_table_emulation
+
     with computation(FORWARD), interval(...):
         if __INLINED(do_mp_table_emulation):
             wqs, dwdt = physfun.wqs(temp, den)
@@ -43,8 +44,8 @@ def calc_table_values(
             wqs, dwdt = physfun.sat_spec_hum_water(temp, den)
             iqs, didt = physfun.sat_spec_hum_water_ice(temp, den)
 
-        ap1 = 10. * max(temp - (constants.TICE0 - 160.)) + 1
-        ap1 = min(ap1, 2621.)
+        ap1 = 10.0 * max(temp - (constants.TICE0 - 160.0)) + 1
+        ap1 = min(ap1, 2621.0)
         it1 = ap1
         it2 = ap1 - 0.5
 
@@ -87,17 +88,7 @@ class CalcTables:
             table0,
             table2,
         )
-        self._calc_table_values(
-            temp2,
-            den,
-            iqs,
-            wqs,
-            didt,
-            dwdt,
-            ap1,
-            it1,
-            it2
-        )
+        self._calc_table_values(temp2, den, iqs, wqs, didt, dwdt, ap1, it1, it2)
 
 
 class LookupPython:

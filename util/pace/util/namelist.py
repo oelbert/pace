@@ -175,7 +175,7 @@ class NamelistDefaults:
     clin = 4.8  # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
     ntimes = 1  # Number of cloud microphysics sub cycles
     do_inline_mp = False  # Whether the microphsyics is called inside of the dycore
-    do_mp_table_emulation = False  # Whether lookup tables should be emulated instead of 
+    do_mp_table_emulation = False  # Whether lookup tables should be emulated instead of
     # directly calculating values in microphysics, useful for validation
     n0w_sig = 1.1  # cwater significand (Lin et al. 1983) (m^-4) (Martin et al. 1994)
     n0i_sig = 1.3  # cice significand (Lin et al. 1983) (m^-4) (McFarquhar et al. 2015)

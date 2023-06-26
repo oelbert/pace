@@ -740,7 +740,9 @@ def total_energy_check(
                 + total_energy_bot_dry_end[i, j]
                 - sum(total_energy_dry_begin[i, j, :])
                 - total_energy_bot_dry_begin[i, j]
-            ) / (sum(total_energy_dry_begin[i, j, :]) + total_energy_bot_dry_begin[i, j])
+            ) / (
+                sum(total_energy_dry_begin[i, j, :]) + total_energy_bot_dry_begin[i, j]
+            )
             if dry_energy_change > te_err:
                 print(f"GFDL-MP-DRY TE: {dry_energy_change}")
             moist_energy_change = abs(
@@ -748,7 +750,10 @@ def total_energy_check(
                 + total_energy_bot_moist_end[i, j]
                 - sum(total_energy_moist_begin[i, j, :])
                 - total_energy_bot_moist_begin[i, j]
-            ) / (sum(total_energy_moist_begin[i, j, :]) + total_energy_bot_moist_begin[i, j])
+            ) / (
+                sum(total_energy_moist_begin[i, j, :])
+                + total_energy_bot_moist_begin[i, j]
+            )
             if moist_energy_change > te_err:
                 print(f"GFDL-MP-MOIST TE: {moist_energy_change}")
             dry_water_change = abs(
@@ -764,7 +769,10 @@ def total_energy_check(
                 + total_water_bot_moist_end[i, j]
                 - sum(total_water_moist_begin[i, j, :])
                 - total_water_bot_moist_begin[i, j]
-            ) / (sum(total_water_moist_begin[i, j, :]) + total_water_bot_moist_begin[i, j])
+            ) / (
+                sum(total_water_moist_begin[i, j, :])
+                + total_water_bot_moist_begin[i, j]
+            )
             if moist_water_change > tw_err:
                 print(f"GFDL-MP-MOIST TW: {moist_water_change}")
 
