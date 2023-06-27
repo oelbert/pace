@@ -92,7 +92,7 @@ def cloud_scheme_2(
     """
     from __externals__ import rh_thres, xr_a, xr_b, xr_c
 
-    if rh > -1.0:
+    if rh >= 1.0:
         qa = 1.0
     elif (rh > rh_thres) and (q_cond > constants.QCMIN):
         qa = exp(xr_a * log(rh)) * (
