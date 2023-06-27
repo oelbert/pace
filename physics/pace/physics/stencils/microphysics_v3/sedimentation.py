@@ -953,7 +953,7 @@ class Sedimentation:
             self._adjust_fluxes(preflux_water)
 
         # terminal fall of rain
-        if self.config.const_vs is False:
+        if self.config.const_vr is False:
             self._calc_terminal_rsg_velocity(
                 qrain,
                 density,

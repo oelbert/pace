@@ -487,7 +487,7 @@ class TracerSedimentation:
 
         elif self._tracer == "qr":
             # terminal fall of rain
-            if self.config.const_vs is False:
+            if self.config.const_vr is False:
                 self._calc_terminal_rsg_velocity(
                     qrain,
                     density,
@@ -648,7 +648,7 @@ class TranslateTracerSed(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        ts_q = "qi"
+        ts_q = "qr"
 
         compute_func = TracerSedimentation(
             self.stencil_factory,

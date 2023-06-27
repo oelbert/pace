@@ -204,6 +204,33 @@ class CalcVT:
                     self.config.blins,
                     self.config.vs_max,
                 )
+        elif mode == "rain":
+            if self.config.const_vr is False:
+                self._calc_terminal_rsg_velocity(
+                    qfall,
+                    density,
+                    density_factor,
+                    vterminal,
+                    self.config.vr_fac,
+                    self.config.tvar,
+                    self.config.tvbr,
+                    self.config.mur,
+                    self.config.blinr,
+                    self.config.vr_max,
+                )
+            else:
+                self._calc_terminal_rsg_velocity_const(
+                    qfall,
+                    density,
+                    density_factor,
+                    vterminal,
+                    self.config.vr_fac,
+                    self.config.tvar,
+                    self.config.tvbr,
+                    self.config.mur,
+                    self.config.blinr,
+                    self.config.vr_max,
+                )
         else:
             raise ValueError(f"calc_vt mode {mode} not ice or snow")
 

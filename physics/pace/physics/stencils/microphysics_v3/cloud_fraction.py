@@ -6,6 +6,7 @@ from gt4py.cartesian.gtscript import (
     exp,
     interval,
     log,
+    log10,
 )
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
@@ -169,7 +170,7 @@ def cloud_scheme_4(
         qa100 = -0.0913 + 0.7213 * gam + 0.1060 * gam ** 2 - 0.0946 * gam ** 3
         qa100 = max(0.0, min(1.0, qa100))
 
-    qa = qa10 + ((log(gsize / 1000.0) / log(10)) - 1) * (qa100 - qa10)
+    qa = qa10 + ((log10(gsize / 1000.0)) - 1) * (qa100 - qa10)
     qa = max(0.0, min(1.0, qa))
     return qa
 
