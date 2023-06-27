@@ -1319,6 +1319,8 @@ class TranslatePostMP(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
+        inputs["last_step"] = True
+
         compute_func = PostMP(
             self.stencil_factory, self.config, self.quantity_factory, consv_te=False
         )
