@@ -290,13 +290,14 @@ class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        inputs.pop("qsi")
-        inputs.pop("dqidt")
-        inputs.pop("qsw")
-        inputs.pop("dqwdt")
+        # inputs.pop("qsi")
+        # inputs.pop("dqidt")
+        # inputs.pop("qsw")
+        # inputs.pop("dqwdt")
 
-        compute_func = CloudFraction(
+        compute_func = CloudFractionTest(
             self.stencil_factory,
+            self.quantity_factory,
             self.config,
         )
 
