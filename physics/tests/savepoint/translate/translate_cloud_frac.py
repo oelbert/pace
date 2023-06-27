@@ -9,6 +9,7 @@ from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import MicroPhysicsConfig, PhysicsConfig
 from pace.physics.stencils.microphysics_v3.cloud_fraction import (  # noqa
     CloudFraction,
+    cloud_fraction,
     cloud_scheme_1,
     cloud_scheme_2,
     cloud_scheme_3,
@@ -151,7 +152,7 @@ class CloudFractionTest:
         self._te = quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
         self._cloud_fraction = stencil_factory.from_origin_domain(
-            func=cloud_fraction_test,
+            func=cloud_fraction,
             externals={
                 "c1_ice": config.c1_ice,
                 "c1_liq": config.c1_liq,
@@ -176,6 +177,7 @@ class CloudFractionTest:
                 "xr_a": config.xr_a,
                 "xr_b": config.xr_b,
                 "xr_c": config.xr_c,
+                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -230,10 +232,6 @@ class CloudFractionTest:
             self._te,
             h_var,
             gsize,
-            qsi,
-            dqidt,
-            qsw,
-            dqwdt,
         )
 
 
@@ -272,6 +270,7 @@ class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
         self.grid_indexing = self.stencil_factory.grid_indexing
         pconf = PhysicsConfig.from_namelist(namelist)
         self.config = pconf.microphysics
+        self.config.do_mp_table_emulation = True
 
         sizer = pace.util.SubtileGridSizer.from_tile_params(
             nx_tile=self.namelist.npx - 1,
