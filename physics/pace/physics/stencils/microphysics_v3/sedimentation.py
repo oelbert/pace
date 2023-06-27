@@ -7,6 +7,7 @@ from gt4py.cartesian.gtscript import (
     exp,
     interval,
     log,
+    log10,
 )
 
 import pace.physics.stencils.microphysics_v3.physical_functions as physfun
@@ -151,7 +152,7 @@ def calc_terminal_velocity_ice(
                 tc = temperature - constants.TICE0
                 if ifflag == 1:
                     v_terminal = (
-                        (3.0 + log(qice * density) / log(10))
+                        (3.0 + log10(qice * density))
                         * (tc * (aa * tc + bb) + cc)
                         + dd * tc
                         + ee
