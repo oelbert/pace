@@ -9,7 +9,6 @@ from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import MicroPhysicsConfig, PhysicsConfig
 from pace.physics.stencils.microphysics_v3.cloud_fraction import (  # noqa
     CloudFraction,
-    cloud_fraction,
     cloud_scheme_1,
     cloud_scheme_2,
     cloud_scheme_3,
@@ -152,7 +151,7 @@ class CloudFractionTest:
         self._te = quantity_factory.zeros(dims=[X_DIM, Y_DIM, Z_DIM], units="unknown")
 
         self._cloud_fraction = stencil_factory.from_origin_domain(
-            func=cloud_fraction,
+            func=cloud_fraction_test,
             externals={
                 "c1_ice": config.c1_ice,
                 "c1_liq": config.c1_liq,
@@ -177,7 +176,6 @@ class CloudFractionTest:
                 "xr_a": config.xr_a,
                 "xr_b": config.xr_b,
                 "xr_c": config.xr_c,
-                "do_mp_table_emulation": config.do_mp_table_emulation,
             },
             origin=self._idx.origin_compute(),
             domain=self._idx.domain_compute(),
@@ -232,6 +230,10 @@ class CloudFractionTest:
             self._te,
             h_var,
             gsize,
+            qsi,
+            dqidt,
+            qsw,
+            dqwdt,
         )
 
 
@@ -288,9 +290,13 @@ class TranslateCloudFrac(TranslatePhysicsFortranData2Py):
     def compute(self, inputs):
         self.make_storage_data_input_vars(inputs)
 
-        compute_func = CloudFractionTest(
+        inputs.pop("qsi")
+        inputs.pop("dqidt")
+        inputs.pop("qsw")
+        inputs.pop("dqwdt")
+
+        compute_func = CloudFraction(
             self.stencil_factory,
-            self.quantity_factory,
             self.config,
         )
 
