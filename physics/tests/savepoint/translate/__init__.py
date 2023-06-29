@@ -13,7 +13,7 @@ from .translate_ice_cloud import TranslateIceCloud
 from .translate_icesub import TranslateIceSubFunc
 from .translate_microphysics import TranslateMicroph
 from .translate_microphysics3 import TranslateMicrophysics3
-from .translate_mp_full import TranslateMPFull
+from .translate_mp_full import TranslateMPFull, TranslateMPSub
 from .translate_neg_adj import TranslateNegAdjP
 from .translate_particle_properties import TranslateParticleProperties
 from .translate_phifv3 import TranslatePhiFV3
