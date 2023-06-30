@@ -115,6 +115,11 @@ TerminalFall:
       tf_i1: 1e-14
       tf_dte: 1e-14
 
+WarmRain:
+  - backend: numpy
+    ignore_near_zero_errors:
+      wr_qr: 2e-7
+
 SubgridZProc:
   - backend: numpy
     near_zero: 1.e-15
@@ -167,3 +172,14 @@ MPFull:
       - mpf_dep
       - mpf_evap
       - mpf_sub
+
+MPSub:
+  - backend: numpy
+    near_zero: 1.e-20
+    ignore_near_zero_errors:
+      - mps_qv
+      - mps_ql
+      - mps_qr
+      - mps_qi
+      - mps_qs
+      - mps_qg
