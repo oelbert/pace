@@ -1,5 +1,4 @@
 import abc
-import logging
 from typing import List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
@@ -14,8 +13,6 @@ from .quantity import Quantity, QuantityHaloSpec, QuantityMetadata
 from .types import NumpyModule
 from .utils import device_synchronize
 
-
-logger = logging.getLogger("pace.util")
 
 try:
     import cupy
@@ -76,10 +73,26 @@ class Communicator(abc.ABC):
     def tile(self) -> "TileCommunicator":
         pass
 
+    @classmethod
+    @abc.abstractmethod
+    def from_layout(
+        cls,
+        comm,
+        layout: Tuple[int, int],
+        force_cpu: bool = False,
+        timer: Optional[Timer] = None,
+    ):
+        pass
+
     @property
     def rank(self) -> int:
         """rank of the current process within this communicator"""
         return self.comm.Get_rank()
+
+    @property
+    def size(self) -> int:
+        """Total number of ranks in this communicator"""
+        return self.comm.Get_size()
 
     def _maybe_force_cpu(self, module: NumpyModule) -> NumpyModule:
         """
@@ -170,12 +183,13 @@ class Communicator(abc.ABC):
     ) -> Quantity:
         """Initialize a Quantity for use when receiving global data during gather"""
         recv_quantity = Quantity(
-            send_metadata.np.empty(global_extent, dtype=send_metadata.dtype),
+            send_metadata.np.zeros(global_extent, dtype=send_metadata.dtype),
             dims=send_metadata.dims,
             units=send_metadata.units,
             origin=tuple([0 for dim in send_metadata.dims]),
             extent=global_extent,
             gt4py_backend=send_metadata.gt4py_backend,
+            allow_mismatch_float_precision=True,
         )
         return recv_quantity
 
@@ -184,10 +198,11 @@ class Communicator(abc.ABC):
     ) -> Quantity:
         """Initialize a Quantity for use when receiving subtile data during scatter"""
         recv_quantity = Quantity(
-            send_metadata.np.empty(shape, dtype=send_metadata.dtype),
+            send_metadata.np.zeros(shape, dtype=send_metadata.dtype),
             dims=send_metadata.dims,
             units=send_metadata.units,
             gt4py_backend=send_metadata.gt4py_backend,
+            allow_mismatch_float_precision=True,
         )
         return recv_quantity
 
@@ -207,7 +222,7 @@ class Communicator(abc.ABC):
         result: Optional[Quantity]
         if self.rank == constants.ROOT_RANK:
             with array_buffer(
-                send_quantity.np.empty,
+                send_quantity.np.zeros,
                 (self.partitioner.total_ranks,) + tuple(send_quantity.extent),
                 dtype=send_quantity.data.dtype,
             ) as recvbuf:
@@ -267,7 +282,10 @@ class Communicator(abc.ABC):
             else:
                 gather_value = to_numpy(quantity.view[:], dtype=transfer_type)
                 gather_quantity = Quantity(
-                    data=gather_value, dims=quantity.dims, units=quantity.units
+                    data=gather_value,
+                    dims=quantity.dims,
+                    units=quantity.units,
+                    allow_mismatch_float_precision=True,
                 )
                 if recv_state is not None and name in recv_state:
                     tile_quantity = self.gather(
@@ -590,6 +608,17 @@ class TileCommunicator(Communicator):
         )
         self.partitioner: TilePartitioner = partitioner
 
+    @classmethod
+    def from_layout(
+        cls,
+        comm,
+        layout: Tuple[int, int],
+        force_cpu: bool = False,
+        timer: Optional[Timer] = None,
+    ) -> "TileCommunicator":
+        partitioner = TilePartitioner(layout=layout)
+        return cls(comm=comm, partitioner=partitioner, force_cpu=force_cpu, timer=timer)
+
     @property
     def tile(self):
         return self
@@ -743,12 +772,13 @@ class CubedSphereCommunicator(Communicator):
         # needs to change the quantity dimensions since we add a "tile" dimension,
         # unlike for tile scatter/gather which retains the same dimensions
         recv_quantity = Quantity(
-            metadata.np.empty(global_extent, dtype=metadata.dtype),
+            metadata.np.zeros(global_extent, dtype=metadata.dtype),
             dims=(constants.TILE_DIM,) + metadata.dims,
             units=metadata.units,
             origin=(0,) + tuple([0 for dim in metadata.dims]),
             extent=global_extent,
             gt4py_backend=metadata.gt4py_backend,
+            allow_mismatch_float_precision=True,
         )
         return recv_quantity
 
@@ -764,9 +794,10 @@ class CubedSphereCommunicator(Communicator):
         # needs to change the quantity dimensions since we remove a "tile" dimension,
         # unlike for tile scatter/gather which retains the same dimensions
         recv_quantity = Quantity(
-            metadata.np.empty(shape, dtype=metadata.dtype),
+            metadata.np.zeros(shape, dtype=metadata.dtype),
             dims=metadata.dims[1:],
             units=metadata.units,
             gt4py_backend=metadata.gt4py_backend,
+            allow_mismatch_float_precision=True,
         )
         return recv_quantity

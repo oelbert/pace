@@ -26,9 +26,9 @@ import pace.util.constants as constants
 from pace.dsl.dace.orchestration import dace_inhibitor, orchestrate
 from pace.dsl.dace.wrapped_halo_exchange import WrappedHaloUpdater
 from pace.dsl.stencil import GridIndexing, StencilFactory
-from pace.dsl.typing import FloatField, FloatFieldIJ
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.fv3core._config import AcousticDynamicsConfig
-from pace.fv3core.initialization.dycore_state import DycoreState
+from pace.fv3core.dycore_state import DycoreState
 from pace.fv3core.stencils.c_sw import CGridShallowWaterDynamics
 from pace.fv3core.stencils.del2cubed import HyperdiffusionDamping
 from pace.fv3core.stencils.pk3_halo import PK3Halo
@@ -97,7 +97,7 @@ def gz_from_surface_height_and_thicknesses(
 
 
 def interface_pressure_from_toa_pressure_and_thickness(
-    delp: FloatField, pem: FloatField, ptop: float
+    delp: FloatField, pem: FloatField, ptop: Float
 ):
     """
     Args:
@@ -125,7 +125,7 @@ def p_grad_c_stencil(
     delpc: FloatField,
     pkc: FloatField,
     gz: FloatField,
-    dt2: float,
+    dt2: Float,
 ):
     """
     Update C-grid winds from the backwards-in-time pressure gradient force
@@ -197,23 +197,37 @@ def dyncore_temporaries(
         # TODO: the dimensions of ut and vt may not be correct,
         #       because they are not used. double-check and correct as needed.
         temporaries[name] = quantity_factory.zeros(
-            dims=[X_DIM, Y_DIM, Z_DIM], units="unknown"
+            dims=[X_DIM, Y_DIM, Z_DIM],
+            units="unknown",
+            dtype=Float,
         )
     for name in ["gz", "pkc", "zh"]:
         temporaries[name] = quantity_factory.zeros(
-            dims=[X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown"
+            dims=[X_DIM, Y_DIM, Z_INTERFACE_DIM],
+            units="unknown",
+            dtype=Float,
         )
     temporaries["divgd"] = quantity_factory.zeros(
-        dims=[X_INTERFACE_DIM, Y_INTERFACE_DIM, Z_DIM], units="unknown"
+        dims=[X_INTERFACE_DIM, Y_INTERFACE_DIM, Z_DIM],
+        units="unknown",
+        dtype=Float,
     )
-    temporaries["ws3"] = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown")
+    temporaries["ws3"] = quantity_factory.zeros(
+        dims=[X_DIM, Y_DIM],
+        units="unknown",
+        dtype=Float,
+    )
     for name in ["crx", "xfx"]:
         temporaries[name] = quantity_factory.zeros(
-            dims=[X_INTERFACE_DIM, Y_DIM, Z_DIM], units="unknown"
+            dims=[X_INTERFACE_DIM, Y_DIM, Z_DIM],
+            units="unknown",
+            dtype=Float,
         )
     for name in ["cry", "yfx"]:
         temporaries[name] = quantity_factory.zeros(
-            dims=[X_DIM, Y_INTERFACE_DIM, Z_DIM], units="unknown"
+            dims=[X_DIM, Y_INTERFACE_DIM, Z_DIM],
+            units="unknown",
+            dtype=Float,
         )
     return temporaries
 
@@ -229,7 +243,7 @@ class AcousticDynamics:
 
         def __init__(
             self,
-            comm: pace.util.CubedSphereCommunicator,
+            comm: pace.util.Communicator,
             grid_indexing: GridIndexing,
             quantity_factory: pace.util.QuantityFactory,
             state: DycoreState,
@@ -245,22 +259,27 @@ class AcousticDynamics:
             full_size_xyz_halo_spec = quantity_factory.get_quantity_halo_spec(
                 dims=[fv3util.X_DIM, fv3util.Y_DIM, fv3util.Z_DIM],
                 n_halo=grid_indexing.n_halo,
+                dtype=Float,
             )
             full_size_xyiz_halo_spec = quantity_factory.get_quantity_halo_spec(
                 dims=[fv3util.X_DIM, fv3util.Y_INTERFACE_DIM, fv3util.Z_DIM],
                 n_halo=grid_indexing.n_halo,
+                dtype=Float,
             )
             full_size_xiyz_halo_spec = quantity_factory.get_quantity_halo_spec(
                 dims=[fv3util.X_INTERFACE_DIM, fv3util.Y_DIM, fv3util.Z_DIM],
                 n_halo=grid_indexing.n_halo,
+                dtype=Float,
             )
             full_size_xyzi_halo_spec = quantity_factory.get_quantity_halo_spec(
                 dims=[fv3util.X_DIM, fv3util.Y_DIM, fv3util.Z_INTERFACE_DIM],
                 n_halo=grid_indexing.n_halo,
+                dtype=Float,
             )
             full_size_xiyiz_halo_spec = quantity_factory.get_quantity_halo_spec(
                 dims=[fv3util.X_INTERFACE_DIM, fv3util.Y_INTERFACE_DIM, fv3util.Z_DIM],
                 n_halo=grid_indexing.n_halo,
+                dtype=Float,
             )
 
             # Build the HaloUpdater. We could build one updater per specification group
@@ -322,6 +341,7 @@ class AcousticDynamics:
                 full_3Dfield_2pts_halo_spec = quantity_factory.get_quantity_halo_spec(
                     dims=[fv3util.X_DIM, fv3util.Y_DIM, fv3util.Z_INTERFACE_DIM],
                     n_halo=2,
+                    dtype=Float,
                 )
                 self.pkc = WrappedHaloUpdater(
                     comm.get_scalar_halo_updater([full_3Dfield_2pts_halo_spec]),
@@ -344,7 +364,7 @@ class AcousticDynamics:
 
     def __init__(
         self,
-        comm: pace.util.CubedSphereCommunicator,
+        comm: pace.util.Communicator,
         stencil_factory: StencilFactory,
         quantity_factory: pace.util.QuantityFactory,
         grid_data: GridData,
@@ -360,14 +380,14 @@ class AcousticDynamics:
     ):
         """
         Args:
-            comm: object for cubed sphere inter-process communication
+            comm: object for tile or cubed-sphere inter-process communication
             stencil_factory: creates stencils
             quantity_factory: creates quantities
             grid_data: metric terms defining the grid
             damping_coefficients: damping configuration
-            grid_type: ???
-            nested: ???
-            stretched_grid: ???
+            grid_type: grid geometry used
+            nested: if the grid contains a nested, high-res region
+            stretched_grid: if the grid is stretched so tile faces cover different areas
             config: configuration settings
             pfull: atmospheric Eulerian grid reference pressure (Pa)
             phis: surface geopotential height
@@ -429,6 +449,7 @@ class AcousticDynamics:
                 grid_type=config.grid_type,
             )
         )
+        self._akap = Float(constants.KAPPA)
 
         temporaries = dyncore_temporaries(quantity_factory)
         self._heat_source = temporaries["heat_source"]
@@ -457,8 +478,14 @@ class AcousticDynamics:
             # To write lower dimensional storages, these need to be 3D
             # then converted to lower dimensional
             self._dp_ref = grid_data.dp_ref
-            self._zs = quantity_factory.zeros([X_DIM, Y_DIM], units="m")
-            self._zs.data[:] = self._zs.np.asarray(phis.data / constants.GRAV)
+            self._zs = quantity_factory.zeros(
+                [X_DIM, Y_DIM],
+                units="m",
+                dtype=Float,
+            )
+            self._zs.data[:] = self._zs.np.asarray(
+                phis.data / constants.GRAV, dtype=self._zs.data.dtype
+            )
 
             self.update_height_on_d_grid = updatedzd.UpdateHeightOnDGrid(
                 stencil_factory,
@@ -533,6 +560,7 @@ class AcousticDynamics:
                 quantity_factory=quantity_factory,
                 area=grid_data.area,
                 dp_ref=grid_data.dp_ref,
+                grid_type=config.grid_type,
             )
         )
 
@@ -667,20 +695,30 @@ class AcousticDynamics:
                 mfyd=state.mfyd,
             )
 
+    # TODO: fix me - we shouldn't need a function here, Dace is fudging the types
+    # See https://github.com/GEOS-ESM/pace/issues/9
+    @dace_inhibitor
+    def dt_acoustic_substep(self, timestep: Float) -> Float:
+        return timestep / self.config.n_split
+
+    # TODO: Same as above
+    @dace_inhibitor
+    def dt2(self, dt_acoustic_substep: Float) -> Float:
+        return 0.5 * dt_acoustic_substep
+
     def __call__(
         self,
         state: DycoreState,
-        timestep: float,  # time to step forward by in seconds
+        timestep: Float,  # time to step forward by in seconds
         n_map=1,  # [DaCe] replaces state.n_map
     ):
         # u, v, w, delz, delp, pt, pe, pk, phis, wsd, omga, ua, va, uc, vc, mfxd,
         # mfyd, cxd, cyd, pkz, peln, q_con, ak, bk, diss_estd, cappa, mdt, n_split,
         # akap, ptop, n_map, comm):
         end_step = n_map == self.config.k_split
-        akap = constants.KAPPA
         # dt = state.mdt / self.config.n_split
-        dt_acoustic_substep = timestep / self.config.n_split
-        dt2 = 0.5 * dt_acoustic_substep
+        dt_acoustic_substep: Float = self.dt_acoustic_substep(timestep)
+        dt2: Float = self.dt2(dt_acoustic_substep)
         n_split = self.config.n_split
         # NOTE: In Fortran model the halo update starts happens in fv_dynamics, not here
         self._halo_updaters.q_con__cappa.start()
@@ -901,7 +939,7 @@ class AcousticDynamics:
                         "unimplemented namelist option use_logp=True"
                     )
                 else:
-                    self._pk3_halo(self._pk3, state.delp, self._ptop, akap)
+                    self._pk3_halo(self._pk3, state.delp, self._ptop, self._akap)
             if not self.config.hydrostatic:
                 self._halo_updaters.zh.wait()
                 self._compute_geopotential_stencil(
@@ -919,7 +957,7 @@ class AcousticDynamics:
                     state.delp,
                     dt_acoustic_substep,
                     self._ptop,
-                    akap,
+                    self._akap,
                 )
 
             if self.config.rf_fast:
@@ -949,7 +987,7 @@ class AcousticDynamics:
         if self._do_del2cubed:
             self._halo_updaters.heat_source.update()
             # TODO: move dependence on da_min into init of hyperdiffusion class
-            da_min: float = self._get_da_min()
+            da_min: Float = self._get_da_min()
             cd = constants.CNST_0P20 * da_min
             # we want to diffuse the heat source from damping before we apply it,
             # so that we don't reinforce the same grid-scale patterns we're trying

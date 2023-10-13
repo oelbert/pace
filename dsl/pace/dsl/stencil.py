@@ -25,7 +25,7 @@ from gt4py.cartesian.gtc.passes.oir_pipeline import DefaultPipeline, OirPipeline
 import pace.util
 from pace.dsl.dace.orchestration import SDFGConvertible
 from pace.dsl.stencil_config import CompilationConfig, RunMode, StencilConfig
-from pace.dsl.typing import Index3D, cast_to_index3d
+from pace.dsl.typing import Float, Index3D, cast_to_index3d
 from pace.util import testing
 from pace.util.decomposition import block_waiting_for_compilation, unblock_waiting_tiles
 from pace.util.mpi import MPI
@@ -325,8 +325,9 @@ class FrozenStencil(SDFGConvertible):
         if "dace" in self.stencil_config.compilation_config.backend:
             dace.Config.set(
                 "default_build_folder",
-                value="{gt_cache}/dacecache".format(
-                    gt_cache=gt4py.cartesian.config.cache_settings["dir_name"]
+                value="{gt_root}/{gt_cache}/dacecache".format(
+                    gt_root=gt4py.cartesian.config.cache_settings["root_path"],
+                    gt_cache=gt4py.cartesian.config.cache_settings["dir_name"],
                 ),
             )
 
@@ -342,6 +343,7 @@ class FrozenStencil(SDFGConvertible):
             self.stencil_object = gtscript.lazy_stencil(
                 definition=func,
                 externals=externals,
+                dtypes={float: Float},
                 **stencil_kwargs,
                 build_info=(build_info := {}),  # type: ignore
             )
@@ -357,6 +359,7 @@ class FrozenStencil(SDFGConvertible):
             self.stencil_object = gtscript.stencil(
                 definition=func,
                 externals=externals,
+                dtypes={float: Float},
                 **stencil_kwargs,
                 build_info=(build_info := {}),
             )
@@ -592,7 +595,7 @@ class GridIndexing:
 
     @classmethod
     def from_sizer_and_communicator(
-        cls, sizer: pace.util.GridSizer, cube: pace.util.CubedSphereCommunicator
+        cls, sizer: pace.util.GridSizer, comm: pace.util.Communicator
     ) -> "GridIndexing":
         # TODO: if this class is refactored to split off the *_edge booleans,
         # this init routine can be refactored to require only a GridSizer
@@ -600,10 +603,10 @@ class GridIndexing:
             Tuple[int, int, int],
             sizer.get_extent([pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM]),
         )
-        south_edge = cube.tile.partitioner.on_tile_bottom(cube.rank)
-        north_edge = cube.tile.partitioner.on_tile_top(cube.rank)
-        west_edge = cube.tile.partitioner.on_tile_left(cube.rank)
-        east_edge = cube.tile.partitioner.on_tile_right(cube.rank)
+        south_edge = comm.tile.partitioner.on_tile_bottom(comm.rank)
+        north_edge = comm.tile.partitioner.on_tile_top(comm.rank)
+        west_edge = comm.tile.partitioner.on_tile_left(comm.rank)
+        east_edge = comm.tile.partitioner.on_tile_right(comm.rank)
         return cls(
             domain=domain,
             n_halo=sizer.n_halo,

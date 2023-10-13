@@ -54,6 +54,7 @@ from .halo_updater import HaloUpdater, HaloUpdateRequest
 from .initialization import GridSizer, QuantityFactory, SubtileGridSizer
 from .io import read_state, write_state
 from .local_comm import LocalComm
+from .logging import AVAILABLE_LOG_LEVELS, pace_log
 from .monitor import Monitor, NetCDFMonitor, ZarrMonitor
 from .mpi import MPIComm
 from .namelist import Namelist, NamelistDefaults
@@ -61,6 +62,7 @@ from .nudging import apply_nudging, get_nudging_tendencies
 from .null_comm import NullComm
 from .partitioner import (
     CubedSpherePartitioner,
+    Partitioner,
     TilePartitioner,
     get_tile_index,
     get_tile_number,

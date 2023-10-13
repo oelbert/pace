@@ -195,6 +195,7 @@ class DynamicalCoreConfig:
     do_qa: bool = DEFAULT_BOOL
     layout: Tuple[int, int] = NamelistDefaults.layout
     grid_type: int = NamelistDefaults.grid_type
+    u_max: float = NamelistDefaults.u_max  # max windspeed for dp config
     do_f3d: bool = NamelistDefaults.do_f3d
     inline_q: bool = NamelistDefaults.inline_q
     do_skeb: bool = NamelistDefaults.do_skeb  # save dissipation estimate
@@ -283,6 +284,9 @@ class DynamicalCoreConfig:
             dycore_config = self.from_f90nml(f90_nml)
             for var in dycore_config.__dict__.keys():
                 setattr(self, var, dycore_config.__dict__[var])
+        # Single tile cartesian grids
+        if self.grid_type > 3:
+            self.nf_omega = 0
 
     @classmethod
     def from_f90nml(self, f90_namelist: f90nml.Namelist) -> "DynamicalCoreConfig":
@@ -334,6 +338,7 @@ class DynamicalCoreConfig:
             do_qa=namelist.do_qa,
             layout=namelist.layout,
             grid_type=namelist.grid_type,
+            u_max=namelist.u_max,
             do_f3d=namelist.do_f3d,
             inline_q=namelist.inline_q,
             do_skeb=namelist.do_skeb,

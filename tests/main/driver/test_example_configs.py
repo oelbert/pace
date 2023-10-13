@@ -13,11 +13,13 @@ EXAMPLE_CONFIGS_DIR = os.path.join(dirname, "../../../driver/examples/configs/")
 
 TESTED_CONFIGS: List[str] = [
     "baroclinic_c12.yaml",
+    "baroclinic_c12_dp.yaml",
     "baroclinic_c12_comm_read.yaml",
     "baroclinic_c12_comm_write.yaml",
     "baroclinic_c12_null_comm.yaml",
     "baroclinic_c12_write_restart.yaml",
     "baroclinic_c48_6ranks_serialbox_test.yaml",
+    "analytic_test.yaml",
 ]
 EXCLUDED_CONFIGS: List[str] = [
     # We don't test serialbox example because it loads namelist

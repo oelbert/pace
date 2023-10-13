@@ -14,7 +14,7 @@ import pace.fv3core.stencils.delnflux as delnflux
 import pace.util
 from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import StencilFactory
-from pace.dsl.typing import FloatField, FloatFieldIJ, FloatFieldK
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ, FloatFieldK
 from pace.fv3core._config import DGridShallowWaterLagrangianDynamicsConfig
 from pace.fv3core.stencils.d2a2c_vect import contravariant
 from pace.fv3core.stencils.delnflux import DelnFluxNoSG
@@ -70,7 +70,7 @@ def heat_diss(
     dw: FloatField,
     damp_w: FloatFieldK,
     ke_bg: FloatFieldK,
-    dt: float,
+    dt: Float,
 ):
     """
     Calculate heat generation due to loss of kinetic energy
@@ -217,7 +217,7 @@ def compute_kinetic_energy(
     dya: FloatFieldIJ,
     rdy: FloatFieldIJ,
     dt_kinetic_energy_on_cell_corners: FloatField,
-    dt: float,
+    dt: Float,
 ):
     """
     Args:
@@ -239,10 +239,16 @@ def compute_kinetic_energy(
             as defined in FV3 documentation by equation 6.3, multiplied by dt
         dt: timestep
     """
+    from __externals__ import grid_type
+
     with computation(PARALLEL), interval(...):
-        ub_contra, vb_contra = interpolate_uc_vc_to_cell_corners(
-            uc, vc, cosa, rsina, uc_contra, vc_contra
-        )
+        if __INLINED(grid_type < 3):
+            ub_contra, vb_contra = interpolate_uc_vc_to_cell_corners(
+                uc, vc, cosa, rsina, uc_contra, vc_contra
+            )
+        else:
+            ub_contra = 0.5 * (uc[0, -1, 0] + uc)
+            vb_contra = 0.5 * (vc[-1, 0, 0] + vc)
         advected_v = advect_v_along_y(v, vb_contra, rdy=rdy, dy=dy, dya=dya, dt=dt)
         advected_u = advect_u_along_x(u, ub_contra, rdx=rdx, dx=dx, dxa=dxa, dt=dt)
         # makes sure the kinetic energy part of the governing equation is computed
@@ -503,7 +509,6 @@ def heat_source_from_vorticity_damping(
     rdx: FloatFieldIJ,
     rdy: FloatFieldIJ,
     heat_source: FloatField,
-    heat_source_total: FloatField,
     dissipation_estimate: FloatField,
     kinetic_energy_fraction_to_damp: FloatFieldK,
 ):
@@ -526,14 +531,13 @@ def heat_source_from_vorticity_damping(
         rdy (in): 1 / dy
         heat_source (inout): heat source from vorticity damping
             implied by energy conservation
-        heat_source_total (inout): accumulated heat source
-        dissipation_estimate (out): dissipation estimate, only calculated if
+        dissipation_estimate (inout): dissipation estimate, only calculated if
             calculate_dissipation_estimate is 1. Used for stochastic kinetic
             energy backscatter (skeb) routine.
         kinetic_energy_fraction_to_damp (in): the fraction of kinetic energy
             to explicitly damp and convert into heat.
     """
-    from __externals__ import (
+    from __externals__ import (  # noqa (see below)
         d_con,
         do_stochastic_ke_backscatter,
         local_ie,
@@ -570,11 +574,20 @@ def heat_source_from_vorticity_damping(
                 heat_source - kinetic_energy_fraction_to_damp * dampterm
             )
 
-        if __INLINED((d_con > dcon_threshold) or do_stochastic_ke_backscatter):
+        if __INLINED(do_stochastic_ke_backscatter):
             with horizontal(region[local_is : local_ie + 1, local_js : local_je + 1]):
-                heat_source_total = heat_source_total + heat_source
-                if __INLINED(do_stochastic_ke_backscatter):
-                    dissipation_estimate -= dampterm
+                dissipation_estimate -= dampterm
+
+
+def accumulate_heat_source_and_dissipation_estimate(
+    heat_source: FloatField,
+    heat_source_total: FloatField,
+    diss_est: FloatField,
+    diss_est_total: FloatField,
+):
+    with computation(PARALLEL), interval(...):
+        heat_source_total += heat_source
+        diss_est_total += diss_est
 
 
 # TODO(eddied): Had to split this into a separate stencil to get this to validate
@@ -652,7 +665,11 @@ def get_column_namelist(
     col: Dict[str, pace.util.Quantity] = {}
     for name in all_names:
         # TODO: fill units information
-        col[name] = quantity_factory.zeros(dims=[Z_DIM], units="unknown")
+        col[name] = quantity_factory.zeros(
+            dims=[Z_DIM],
+            units="unknown",
+            dtype=Float,
+        )
     for name in direct_namelist:
         col[name].view[:] = getattr(config, name)
 
@@ -742,9 +759,11 @@ class DGridShallowWaterLagrangianDynamics:
         orchestrate(obj=self, config=stencil_factory.config.dace_config)
         self.grid_data = grid_data
         self._f0 = self.grid_data.fC_agrid
+        self._d_con = config.d_con
+        self._do_stochastic_ke_backscatter = config.do_skeb
 
         self.grid_indexing = stencil_factory.grid_indexing
-        assert config.grid_type < 3, "ubke and vbke only implemented for grid_type < 3"
+        self._grid_type = config.grid_type
         assert not config.inline_q, "inline_q not yet implemented"
         assert (
             config.d_ext <= 0
@@ -760,9 +779,14 @@ class DGridShallowWaterLagrangianDynamics:
         self.hydrostatic = config.hydrostatic
 
         def make_quantity():
-            return quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="unknown")
+            return quantity_factory.zeros(
+                [X_DIM, Y_DIM, Z_DIM],
+                units="unknown",
+                dtype=Float,
+            )
 
         self._tmp_heat_s = make_quantity()
+        self._tmp_diss_e = make_quantity()
         self._vort_x_delta = make_quantity()
         self._vort_y_delta = make_quantity()
         self._dt_kinetic_energy_on_cell_corners = make_quantity()
@@ -837,6 +861,7 @@ class DGridShallowWaterLagrangianDynamics:
         self.fv_prep = FiniteVolumeFluxPrep(
             stencil_factory=stencil_factory,
             grid_data=grid_data,
+            grid_type=self._grid_type,
         )
         self.divergence_damping = DivergenceDamping(
             stencil_factory,
@@ -869,6 +894,7 @@ class DGridShallowWaterLagrangianDynamics:
                 "mord": config.hord_mt,
                 "xt_minmax": False,
                 "yt_minmax": False,
+                "grid_type": config.grid_type,
             },
         )
         self._apply_fluxes = stencil_factory.from_dims_halo(
@@ -913,6 +939,15 @@ class DGridShallowWaterLagrangianDynamics:
                 },
             )
         )
+
+        if (self._d_con > 1.0e-5) or (self._do_stochastic_ke_backscatter):
+            self._accumulate_heat_source_and_dissipation_estimate_stencil = (
+                stencil_factory.from_dims_halo(
+                    func=accumulate_heat_source_and_dissipation_estimate,
+                    compute_dims=[X_DIM, Y_DIM, Z_DIM],
+                )
+            )
+
         self._compute_vorticity_stencil = stencil_factory.from_dims_halo(
             compute_vorticity,
             compute_dims=[X_DIM, Y_DIM, Z_DIM],
@@ -1047,7 +1082,7 @@ class DGridShallowWaterLagrangianDynamics:
             w,
             self.grid_data.rarea,
             self._tmp_heat_s,
-            diss_est,
+            self._tmp_diss_e,
             self._tmp_dw,
             self._column_namelist["damp_w"],
             self._column_namelist["ke_bg"],
@@ -1223,10 +1258,14 @@ class DGridShallowWaterLagrangianDynamics:
             self.grid_data.rdx,
             self.grid_data.rdy,
             self._tmp_heat_s,
-            heat_source,
-            diss_est,
+            self._tmp_diss_e,
             self._column_namelist["d_con"],
         )
+
+        if (self._d_con > 1.0e-5) or (self._do_stochastic_ke_backscatter):
+            self._accumulate_heat_source_and_dissipation_estimate_stencil(
+                self._tmp_heat_s, heat_source, self._tmp_diss_e, diss_est
+            )
 
         self._update_u_and_v_stencil(
             self._tmp_ut,

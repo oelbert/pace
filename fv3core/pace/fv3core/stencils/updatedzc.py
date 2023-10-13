@@ -4,7 +4,7 @@ from gt4py.cartesian.gtscript import BACKWARD, FORWARD, PARALLEL, computation, i
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.stencil import StencilFactory
-from pace.dsl.typing import FloatField, FloatFieldIJ, FloatFieldK
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ, FloatFieldK
 from pace.stencils import corners
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
@@ -69,7 +69,7 @@ def update_dz_c(
     gz_y: FloatField,
     ws: FloatFieldIJ,
     *,
-    dt: float,
+    dt: Float,
 ):
     """
     Step dz forward on c-grid
@@ -124,19 +124,33 @@ class UpdateGeopotentialHeightOnCGrid:
         quantity_factory: pace.util.QuantityFactory,
         area: pace.util.Quantity,
         dp_ref: pace.util.Quantity,
+        grid_type,
     ):
         grid_indexing = stencil_factory.grid_indexing
         self._area = area
+        self._grid_type = grid_type
         # TODO: this is needed because GridData.dp_ref does not have access
         # to a QuantityFactory, we should add a way to perform operations on
         # Quantity and persist the QuantityFactory choices
         # e.g. by adding a quantity.factory
         # attribute, or by implementing basic math like slicing, addition, etc.
         # here it's needed to ensure we have a buffer point after the compute domain
-        self._dp_ref = quantity_factory.zeros(dp_ref.dims, units=dp_ref.units)
+        self._dp_ref = quantity_factory.zeros(
+            dp_ref.dims,
+            units=dp_ref.units,
+            dtype=Float,
+        )
         self._dp_ref.view[:] = dp_ref.view[:]
-        self._gz_x = quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="m**2/s**2")
-        self._gz_y = quantity_factory.zeros([X_DIM, Y_DIM, Z_DIM], units="m**2/s**2")
+        self._gz_x = quantity_factory.zeros(
+            [X_DIM, Y_DIM, Z_DIM],
+            units="m**2/s**2",
+            dtype=Float,
+        )
+        self._gz_y = quantity_factory.zeros(
+            [X_DIM, Y_DIM, Z_DIM],
+            units="m**2/s**2",
+            dtype=Float,
+        )
         full_origin = grid_indexing.origin_full()
         full_domain = grid_indexing.domain_full(add=(0, 0, 1))
         self._double_copy_stencil = stencil_factory.from_origin_domain(
@@ -146,18 +160,21 @@ class UpdateGeopotentialHeightOnCGrid:
         )
 
         ax_offsets = grid_indexing.axis_offsets(full_origin, full_domain)
-        self._fill_corners_x_stencil = stencil_factory.from_origin_domain(
-            corners.fill_corners_2cells_x_stencil,
-            externals=ax_offsets,
-            origin=full_origin,
-            domain=full_domain,
-        )
-        self._fill_corners_y_stencil = stencil_factory.from_origin_domain(
-            corners.fill_corners_2cells_y_stencil,
-            externals=ax_offsets,
-            origin=full_origin,
-            domain=full_domain,
-        )
+
+        if self._grid_type < 3:
+            self._fill_corners_x_stencil = stencil_factory.from_origin_domain(
+                corners.fill_corners_2cells_x_stencil,
+                externals=ax_offsets,
+                origin=full_origin,
+                domain=full_domain,
+            )
+            self._fill_corners_y_stencil = stencil_factory.from_origin_domain(
+                corners.fill_corners_2cells_y_stencil,
+                externals=ax_offsets,
+                origin=full_origin,
+                domain=full_domain,
+            )
+
         self._update_dz_c = stencil_factory.from_origin_domain(
             update_dz_c,
             origin=grid_indexing.origin_compute(add=(-1, -1, 0)),
@@ -171,7 +188,7 @@ class UpdateGeopotentialHeightOnCGrid:
         vt: FloatField,
         gz: FloatField,
         ws: FloatFieldIJ,
-        dt: float,
+        dt: Float,
     ):
         """
         Args:
@@ -190,8 +207,9 @@ class UpdateGeopotentialHeightOnCGrid:
         self._double_copy_stencil(gz, self._gz_x, self._gz_y)
 
         # TODO(eddied): We pass the same fields 2x to avoid GTC validation errors
-        self._fill_corners_x_stencil(self._gz_x, self._gz_x)
-        self._fill_corners_y_stencil(self._gz_y, self._gz_y)
+        if self._grid_type < 3:
+            self._fill_corners_x_stencil(self._gz_x, self._gz_x)
+            self._fill_corners_y_stencil(self._gz_y, self._gz_y)
 
         self._update_dz_c(
             self._dp_ref,

@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta
 from typing import Mapping, Optional
 
@@ -8,13 +7,12 @@ from gt4py.cartesian.gtscript import PARALLEL, computation, interval
 import pace.dsl.gt4py_utils as utils
 import pace.fv3core.stencils.moist_cv as moist_cv
 import pace.util
-import pace.util.constants as constants
 from pace.dsl.dace.orchestration import dace_inhibitor, orchestrate
 from pace.dsl.dace.wrapped_halo_exchange import WrappedHaloUpdater
 from pace.dsl.stencil import StencilFactory
-from pace.dsl.typing import FloatField
+from pace.dsl.typing import Float, FloatField
 from pace.fv3core._config import DynamicalCoreConfig
-from pace.fv3core.initialization.dycore_state import DycoreState
+from pace.fv3core.dycore_state import DycoreState
 from pace.fv3core.stencils import fvtp2d, tracer_2d_1l
 from pace.fv3core.stencils.basic_operations import copy_defn
 from pace.fv3core.stencils.del2cubed import HyperdiffusionDamping
@@ -22,18 +20,10 @@ from pace.fv3core.stencils.dyn_core import AcousticDynamics
 from pace.fv3core.stencils.neg_adj3 import AdjustNegativeTracerMixingRatio
 from pace.fv3core.stencils.remapping import LagrangianToEulerian
 from pace.stencils.c2l_ord import CubedToLatLon
-from pace.util import X_DIM, Y_DIM, Z_INTERFACE_DIM, Timer
+from pace.util import X_DIM, Y_DIM, Z_INTERFACE_DIM, Timer, constants
 from pace.util.grid import DampingCoefficients, GridData
+from pace.util.logging import pace_log
 from pace.util.mpi import MPI
-
-
-logger = logging.getLogger(__name__)
-
-# nq is actually given by ncnst - pnats, where those are given in atmosphere.F90 by:
-# ncnst = Atm(mytile)%ncnst
-# pnats = Atm(mytile)%flagstruct%pnats
-# here we hard-coded it because 8 is the only supported value, refactor this later!
-NQ = 8  # state.nq_tot - spec.namelist.dnats
 
 
 def pt_to_potential_density_pt(
@@ -70,13 +60,16 @@ def fvdyn_temporaries(
     tmps = {}
     for name in ["te_2d", "te0_2d", "wsd"]:
         quantity = quantity_factory.zeros(
-            dims=[pace.util.X_DIM, pace.util.Y_DIM], units="unknown"
+            dims=[pace.util.X_DIM, pace.util.Y_DIM],
+            units="unknown",
+            dtype=Float,
         )
         tmps[name] = quantity
     for name in ["dp1", "cvm"]:
         quantity = quantity_factory.zeros(
             dims=[pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
             units="unknown",
+            dtype=Float,
         )
         tmps[name] = quantity
     return tmps
@@ -86,7 +79,7 @@ def fvdyn_temporaries(
 def log_on_rank_0(msg: str):
     """Print when rank is 0 - outside of DaCe critical path"""
     if not MPI or MPI.COMM_WORLD.Get_rank() == 0:
-        logger.info(msg)
+        pace_log.info(msg)
 
 
 class DynamicalCore:
@@ -96,7 +89,7 @@ class DynamicalCore:
 
     def __init__(
         self,
-        comm: pace.util.CubedSphereCommunicator,
+        comm: pace.util.Communicator,
         grid_data: GridData,
         stencil_factory: StencilFactory,
         quantity_factory: pace.util.QuantityFactory,
@@ -109,7 +102,7 @@ class DynamicalCore:
     ):
         """
         Args:
-            comm: object for cubed sphere inter-process communication
+            comm: object for cubed sphere or tile inter-process communication
             grid_data: metric terms defining the model grid
             stencil_factory: creates stencils
             damping_coefficients: damping configuration/constants
@@ -178,6 +171,11 @@ class DynamicalCore:
             method_to_orchestrate="_checkpoint_tracer_advection_out",
             dace_compiletime_args=["state"],
         )
+        if timestep == timedelta(seconds=0):
+            raise RuntimeError(
+                "Bad dynamical core configuration:"
+                " the atmospheric timestep is 0 seconds!"
+            )
         # nested and stretched_grid are options in the Fortran code which we
         # have not implemented, so they are hard-coded here.
         self.call_checkpointer = checkpointer is not None
@@ -206,7 +204,7 @@ class DynamicalCore:
         )
 
         self.tracers = {}
-        for name in utils.tracer_variables[0:NQ]:
+        for name in utils.tracer_variables[0 : constants.NQ]:
             self.tracers[name] = state.__dict__[name]
 
         temporaries = fvdyn_temporaries(quantity_factory)
@@ -277,11 +275,17 @@ class DynamicalCore:
             self.config.nf_omega,
         )
         self._cubed_to_latlon = CubedToLatLon(
-            state, stencil_factory, quantity_factory, grid_data, config.c2l_ord, comm
+            state,
+            stencil_factory,
+            quantity_factory,
+            grid_data,
+            self.config.grid_type,
+            config.c2l_ord,
+            comm,
         )
         self._cappa = self.acoustic_dynamics.cappa
 
-        if not (not self.config.inline_q and NQ != 0):
+        if not (not self.config.inline_q and constants.NQ != 0):
             raise NotImplementedError("tracer_2d not implemented, turn on z_tracer")
         self._adjust_tracer_mixing_ratio = AdjustNegativeTracerMixingRatio(
             stencil_factory,
@@ -295,7 +299,7 @@ class DynamicalCore:
             quantity_factory=quantity_factory,
             config=config.remapping,
             area_64=grid_data.area_64,
-            nq=NQ,
+            nq=constants.NQ,
             pfull=self._pfull,
             tracers=self.tracers,
             checkpointer=checkpointer,
@@ -304,6 +308,7 @@ class DynamicalCore:
         full_xyz_spec = quantity_factory.get_quantity_halo_spec(
             dims=[pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
             n_halo=grid_indexing.n_halo,
+            dtype=Float,
         )
         self._omega_halo_updater = WrappedHaloUpdater(
             comm.get_scalar_halo_updater([full_xyz_spec]), state, ["omga"], comm=comm
@@ -544,6 +549,12 @@ class DynamicalCore:
                     log_on_rank_0("Remapping")
                 with timer.clock("Remapping"):
                     self._checkpoint_remapping_in(state)
+
+                    # TODO: When NQ=9, we shouldn't need to pass qcld explicitly
+                    #       since it's in self.tracers. It should not be an issue since
+                    #       we don't have self.tracers & qcld computation at the same
+                    #       time
+                    #       When NQ=8, we do need qcld passed explicitely
                     self._lagrangian_to_eulerian_obj(
                         self.tracers,
                         state.pt,
@@ -576,7 +587,7 @@ class DynamicalCore:
                 # TODO: can we pull this block out of the loop intead of
                 # using an if-statement?
                 if last_step:
-                    da_min: float = self._get_da_min()
+                    da_min: Float = self._get_da_min()
                     if not self.config.hydrostatic:
                         if __debug__:
                             log_on_rank_0("Omega")

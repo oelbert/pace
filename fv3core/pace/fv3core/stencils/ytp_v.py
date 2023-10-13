@@ -1,7 +1,7 @@
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtscript import __INLINED, compile_assert, horizontal, region
 
-from pace.dsl.typing import FloatField, FloatFieldIJ
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.fv3core.stencils import ppm, yppm
 
 
@@ -17,7 +17,7 @@ def get_bl_br(v, dy, dya):
         bl: ???
         br: ???
     """
-    from __externals__ import i_end, i_start, j_end, j_start, jord
+    from __externals__ import grid_type, i_end, i_start, j_end, j_start, jord
 
     if __INLINED(jord < 8):
         v_on_cell_corners = yppm.compute_al(v, dy)
@@ -32,20 +32,23 @@ def get_bl_br(v, dy, dya):
         compile_assert(jord == 8)
 
         bl, br = yppm.blbr_jord8(v, v_on_cell_corners, dm)
-        bl, br = yppm.bl_br_edges(bl, br, v, dya, v_on_cell_corners, dm)
+        if __INLINED(grid_type < 3):
+            bl, br = yppm.bl_br_edges(bl, br, v, dya, v_on_cell_corners, dm)
 
-        with horizontal(region[:, j_start + 1], region[:, j_end - 1]):
-            bl, br = ppm.pert_ppm_standard_constraint_fcn(v, bl, br)
+            with horizontal(region[:, j_start + 1], region[:, j_end - 1]):
+                bl, br = ppm.pert_ppm_standard_constraint_fcn(v, bl, br)
 
-    # Zero corners
-    with horizontal(
-        region[i_start, j_start - 1 : j_start + 1],
-        region[i_end + 1, j_start - 1 : j_start + 1],
-        region[i_start, j_end : j_end + 2],
-        region[i_end + 1, j_end : j_end + 2],
-    ):
-        bl = 0.0
-        br = 0.0
+    if __INLINED(grid_type < 3):
+        # Zero corners
+        with horizontal(
+            region[i_start, j_start - 1 : j_start + 1],
+            region[i_end + 1, j_start - 1 : j_start + 1],
+            region[i_start, j_end : j_end + 2],
+            region[i_end + 1, j_end : j_end + 2],
+        ):
+            bl = 0.0
+            br = 0.0
+
     return bl, br
 
 
@@ -56,7 +59,7 @@ def advect_v_along_y(
     rdy: FloatFieldIJ,
     dy: FloatFieldIJ,
     dya: FloatFieldIJ,
-    dt: float,
+    dt: Float,
 ):
     """
     Advect covariant y-wind on D-grid using contravariant y-wind on cell corners.

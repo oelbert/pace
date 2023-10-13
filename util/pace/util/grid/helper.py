@@ -166,8 +166,8 @@ class VerticalGridData:
                 but no fv_core.res.nc in restart data file."""
             )
 
-        ak = quantity_factory.empty([Z_INTERFACE_DIM], units="Pa")
-        bk = quantity_factory.empty([Z_INTERFACE_DIM], units="")
+        ak = quantity_factory.zeros([Z_INTERFACE_DIM], units="Pa")
+        bk = quantity_factory.zeros([Z_INTERFACE_DIM], units="")
         with fs.open(ak_bk_data_file, "rb") as f:
             ds = xr.open_dataset(f).isel(Time=0).drop_vars("Time")
             ak.view[:] = ds["ak"].values
@@ -322,7 +322,6 @@ class GridData:
 
     @classmethod
     def new_from_metric_terms(cls, metric_terms: MetricTerms):
-
         horizontal_data = HorizontalGridData.new_from_metric_terms(metric_terms)
         vertical_data = VerticalGridData.new_from_metric_terms(metric_terms)
         contravariant_data = ContravariantGridData.new_from_metric_terms(metric_terms)
@@ -675,6 +674,7 @@ class DriverGridData:
     ew2_1: pace.util.Quantity
     ew2_2: pace.util.Quantity
     ew2_3: pace.util.Quantity
+    grid_type: int
 
     @classmethod
     def new_from_metric_terms(cls, metric_terms: MetricTerms) -> "DriverGridData":
@@ -687,6 +687,7 @@ class DriverGridData:
             edge_vect_w=metric_terms.edge_vect_w,
             es1=metric_terms.es1,
             ew2=metric_terms.ew2,
+            grid_type=metric_terms._grid_type,
         )
 
     @classmethod
@@ -700,8 +701,8 @@ class DriverGridData:
         edge_vect_w: pace.util.Quantity,
         es1: pace.util.Quantity,
         ew2: pace.util.Quantity,
+        grid_type: int = 0,
     ) -> "DriverGridData":
-
         try:
             vlon1, vlon2, vlon3 = split_quantity_along_last_dim(vlon)
             vlat1, vlat2, vlat3 = split_quantity_along_last_dim(vlat)
@@ -730,6 +731,7 @@ class DriverGridData:
             edge_vect_e=edge_vect_e,
             edge_vect_s=edge_vect_s,
             edge_vect_n=edge_vect_n,
+            grid_type=grid_type,
         )
 
 

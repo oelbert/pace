@@ -13,7 +13,7 @@ from gt4py.cartesian.gtscript import (
 
 import pace.util.constants as constants
 from pace.dsl.stencil import StencilFactory
-from pace.dsl.typing import FloatField, FloatFieldIJ
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.fv3core._config import SatAdjustConfig
 from pace.fv3core.stencils.basic_operations import dim
 from pace.fv3core.stencils.moist_cv import compute_pkz_func
@@ -576,22 +576,22 @@ def satadjust(
     area: FloatFieldIJ,
     hs: FloatFieldIJ,
     pkz: FloatField,
-    sdt: float,
-    zvir: float,
-    fac_i2s: float,
+    sdt: Float,
+    zvir: Float,
+    fac_i2s: Float,
     do_qa: bool,
     consv_te: bool,
-    c_air: float,
-    c_vap: float,
-    mdt: float,
-    fac_r2g: float,
-    fac_smlt: float,
-    fac_l2r: float,
-    fac_imlt: float,
-    d0_vap: float,
-    lv00: float,
-    fac_v2l: float,
-    fac_l2v: float,
+    c_air: Float,
+    c_vap: Float,
+    mdt: Float,
+    fac_r2g: Float,
+    fac_smlt: Float,
+    fac_l2r: Float,
+    fac_imlt: Float,
+    d0_vap: Float,
+    lv00: Float,
+    fac_v2l: Float,
+    fac_l2v: Float,
     last_step: bool,
 ):
     """
@@ -909,14 +909,14 @@ def satadjust(
             # icloud_f = 0: bug - fixed
             # icloud_f = 1: old fvgfs gfdl) mp implementation
             # icloud_f = 2: binary cloud scheme (0 / 1)
-            if rh > 0.75 and qpz > 1.0e-8:
+            if rh > 0.75 and qpz > constants.SAT_ADJUST_THRESHOLD:
                 dq = hvar * qpz
                 q_plus = qpz + dq
                 q_minus = qpz - dq
                 if icloud_f == 2:  # TODO untested
                     if qpz > qstar:
                         qa = 1.0
-                    elif (qstar < q_plus) and (q_cond > 1.0e-8):
+                    elif (qstar < q_plus) and (q_cond > constants.SAT_ADJUST_THRESHOLD):
                         qa = min(1.0, ((q_plus - qstar) / dq) ** 2)
                     else:
                         qa = 0.0
@@ -932,7 +932,7 @@ def satadjust(
                         else:
                             qa = 0.0
                         # impose minimum cloudiness if substantial q_cond exist
-                        if q_cond > 1.0e-8:
+                        if q_cond > constants.SAT_ADJUST_THRESHOLD:
                             qa = max(cld_min, qa)
                         qa = min(1, qa)
             else:
@@ -997,11 +997,11 @@ class SatAdjust3d:
         pt: FloatField,
         pkz: FloatField,
         cappa: FloatField,
-        r_vir: float,
-        mdt: float,
+        r_vir: Float,
+        mdt: Float,
         fast_mp_consv: bool,
         last_step: bool,
-        akap: float,
+        akap: Float,
         kmp: int,
     ):
         """

@@ -1,15 +1,16 @@
 from gt4py.cartesian.gtscript import PARALLEL, computation, interval
 
 import pace.util
+from pace.dsl.dace import orchestrate
 from pace.dsl.stencil import StencilFactory
-from pace.dsl.typing import FloatField, FloatFieldIJ
+from pace.dsl.typing import Float, FloatField, FloatFieldIJ
 from pace.fv3core.stencils.a2b_ord4 import AGrid2BGridFourthOrder
 from pace.util import X_DIM, Y_DIM, Z_INTERFACE_DIM
 from pace.util.grid import GridData
 
 
 def set_k0_and_calc_wk(
-    pp: FloatField, pk3: FloatField, wk: FloatField, top_value: float
+    pp: FloatField, pk3: FloatField, wk: FloatField, top_value: Float
 ):
     """
     Args:
@@ -34,7 +35,7 @@ def calc_u(
     pk3: FloatField,
     pp: FloatField,
     rdx: FloatFieldIJ,
-    dt: float,
+    dt: Float,
 ):
     """
     Args:
@@ -77,7 +78,7 @@ def calc_v(
     pk3: FloatField,
     pp: FloatField,
     rdy: FloatFieldIJ,
-    dt: float,
+    dt: Float,
 ):
     """
     Args:
@@ -130,6 +131,11 @@ class NonHydrostaticPressureGradient:
         grid_data: GridData,
         grid_type,
     ):
+        orchestrate(
+            obj=self,
+            config=stencil_factory.config.dace_config,
+        )
+
         grid_indexing = stencil_factory.grid_indexing
         self.orig = grid_indexing.origin_compute()
         domain_full_k = grid_indexing.domain_compute(add=(1, 1, 0))
@@ -140,10 +146,14 @@ class NonHydrostaticPressureGradient:
         self._rdy = grid_data.rdy
 
         self._tmp_wk = quantity_factory.zeros(
-            [X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown"
+            [X_DIM, Y_DIM, Z_INTERFACE_DIM],
+            units="unknown",
+            dtype=Float,
         )
         self._tmp_wk1 = quantity_factory.zeros(
-            [X_DIM, Y_DIM, Z_INTERFACE_DIM], units="unknown"
+            [X_DIM, Y_DIM, Z_INTERFACE_DIM],
+            units="unknown",
+            dtype=Float,
         )
 
         self.a2b_k1 = AGrid2BGridFourthOrder(
@@ -169,6 +179,7 @@ class NonHydrostaticPressureGradient:
             grid_type=grid_type,
             replace=False,
         )
+
         self._set_k0_and_calc_wk_stencil = stencil_factory.from_origin_domain(
             set_k0_and_calc_wk,
             origin=self.orig,
@@ -195,9 +206,9 @@ class NonHydrostaticPressureGradient:
         gz: FloatField,
         pk3: FloatField,
         delp: FloatField,
-        dt: float,
-        ptop: float,
-        akap: float,
+        dt: Float,
+        ptop: Float,
+        akap: Float,
     ):
         """
         Updates the U and V winds due to pressure gradients,
@@ -223,7 +234,6 @@ class NonHydrostaticPressureGradient:
         # TODO: make it clearer that each of these a2b outputs is updated
         # instead of the output being put in tmp_wk1, possibly by removing
         # the second argument and using a temporary instead?
-
         self.a2b_k1(pp, self._tmp_wk1)
         self.a2b_k1(pk3, self._tmp_wk1)
 

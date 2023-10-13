@@ -8,6 +8,7 @@ import pace.physics
 import pace.util
 import pace.util.grid
 from pace import fv3core
+from pace.dsl.typing import Float
 
 
 @dataclasses.dataclass()
@@ -49,7 +50,7 @@ class TendencyState:
             initial_quantities[_field.name] = quantity_factory.zeros(
                 _field.metadata["dims"],
                 _field.metadata["units"],
-                dtype=float,
+                dtype=Float,
             )
         return cls(**initial_quantities)
 
@@ -76,7 +77,7 @@ class DriverState:
         grid_data: pace.util.grid.GridData,
     ) -> "DriverState":
         comm = driver_config.comm_config.get_comm()
-        communicator = pace.util.CubedSphereCommunicator.from_layout(
+        communicator = pace.util.Communicator.from_layout(
             comm=comm, layout=driver_config.layout
         )
         sizer = pace.util.SubtileGridSizer.from_tile_params(
@@ -171,7 +172,7 @@ def _restart_driver_state(
     path: str,
     rank: int,
     quantity_factory: pace.util.QuantityFactory,
-    communicator: pace.util.CubedSphereCommunicator,
+    communicator: pace.util.Communicator,
     damping_coefficients: pace.util.grid.DampingCoefficients,
     driver_grid_data: pace.util.grid.DriverGridData,
     grid_data: pace.util.grid.GridData,

@@ -1,6 +1,5 @@
 import abc
 import dataclasses
-import logging
 from typing import ClassVar, Optional, Tuple
 
 import f90nml
@@ -11,7 +10,7 @@ import pace.physics
 import pace.stencils
 import pace.util.grid
 from pace.stencils.testing import TranslateGrid
-from pace.util import CubedSphereCommunicator, QuantityFactory
+from pace.util import Communicator, QuantityFactory
 from pace.util.grid import (
     DampingCoefficients,
     DriverGridData,
@@ -25,12 +24,10 @@ from pace.util.grid.helper import (
     HorizontalGridData,
     VerticalGridData,
 )
+from pace.util.logging import pace_log
 from pace.util.namelist import Namelist
 
 from .registry import Registry
-
-
-logger = logging.getLogger(__name__)
 
 
 class GridInitializer(abc.ABC):
@@ -38,7 +35,7 @@ class GridInitializer(abc.ABC):
     def get_grid(
         self,
         quantity_factory: pace.util.QuantityFactory,
-        communicator: pace.util.CubedSphereCommunicator,
+        communicator: pace.util.Communicator,
     ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
         ...
 
@@ -65,7 +62,7 @@ class GridInitializerSelector(GridInitializer):
     def get_grid(
         self,
         quantity_factory: QuantityFactory,
-        communicator: CubedSphereCommunicator,
+        communicator: Communicator,
     ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
         return self.config.get_grid(
             quantity_factory=quantity_factory, communicator=communicator
@@ -88,21 +85,33 @@ class GeneratedGridConfig(GridInitializer):
         lon_target: desired center longitude for refined tile (deg)
         lat_target: desired center latitude for refined tile (deg)
         restart_path: if given, load vertical grid from restart file
+        grid_type: type of grid, 0 is a gnomonic cubed-sphere, 4 is doubly-periodic
+        dx_const: constant x-width of grid cells on a dp-grid
+        dy_const: constant y-width of grid cells on a dp-grid
+        deglat: latitude to use for coriolis calculations on a dp-grid
     """
 
     stretch_factor: Optional[float] = 1.0
     lon_target: Optional[float] = 350.0
     lat_target: Optional[float] = -90.0
     restart_path: Optional[str] = None
+    grid_type: Optional[int] = 0
+    dx_const: Optional[float] = 1000.0
+    dy_const: Optional[float] = 1000.0
+    deglat: Optional[float] = 15.0
 
     def get_grid(
         self,
         quantity_factory: QuantityFactory,
-        communicator: CubedSphereCommunicator,
+        communicator: Communicator,
     ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
-
         metric_terms = MetricTerms(
-            quantity_factory=quantity_factory, communicator=communicator
+            quantity_factory=quantity_factory,
+            communicator=communicator,
+            grid_type=self.grid_type,
+            dx_const=self.dx_const,
+            dy_const=self.dy_const,
+            deglat=self.deglat,
         )
         if self.stretch_factor != 1:  # do horizontal grid transformation
             _transform_horizontal_grid(
@@ -148,7 +157,7 @@ class SerialboxGridConfig(GridInitializer):
     def _namelist(self) -> Namelist:
         return Namelist.from_f90nml(self._f90_namelist)
 
-    def _serializer(self, communicator: pace.util.CubedSphereCommunicator):
+    def _serializer(self, communicator: pace.util.Communicator):
         import serialbox
 
         serializer = serialbox.Serializer(
@@ -160,7 +169,7 @@ class SerialboxGridConfig(GridInitializer):
 
     def _get_serialized_grid(
         self,
-        communicator: pace.util.CubedSphereCommunicator,
+        communicator: pace.util.Communicator,
         backend: str,
     ) -> pace.stencils.testing.grid.Grid:  # type: ignore
         ser = self._serializer(communicator)
@@ -172,14 +181,13 @@ class SerialboxGridConfig(GridInitializer):
     def get_grid(
         self,
         quantity_factory: QuantityFactory,
-        communicator: CubedSphereCommunicator,
+        communicator: Communicator,
     ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
-
-        backend = quantity_factory.empty(
+        backend = quantity_factory.zeros(
             dims=[pace.util.X_DIM, pace.util.Y_DIM], units="unknown"
         ).gt4py_backend
 
-        logger.info("Using serialized grid data")
+        pace_log.info("Using serialized grid data")
         grid = self._get_serialized_grid(communicator, backend)
         grid_data = grid.grid_data
         driver_grid_data = grid.driver_grid_data
@@ -218,5 +226,5 @@ def _transform_horizontal_grid(
     grid.data[:, :, 0] = lon_transform[:]
     grid.data[:, :, 1] = lat_transform[:]
 
-    metric_terms._grid.data[:] = grid.data[:]
+    metric_terms._grid.data[:] = grid.data[:]  # type: ignore[attr-defined]
     metric_terms._init_agrid()
