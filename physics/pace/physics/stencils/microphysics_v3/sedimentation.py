@@ -152,8 +152,7 @@ def calc_terminal_velocity_ice(
                 tc = temperature - constants.TICE0
                 if ifflag == 1:
                     v_terminal = (
-                        (3.0 + log10(qice * density))
-                        * (tc * (aa * tc + bb) + cc)
+                        (3.0 + log10(qice * density)) * (tc * (aa * tc + bb) + cc)
                         + dd * tc
                         + ee
                     )
@@ -202,28 +201,14 @@ def sedi_melt(
         q_melt = qgraupel
     else:
         raise ValueError(f"sedi_melt mode {mode} not ice, snow, or graupel")
-    count_1 = 0
-    index_1 = []
-    count_2 = 0
-    index_2 = []
-    count_3 = 0
-    index_3 = []
-    count_4 = 0
-    index_4 = []
-    count_5 = 0
-    index_5 = []
     for i in range(is_, ie + 1):
         for j in range(js, je + 1):
             for k in range(ke - 1, ks - 1, -1):
                 if v_terminal[i, j, k] < 1.0e-10:
-                    count_1 += 1
-                    index_1.append((i, j, k))
                     continue
                 if q_melt[i, j, k] > constants.QCMIN:
                     for m in range(k + 1, ke + 1):
                         if z_terminal[i, j, k + 1] >= z_edge[i, j, m]:
-                            count_2 += 1
-                            index_2.append((i, j, k, m))
                             break
                         if (z_terminal[i, j, k] < z_edge[i, j, m + 1]) and (
                             temperature[i, j, m] > constants.TICE0
@@ -280,8 +265,6 @@ def sedi_melt(
                             )
                             q_melt[i, j, k] -= sink * delp[i, j, m] / delp[i, j, k]
                             if z_terminal[i, j, k] < z_surface[i, j]:
-                                count_3 += 1
-                                index_3.append((i, j, k, m))
                                 r1[i, j] += sink * delp[i, j, m]
                             else:
                                 qrain[i, j, m] += sink
@@ -340,11 +323,7 @@ def sedi_melt(
                                 temperature[i, j, m] * cvm[i, j, m]
                             ) / cvm_tmp
                         if q_melt[i, j, k] < constants.QCMIN:
-                            count_4 += 1
-                            index_4.append((i, j, k, m))
                             break
-                    count_5 += 1
-                    index_5.append((i, j, k))
 
 
 def calc_edge_and_terminal_height(
