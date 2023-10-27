@@ -371,9 +371,44 @@ class MetricTerms:
         self._vlon_64 = None
         self._vlat_64 = None
 
+        # Initialize grids and configure internal numerics
         if grid_type == 4:
+            self._compute_dxdy = self._compute_dxdy_cartesian
+            self._compute_dxdy_agrid = self._compute_dxdy_agrid_cartesian
+            self._compute_dxdy_center = self._compute_dxdy_center_cartesian
+            self._compute_area = self._compute_area_cartesian
+            self._compute_area_c = self._compute_area_c_cartesian
+            self._calculate_center_vectors = self._calculate_center_vectors_cartesian
+            self._calculate_vectors_west = self._calculate_vectors_west_cartesian
+            self._calculate_vectors_south = self._calculate_vectors_south_cartesian
+            self._init_cell_trigonometry = self._init_cell_trigonometry_cartesian
+            self._calculate_latlon_momentum_correction = (
+                self._calculate_latlon_momentum_correction_cartesian
+            )
+            self._calculate_xy_unit_vectors = self._calculate_xy_unit_vectors_cartesian
+            self._calculate_unit_vectors_lonlat = (
+                self._calculate_unit_vectors_lonlat_cartesian
+            )
             self._init_cartesian()
         elif grid_type < 3:
+            self._compute_dxdy = self._compute_dxdy_cube_sphere
+            self._compute_dxdy_agrid = self._compute_dxdy_agrid_cube_sphere
+            self._compute_dxdy_center = self._compute_dxdy_center_cube_sphere
+            self._compute_area = self._compute_area_cube_sphere
+            self._compute_area_c = self._compute_area_c_cube_sphere
+            self._calculate_center_vectors = self._calculate_center_vectors_cube_sphere
+            self._calculate_vectors_west = self._calculate_vectors_west_cube_sphere
+            self._calculate_vectors_south = self._calculate_vectors_south_cube_sphere
+            self._init_cell_trigonometry = self._init_cell_trigonometry_cube_sphere
+            self._calculate_latlon_momentum_correction = (
+                self._calculate_latlon_momentum_correction_cube_sphere
+            )
+            self._calculate_xy_unit_vectors = (
+                self._calculate_xy_unit_vectors_cube_sphere
+            )
+            self._calculate_unit_vectors_lonlat = (
+                self._calculate_unit_vectors_lonlat_cube_sphere
+            )
             self._init_dgrid()
             self._init_agrid()
         else:
@@ -385,7 +420,7 @@ class MetricTerms:
         npx: int,
         npy: int,
         npz: int,
-        communicator: util.CubedSphereCommunicator,
+        communicator: util.Communicator,
         backend: str,
         grid_type: int = 0,
         dx_const: float = 1000.0,
@@ -1566,12 +1601,6 @@ class MetricTerms:
         lat_rad = self._deglat * PI / 180.0
         lon_rad = 0.0
 
-        self._dx, self._dy = self._compute_dxdy_cartesian()
-        self._dx_agrid, self._dy_agrid = self._compute_dxdy_agrid_cartesian()
-        self._dx_center, self._dy_center = self._compute_dxdy_center_cartesian()
-        self._area = self._compute_area_cartesian()
-        self._area_c = self._compute_area_c_cartesian()
-
         self._grid_64.data[:, :, :] = self._np.nan
         slice_x, slice_y = self._tile_partitioner.subtile_slice(
             self._rank, self._grid_64.dims, (self._npx, self._npy)
@@ -1601,22 +1630,6 @@ class MetricTerms:
 
         self._agrid_64.data[:, :, 0] = lon_rad
         self._agrid_64.data[:, :, 1] = lat_rad
-
-        self._init_cell_trigonometry_cartesian()
-
-        self._ec1, self._ec2 = self._calculate_center_vectors_cartesian()
-        self._ew1, self._ew2 = self._calculate_vectors_west_cartesian()
-        self._es1, self._es2 = self._calculate_vectors_south_cartesian()
-
-        # TODO: following lines just fill fields with nan
-        # presumably these aren't needed other than for testing
-        # so best to get rid of them to reduce memory pressure?
-        self._ee1, self._ee2 = self._calculate_xy_unit_vectors_cartesian()
-        self._vlon, self._vlat = self._calculate_unit_vectors_lonlat_cartesian()
-        (
-            self._l2c_v,
-            self._l2c_u,
-        ) = self._calculate_latlon_momentum_correction_cartesian()
 
     def _init_dgrid(self):
         grid_mirror_ew = self.quantity_factory.zeros(
@@ -1788,7 +1801,7 @@ class MetricTerms:
             direction="y",
         )
 
-    def _compute_dxdy(self):
+    def _compute_dxdy_cube_sphere(self):
         dx_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_INTERFACE_DIM],
             "m",
@@ -1862,7 +1875,7 @@ class MetricTerms:
 
         return dx, dy
 
-    def _compute_dxdy_agrid(self):
+    def _compute_dxdy_agrid_cube_sphere(self):
         dx_agrid_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_DIM],
             "m",
@@ -1933,7 +1946,7 @@ class MetricTerms:
 
         return dx_agrid, dy_agrid
 
-    def _compute_dxdy_center(self):
+    def _compute_dxdy_center_cube_sphere(self):
         dx_center_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_DIM],
             "m",
@@ -2032,7 +2045,7 @@ class MetricTerms:
 
         return dx_center, dy_center
 
-    def _compute_area(self):
+    def _compute_area_cube_sphere(self):
         area_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_DIM],
             "m^2",
@@ -2061,7 +2074,7 @@ class MetricTerms:
         area_64.data[:, :] = self._dx_const * self._dy_const
         return quantity_cast_to_model_float(self.quantity_factory, area_64)
 
-    def _compute_area_c(self):
+    def _compute_area_c_cube_sphere(self):
         area_cgrid_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_INTERFACE_DIM],
             "m^2",
@@ -2143,7 +2156,7 @@ class MetricTerms:
         bk.data[:] = asarray(pressure_coefficients.bk, type(bk.data))
         return ks, ptop, ak, bk
 
-    def _calculate_center_vectors(self):
+    def _calculate_center_vectors_cube_sphere(self):
         ec1_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_DIM, self.CARTESIAN_DIM],
             "",
@@ -2187,10 +2200,7 @@ class MetricTerms:
             allow_mismatch_float_precision=True,
         )
         ec1_64.data[:, :, 0] = 1.0
-        ec1_64.data[:, :, 1:3] = 0.0
-        ec2_64.data[:, :, 0] = 0.0
         ec2_64.data[:, :, 1] = 1.0
-        ec2_64.data[:, :, 2] = 0.0
 
         ec1 = quantity_cast_to_model_float(self.quantity_factory, ec1_64)
         self._ec1_64 = ec1_64
@@ -2198,7 +2208,7 @@ class MetricTerms:
         self._ec2_64 = ec2_64
         return ec1, ec2
 
-    def _calculate_vectors_west(self):
+    def _calculate_vectors_west_cube_sphere(self):
         ew1_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_DIM, self.CARTESIAN_DIM],
             "",
@@ -2241,16 +2251,13 @@ class MetricTerms:
             allow_mismatch_float_precision=True,
         )
         ew1_64.data[:, :, 0] = 1.0
-        ew1_64.data[:, :, 1:3] = 0.0
-        ew2_64.data[:, :, 0] = 0.0
         ew2_64.data[:, :, 1] = 1.0
-        ew2_64.data[:, :, 2] = 0.0
 
         ew1 = quantity_cast_to_model_float(self.quantity_factory, ew1_64)
         ew2 = quantity_cast_to_model_float(self.quantity_factory, ew2_64)
         return ew1, ew2
 
-    def _calculate_vectors_south(self):
+    def _calculate_vectors_south_cube_sphere(self):
         es1_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_INTERFACE_DIM, self.CARTESIAN_DIM],
             "",
@@ -2289,10 +2296,7 @@ class MetricTerms:
             allow_mismatch_float_precision=True,
         )
         es1_64.data[:, :, 0] = 1.0
-        es1_64.data[:, :, 1:2] = 0.0
-        es2_64.data[:, :, 0] = 0.0
         es2_64.data[:, :, 1] = 1.0
-        es2_64.data[:, :, 2] = 0.0
 
         es1 = quantity_cast_to_model_float(self.quantity_factory, es1_64)
         es2 = quantity_cast_to_model_float(self.quantity_factory, es2_64)
@@ -2400,7 +2404,7 @@ class MetricTerms:
             quantity_cast_to_model_float(self.quantity_factory, rsin2_64),
         )
 
-    def _init_cell_trigonometry(self):
+    def _init_cell_trigonometry_cube_sphere(self):
         cosa_u_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_DIM],
             "",
@@ -2625,37 +2629,37 @@ class MetricTerms:
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        sina_u_64 = self.quantity_factory.zeros(
+        sina_u_64 = self.quantity_factory.ones(
             [util.X_INTERFACE_DIM, util.Y_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        sina_v_64 = self.quantity_factory.zeros(
+        sina_v_64 = self.quantity_factory.ones(
             [util.X_DIM, util.Y_INTERFACE_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        rsin_u_64 = self.quantity_factory.zeros(
+        rsin_u_64 = self.quantity_factory.ones(
             [util.X_INTERFACE_DIM, util.Y_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        rsin_v_64 = self.quantity_factory.zeros(
+        rsin_v_64 = self.quantity_factory.ones(
             [util.X_DIM, util.Y_INTERFACE_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        rsina_64 = self.quantity_factory.zeros(
+        rsina_64 = self.quantity_factory.ones(
             [util.X_INTERFACE_DIM, util.Y_INTERFACE_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        rsin2_64 = self.quantity_factory.zeros(
+        rsin2_64 = self.quantity_factory.ones(
             [util.X_DIM, util.Y_DIM],
             "",
             dtype=np.float64,
@@ -2667,33 +2671,20 @@ class MetricTerms:
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
-        sina_64 = self.quantity_factory.zeros(
+        sina_64 = self.quantity_factory.ones(
             [util.X_INTERFACE_DIM, util.Y_INTERFACE_DIM],
             "",
             dtype=np.float64,
             allow_mismatch_float_precision=True,
         )
 
-        cosa_u_64.data[:, :] = 0.0
-        cosa_v_64.data[:, :] = 0.0
-        cosa_s_64.data[:, :] = 0.0
-        sina_u_64.data[:, :] = 1.0
-        sina_v_64.data[:, :] = 1.0
-        rsin_u_64.data[:, :] = 1.0
-        rsin_v_64.data[:, :] = 1.0
-        rsina_64.data[:, :] = 1.0
-        rsin2_64.data[:, :] = 1.0
-        cosa_64.data[:, :] = 0.0
-        sina_64.data[:, :] = 1.0
-
         for i in range(1, 10):
-            sin_sg = self.quantity_factory.zeros(
+            sin_sg = self.quantity_factory.ones(
                 [util.X_DIM, util.Y_DIM],
                 "",
                 dtype=np.float64,
                 allow_mismatch_float_precision=True,
             )
-            sin_sg.data[:, :] = 1.0
             setattr(
                 self,
                 f"_sin_sg{i}",
@@ -2707,7 +2698,6 @@ class MetricTerms:
                 dtype=np.float64,
                 allow_mismatch_float_precision=True,
             )
-            cos_sg.data[:, :] = 0.0
             setattr(
                 self,
                 f"_cos_sg{i}",
@@ -2861,7 +2851,7 @@ class MetricTerms:
         self._rsina = quantity_cast_to_model_float(self.quantity_factory, rsina_64)
         self._rsin2 = quantity_cast_to_model_float(self.quantity_factory, rsin2_64)
 
-    def _calculate_latlon_momentum_correction(self):
+    def _calculate_latlon_momentum_correction_cube_sphere(self):
         l2c_v_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_DIM],
             "",
@@ -2905,7 +2895,7 @@ class MetricTerms:
 
         return l2c_v, l2c_u
 
-    def _calculate_xy_unit_vectors(self):
+    def _calculate_xy_unit_vectors_cube_sphere(self):
         ee1_64 = self.quantity_factory.zeros(
             [util.X_INTERFACE_DIM, util.Y_INTERFACE_DIM, self.CARTESIAN_DIM],
             "",
@@ -3092,7 +3082,7 @@ class MetricTerms:
         self._del6_v = quantity_cast_to_model_float(self.quantity_factory, del6_v_64)
         self._del6_u = quantity_cast_to_model_float(self.quantity_factory, del6_u_64)
 
-    def _calculate_unit_vectors_lonlat(self):
+    def _calculate_unit_vectors_lonlat_cube_sphere(self):
         vlon_64 = self.quantity_factory.zeros(
             [util.X_DIM, util.Y_DIM, self.CARTESIAN_DIM],
             "",
