@@ -13,6 +13,7 @@ class MetaEnumStr(EnumMeta):
 class Cases(Enum, metaclass=MetaEnumStr):
     baroclinic = "baroclinic"
     tropicalcyclone = "tropicalcyclone"
+    rce = "rce"
 
 
 def init_analytic_state(
@@ -64,6 +65,19 @@ def init_analytic_state(
                 hydrostatic=hydrostatic,
                 comm=comm,
             )
+        
+        elif analytic_init_case == Cases.rce.value:
+            import pace.fv3core.initialization.test_cases.initialize_rce as rce
+
+            assert isinstance(comm, fv3util.TileCommunicator)
+
+            return rce.init_rce_state(
+                grid_data=grid_data,
+                quantity_factory=quantity_factory,
+                hydrostatic=hydrostatic,
+                comm=comm,
+            )
+
         else:
             raise ValueError(f"Case {analytic_init_case} not implemented")
     else:
