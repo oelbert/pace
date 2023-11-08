@@ -470,7 +470,7 @@ class DynamicalCore:
 
         if (not self.config.rf_fast) and self.config.tau != 0:
             raise NotImplementedError(
-                "Rayleigh_Super, called when rf_fast=False and tau !=0"
+                "Rayleigh_Super or Rayleigh Friction, called when rf_fast=False and tau !=0"
             )
 
         if self.config.adiabatic and self.config.kord_tm > 0:

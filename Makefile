@@ -91,7 +91,7 @@ _force_build:
 
 enter:
 	docker run --rm -it \
-		--network host \
+		-p 8888:8888 \
 		$(VOLUMES) \
 	$(PACE_IMAGE) bash
 

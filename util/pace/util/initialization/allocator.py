@@ -1,6 +1,7 @@
 from typing import Callable, Optional, Sequence
 
 import numpy as np
+#import jax.numpy as jnp
 
 from .._optional_imports import gt4py
 from ..constants import SPATIAL_DIMS

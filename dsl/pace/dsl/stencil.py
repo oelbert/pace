@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import inspect
+from functools import partial
 from typing import (
     Any,
     Callable,
@@ -21,6 +22,7 @@ import gt4py
 import numpy as np
 from gt4py.cartesian import gtscript
 from gt4py.cartesian.gtc.passes.oir_pipeline import DefaultPipeline, OirPipeline
+from jax import jit
 
 import pace.util
 from pace.dsl.dace.orchestration import SDFGConvertible
@@ -347,6 +349,7 @@ class FrozenStencil(SDFGConvertible):
                 **stencil_kwargs,
                 build_info=(build_info := {}),  # type: ignore
             )
+            self._jso = self.stencil_object
         else:
             compilation_config = stencil_config.compilation_config
             if (
@@ -362,6 +365,13 @@ class FrozenStencil(SDFGConvertible):
                 dtypes={float: Float},
                 **stencil_kwargs,
                 build_info=(build_info := {}),
+            )
+
+            self._jso = partial(
+                jit(
+                    self.stencil_object,
+                    static_argnames=["validate_args", "origin", "domain"],
+                ),
             )
 
             if (
@@ -413,16 +423,13 @@ class FrozenStencil(SDFGConvertible):
                 raise TypeError("origin cannot be passed to FrozenStencil call")
             if __debug__ and "domain" in kwargs:
                 raise TypeError("domain cannot be passed to FrozenStencil call")
-            self.stencil_object(
+            results = self._jso(
                 *args,
                 **kwargs,
-                origin=self._field_origins,
-                domain=self.domain,
-                validate_args=True,
                 exec_info=self._timing_collector.exec_info,
             )
         else:
-            self.stencil_object.run(
+            results = self._jso(
                 **args_as_kwargs,
                 **kwargs,
                 **self._stencil_run_kwargs,
@@ -435,6 +442,7 @@ class FrozenStencil(SDFGConvertible):
                     f"rank {self.comm.Get_rank()} has differences {differences} "
                     f"after calling {self._func_name}"
                 )
+        return results
 
     @classmethod
     def _compute_field_origins(
