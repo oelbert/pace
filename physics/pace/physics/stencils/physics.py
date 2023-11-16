@@ -20,7 +20,8 @@ from pace.dsl.typing import Float, FloatField
 from pace.physics.physics_state import PhysicsState
 from pace.physics.stencils.get_phi_fv3 import get_phi_fv3
 from pace.physics.stencils.get_prs_fv3 import get_prs_fv3
-from pace.physics.stencils.microphysics import Microphysics
+# from pace.physics.stencils.microphysics import Microphysics
+from pace.physics.stencils.microphysics_v3 import Microphysics
 from pace.util import X_DIM, Y_DIM, Z_DIM
 from pace.util.grid import GridData
 
