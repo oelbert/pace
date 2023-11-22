@@ -270,6 +270,14 @@ class MicrophysicsState:
             "intent": "out",
         }
     )
+    cappa: pace.util.Quantity = field(
+        metadata={
+            "name": "cappa",
+            "dims": [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
+            "units": "unknown",
+            "intent": "inout",
+        }
+    )
     adj_vmr: pace.util.Quantity = field(
         metadata={
             "name": "mixing_ratio_adjustment",

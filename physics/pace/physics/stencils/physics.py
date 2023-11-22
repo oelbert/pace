@@ -265,7 +265,7 @@ class Physics:
                 )
             )
             self._microphysics = Microphysics(
-                stencil_factory, quantity_factory, grid_data, namelist=namelist
+                stencil_factory, quantity_factory, grid_data, namelist.microphysics
             )
         else:
             self._do_microphysics = False

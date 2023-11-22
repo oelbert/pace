@@ -294,7 +294,7 @@ class PhysicsState:
                 "unknown",
                 dtype=Float,
             )
-            self.microphysics: Optional[MicrophysicsState] = MicrophysicsState.init_zeros()
+            self.microphysics: Optional[MicrophysicsState] = MicrophysicsState.init_zeros(quantity_factory)
             self.microphysics.pt=self.pt
             self.microphysics.qvapor=self.qvapor
             self.microphysics.qliquid=self.qliquid
@@ -308,14 +308,14 @@ class PhysicsState:
             self.microphysics.wa=self.w
             self.microphysics.delp=self.delp
             self.microphysics.delz=self.delz
-            self.microphysics.geopotential_surface_height.data=self.phii.data[:,:,-1] #does this work? should it go somewhere else?
+            self.microphysics.geopotential_surface_height=self.phii[:,:,-1] #does this work? should it go somewhere else?
         elif "microphysics_old" in active_packages:
-             tendency = quantity_factory.zeros(
+            tendency = quantity_factory.zeros(
                 [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],
                 "unknown",
                 dtype=Float,
             )
-            self.microphysics: Optional[MicrophysicsState] = MicrophysicsState(
+            self.microphysics: Optional[MicrophysicsStateOld] = MicrophysicsStateOld(
                 pt=self.pt,
                 qvapor=self.qvapor,
                 qliquid=self.qliquid,

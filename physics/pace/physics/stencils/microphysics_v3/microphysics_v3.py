@@ -525,6 +525,8 @@ def convert_mass_mixing_to_specific_ratios_and_update_temperatures(
     qice: FloatField,
     qsnow: FloatField,
     qgraupel: FloatField,
+    qcon: FloatField,
+    cappa: FloatField,
     ua: FloatField,
     va: FloatField,
     wa: FloatField,
@@ -589,7 +591,7 @@ def convert_mass_mixing_to_specific_ratios_and_update_temperatures(
         c8 = (con_r8 + qvapor * c1_vap + q_liq * c1_liq + q_sol * c1_ice) * c_air
 
         # ifdef USE_COND
-        q_con = q_cond
+        qcon = q_cond
         # endif
         # ifdef MOIST_CAPPA
         tmp = constants.RDGAS * (1.0 + constants.ZVIR * qvapor)
@@ -784,11 +786,13 @@ class Microphysics:
         quantity_factory: pace.util.QuantityFactory,
         grid_data: GridData,
         config: MicroPhysicsConfig,
-        full_timestep: float,
+        full_timestep: float = None,
         do_mp_fast: bool = False,
         do_mp_full: bool = True,
         consv_te: bool = False,
     ):
+        if full_timestep is None:
+            full_timestep = config.dt_full
         self.config = config
         self._idx: GridIndexing = stencil_factory.grid_indexing
         self._max_timestep = self.config.mp_time
@@ -1154,7 +1158,7 @@ class Microphysics:
         )
 
     def _update_timestep_if_needed(self, timestep: float):
-        if timestep != self.config.dt_full:
+        if (timestep != self.config.dt_full) or (timestep > self._max_timestep):
             self._set_timestepping(timestep)
 
     def _set_timestepping(self, full_timestep: float):
@@ -1488,6 +1492,8 @@ class Microphysics:
             state.qice,
             state.qsnow,
             state.qgraupel,
+            state.qcon,
+            state.cappa,
             state.ua,
             state.va,
             state.wa,
