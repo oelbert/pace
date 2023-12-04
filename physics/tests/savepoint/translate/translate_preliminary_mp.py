@@ -2,7 +2,7 @@ import pace.dsl
 import pace.fv3core.stencils.basic_operations as basic
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
+from pace.physics.stencils.SHiELD_microphysics.microphysics_v3 import (
     calculate_density_factor,
     cloud_nuclei_subgrid_and_relative_humidity,
     convert_specific_to_mass_mixing_ratios_and_calculate_densities,

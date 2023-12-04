@@ -1,8 +1,8 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.cloud_fraction import CloudFraction
-from pace.physics.stencils.microphysics_v3.microphysics_v3 import (
+from pace.physics.stencils.SHiELD_microphysics.cloud_fraction import CloudFraction
+from pace.physics.stencils.SHiELD_microphysics.microphysics_v3 import (
     calc_sedimentation_energy_loss,
     calculate_particle_properties,
     calculate_total_energy_change_and_convert_temp,

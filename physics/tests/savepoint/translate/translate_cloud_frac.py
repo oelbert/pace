@@ -1,13 +1,13 @@
 from gt4py.cartesian.gtscript import __INLINED, PARALLEL, computation, interval
 
 import pace.dsl
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import MicroPhysicsConfig, PhysicsConfig
-from pace.physics.stencils.microphysics_v3.cloud_fraction import (  # noqa
+from pace.physics.stencils.SHiELD_microphysics.cloud_fraction import (  # noqa
     CloudFraction,
     cloud_scheme_1,
     cloud_scheme_2,

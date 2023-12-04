@@ -1,7 +1,7 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.ice_cloud import IceCloud
+from pace.physics.stencils.SHiELD_microphysics.ice_cloud import IceCloud
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 

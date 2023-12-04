@@ -1,15 +1,15 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.mp_full import FullMicrophysics, add_fluxes_and_surface_tracers, accumulate_state_changes
+from pace.physics.stencils.SHiELD_microphysics.mp_full import FullMicrophysics, add_fluxes_and_surface_tracers, accumulate_state_changes
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 from pace.util import X_DIM, Y_DIM, Z_DIM
-from pace.physics.stencils.microphysics_v3.ice_cloud import IceCloud
-from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
-from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (
+from pace.physics.stencils.SHiELD_microphysics.ice_cloud import IceCloud
+from pace.physics.stencils.SHiELD_microphysics.sedimentation import Sedimentation
+from pace.physics.stencils.SHiELD_microphysics.subgrid_z_proc import (
     VerticalSubgridProcesses,
 )
-from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
+from pace.physics.stencils.SHiELD_microphysics.warm_rain import WarmRain
 
 
 class SubMicrophysics:

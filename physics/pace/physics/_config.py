@@ -1400,6 +1400,7 @@ class PhysicsConfig:
     dt_atmos: float = DEFAULT_FLOAT
     ntimes: int = NamelistDefaults.ntimes
     hydrostatic: bool = DEFAULT_BOOL
+    scheme: str = "GFS"  # Which physics schemes to use
     npx: int = DEFAULT_INT
     npy: int = DEFAULT_INT
     npz: int = DEFAULT_INT

@@ -10,13 +10,13 @@ from gt4py.cartesian.gtscript import (  # noqa
 
 import pace.dsl
 import pace.fv3core.stencils.basic_operations as basic  # noqa
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun  # noqa
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun  # noqa
 import pace.util
 import pace.util.constants as constants  # noqa
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (  # noqa
+from pace.physics.stencils.SHiELD_microphysics.subgrid_z_proc import (  # noqa
     cloud_condensation_evaporation,
     complete_freeze,
     deposit_and_sublimate_graupel,

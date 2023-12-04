@@ -3,7 +3,7 @@ import pace.util
 import pace.util.constants as constants
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.terminal_fall import (
+from pace.physics.stencils.SHiELD_microphysics.terminal_fall import (
     prep_terminal_fall,
     update_energy_wind_heat_post_fall,
 )

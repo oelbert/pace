@@ -6,7 +6,7 @@ import xarray as xr
 import pace.dsl.gt4py_utils as gt_utils
 import pace.util
 from pace.dsl.typing import Float
-from pace.physics.stencils.microphysics_v3 import MicrophysicsState
+from pace.physics.stencils.SHiELD_microphysics import MicrophysicsState
 from pace.physics.stencils.microphysics import MicrophysicsState as MicrophysicsStateOld
 
 
@@ -283,6 +283,7 @@ class PhysicsState:
     )
     quantity_factory: InitVar[pace.util.QuantityFactory]
     active_packages: InitVar[List[str]]
+    scheme: str
 
     def __post_init__(
         self, quantity_factory: pace.util.QuantityFactory, active_packages: List[str]
@@ -295,20 +296,20 @@ class PhysicsState:
                 dtype=Float,
             )
             self.microphysics: Optional[MicrophysicsState] = MicrophysicsState.init_zeros(quantity_factory)
-            self.microphysics.pt=self.pt
-            self.microphysics.qvapor=self.qvapor
-            self.microphysics.qliquid=self.qliquid
-            self.microphysics.qrain=self.qrain
-            self.microphysics.qice=self.qice
-            self.microphysics.qsnow=self.qsnow
-            self.microphysics.qgraupel=self.qgraupel
-            self.microphysics.qcld=self.qcld
-            self.microphysics.ua=self.ua
-            self.microphysics.va=self.va
-            self.microphysics.wa=self.w
-            self.microphysics.delp=self.delp
-            self.microphysics.delz=self.delz
-            self.microphysics.geopotential_surface_height=self.phii[:,:,-1] #does this work? should it go somewhere else?
+            self.microphysics.pt = self.pt
+            self.microphysics.qvapor = self.qvapor
+            self.microphysics.qliquid = self.qliquid
+            self.microphysics.qrain = self.qrain
+            self.microphysics.qice = self.qice
+            self.microphysics.qsnow = self.qsnow
+            self.microphysics.qgraupel = self.qgraupel
+            self.microphysics.qcld = self.qcld
+            self.microphysics.ua = self.ua
+            self.microphysics.va = self.va
+            self.microphysics.wa = self.w
+            self.microphysics.delp = self.delp
+            self.microphysics.delz = self.delz
+            self.microphysics.geopotential_surface_height = self.phii[:, :, -1]  # does this work? should it go somewhere else?
         elif "microphysics_old" in active_packages:
             tendency = quantity_factory.zeros(
                 [pace.util.X_DIM, pace.util.Y_DIM, pace.util.Z_DIM],

@@ -1,12 +1,12 @@
 from gt4py.cartesian.gtscript import __INLINED, FORWARD, computation, interval
 
 import pace.dsl
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.typing import FloatField, IntField
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.humidity_tables import (
+from pace.physics.stencils.SHiELD_microphysics.humidity_tables import (
     HumiditySaturationTables,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py

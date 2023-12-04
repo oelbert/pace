@@ -5,12 +5,12 @@ import pace.util
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.physics.stencils.microphysics_v3.ice_cloud import IceCloud
-from pace.physics.stencils.microphysics_v3.sedimentation import Sedimentation
-from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (
+from pace.physics.stencils.SHiELD_microphysics.ice_cloud import IceCloud
+from pace.physics.stencils.SHiELD_microphysics.sedimentation import Sedimentation
+from pace.physics.stencils.SHiELD_microphysics.subgrid_z_proc import (
     VerticalSubgridProcesses,
 )
-from pace.physics.stencils.microphysics_v3.warm_rain import WarmRain
+from pace.physics.stencils.SHiELD_microphysics.warm_rain import WarmRain
 from pace.util import X_DIM, Y_DIM, Z_DIM
 
 from ..._config import MicroPhysicsConfig

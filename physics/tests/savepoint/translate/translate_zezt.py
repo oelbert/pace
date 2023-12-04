@@ -2,7 +2,7 @@ import pace.dsl
 import pace.util
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.sedimentation import (
+from pace.physics.stencils.SHiELD_microphysics.sedimentation import (
     calc_edge_and_terminal_height,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py

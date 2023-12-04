@@ -9,12 +9,12 @@ from gt4py.cartesian.gtscript import (  # noqa
 
 import pace.dsl
 import pace.fv3core.stencils.basic_operations as basic
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 from pace.dsl.typing import FloatField, FloatFieldIJ
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.ice_cloud import (  # noqa
+from pace.physics.stencils.SHiELD_microphysics.ice_cloud import (  # noqa
     accrete_graupel_with_cloud_water_and_rain,
     accrete_graupel_with_ice,
     accrete_graupel_with_snow,

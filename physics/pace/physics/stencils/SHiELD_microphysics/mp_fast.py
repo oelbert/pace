@@ -9,17 +9,17 @@ from gt4py.cartesian.gtscript import (
 )
 
 import pace.fv3core.stencils.basic_operations as basic
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import FloatField, FloatFieldIJ
-from pace.physics.stencils.microphysics_v3.ice_cloud import (
+from pace.physics.stencils.SHiELD_microphysics.ice_cloud import (
     freeze_cloud_water,
     melt_cloud_ice,
 )
-from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (
+from pace.physics.stencils.SHiELD_microphysics.subgrid_z_proc import (
     cloud_condensation_evaporation,
     complete_freeze,
     deposit_and_sublimate_ice,

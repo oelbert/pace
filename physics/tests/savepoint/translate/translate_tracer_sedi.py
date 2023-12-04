@@ -1,14 +1,14 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.sedimentation import (
+from pace.physics.stencils.SHiELD_microphysics.sedimentation import (
     adjust_fluxes,
     calc_edge_and_terminal_height,
     calc_terminal_velocity_ice,
     calc_terminal_velocity_rsg,
     sedi_melt,
 )
-from pace.physics.stencils.microphysics_v3.terminal_fall import TerminalFall
+from pace.physics.stencils.SHiELD_microphysics.terminal_fall import TerminalFall
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 from pace.util import X_DIM, Y_DIM, Z_DIM
 

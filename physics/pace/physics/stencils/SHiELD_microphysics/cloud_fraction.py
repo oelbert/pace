@@ -9,7 +9,7 @@ from gt4py.cartesian.gtscript import (
     log10,
 )
 
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate

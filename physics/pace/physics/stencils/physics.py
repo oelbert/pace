@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List
 
 import gt4py.cartesian.gtscript as gtscript
@@ -20,8 +21,8 @@ from pace.dsl.typing import Float, FloatField
 from pace.physics.physics_state import PhysicsState
 from pace.physics.stencils.get_phi_fv3 import get_phi_fv3
 from pace.physics.stencils.get_prs_fv3 import get_prs_fv3
-# from pace.physics.stencils.microphysics import Microphysics
-from pace.physics.stencils.microphysics_v3 import Microphysics
+from pace.physics.stencils.microphysics import Microphysics as GFS_Microphysics
+from pace.physics.stencils.SHiELD_microphysics import Microphysics as SHiELD_Microphysics
 from pace.util import X_DIM, Y_DIM, Z_DIM
 from pace.util.grid import GridData
 
@@ -29,6 +30,11 @@ from .._config import PhysicsConfig
 
 
 PHYSICS_PACKAGES = Literal["microphysics"]
+
+
+class Schemes(Enum, metaclass=pace.util.MetaEnumStr):
+    GFS = "GFS"
+    SHiELD = "SHiELD"
 
 
 def atmos_phys_driver_statein(
@@ -217,6 +223,9 @@ class Physics:
             dace_compiletime_args=["physics_state"],
         )
 
+        self.scheme = namelist.scheme
+        if self.scheme not in Schemes:
+            raise ValueError(f"{self.scheme} physics scheme not recognized")
         grid_indexing = stencil_factory.grid_indexing
         self._setup_statein()
         self._ptop = grid_data.ptop
@@ -252,21 +261,28 @@ class Physics:
         )
         if "microphysics" in active_packages:
             self._do_microphysics = True
-            self._prepare_microphysics = stencil_factory.from_origin_domain(
-                func=prepare_microphysics,
-                origin=grid_indexing.origin_compute(),
-                domain=grid_indexing.domain_compute(),
-            )
-            self._update_physics_state_with_tendencies = (
-                stencil_factory.from_origin_domain(
-                    func=update_physics_state_with_tendencies,
+            if self.scheme == "GFS":
+                self._prepare_microphysics = stencil_factory.from_origin_domain(
+                    func=prepare_microphysics,
                     origin=grid_indexing.origin_compute(),
                     domain=grid_indexing.domain_compute(),
                 )
-            )
-            self._microphysics = Microphysics(
-                stencil_factory, quantity_factory, grid_data, namelist.microphysics
-            )
+                self._update_physics_state_with_tendencies = (
+                    stencil_factory.from_origin_domain(
+                        func=update_physics_state_with_tendencies,
+                        origin=grid_indexing.origin_compute(),
+                        domain=grid_indexing.domain_compute(),
+                    )
+                )
+                self._microphysics = GFS_Microphysics(
+                    stencil_factory, quantity_factory, grid_data, namelist.microphysics
+                )
+            elif self.scheme == "SHiELD":
+                self._microphysics = SHiELD_Microphysics(
+                    stencil_factory, quantity_factory, grid_data, namelist.microphysics
+                )
+            else:
+                raise NotImplementedError(f"{self.scheme} scheme is not implemented")
         else:
             self._do_microphysics = False
 
@@ -313,58 +329,63 @@ class Physics:
             physics_state.phil,
         )
         if self._do_microphysics:
-            self._prepare_microphysics(
-                physics_state.dz,
-                physics_state.phii,
-                physics_state.wmp,
-                physics_state.omga,
-                physics_state.qvapor,
-                physics_state.pt,
-                physics_state.delp,
-                physics_state.microphysics.udt,
-                physics_state.microphysics.vdt,
-                physics_state.microphysics.pt_dt,
-                physics_state.microphysics.qv_dt,
-                physics_state.microphysics.ql_dt,
-                physics_state.microphysics.qr_dt,
-                physics_state.microphysics.qi_dt,
-                physics_state.microphysics.qs_dt,
-                physics_state.microphysics.qg_dt,
-                physics_state.microphysics.qa_dt,
-            )
-            self._microphysics(physics_state.microphysics, timestep=timestep)
-            # Fortran uses IPD interface, here we use physics_updated_<var> to denote
-            # the updated field
-            self._update_physics_state_with_tendencies(
-                physics_state.qvapor,
-                physics_state.qliquid,
-                physics_state.qrain,
-                physics_state.qice,
-                physics_state.qsnow,
-                physics_state.qgraupel,
-                physics_state.qcld,
-                physics_state.pt,
-                physics_state.ua,
-                physics_state.va,
-                physics_state.microphysics.qv_dt,
-                physics_state.microphysics.ql_dt,
-                physics_state.microphysics.qr_dt,
-                physics_state.microphysics.qi_dt,
-                physics_state.microphysics.qs_dt,
-                physics_state.microphysics.qg_dt,
-                physics_state.microphysics.qa_dt,
-                physics_state.microphysics.pt_dt,
-                physics_state.microphysics.udt,
-                physics_state.microphysics.vdt,
-                physics_state.physics_updated_specific_humidity,
-                physics_state.physics_updated_qliquid,
-                physics_state.physics_updated_qrain,
-                physics_state.physics_updated_qice,
-                physics_state.physics_updated_qsnow,
-                physics_state.physics_updated_qgraupel,
-                physics_state.physics_updated_cloud_fraction,
-                physics_state.physics_updated_pt,
-                physics_state.physics_updated_ua,
-                physics_state.physics_updated_va,
-                timestep,
-            )
+            if self.scheme == "GFS":
+                self._prepare_microphysics(
+                    physics_state.dz,
+                    physics_state.phii,
+                    physics_state.wmp,
+                    physics_state.omga,
+                    physics_state.qvapor,
+                    physics_state.pt,
+                    physics_state.delp,
+                    physics_state.microphysics.udt,
+                    physics_state.microphysics.vdt,
+                    physics_state.microphysics.pt_dt,
+                    physics_state.microphysics.qv_dt,
+                    physics_state.microphysics.ql_dt,
+                    physics_state.microphysics.qr_dt,
+                    physics_state.microphysics.qi_dt,
+                    physics_state.microphysics.qs_dt,
+                    physics_state.microphysics.qg_dt,
+                    physics_state.microphysics.qa_dt,
+                )
+                self._microphysics(physics_state.microphysics, timestep=timestep)
+                # Fortran uses IPD interface, here we use physics_updated_<var> to denote
+                # the updated field
+                self._update_physics_state_with_tendencies(
+                    physics_state.qvapor,
+                    physics_state.qliquid,
+                    physics_state.qrain,
+                    physics_state.qice,
+                    physics_state.qsnow,
+                    physics_state.qgraupel,
+                    physics_state.qcld,
+                    physics_state.pt,
+                    physics_state.ua,
+                    physics_state.va,
+                    physics_state.microphysics.qv_dt,
+                    physics_state.microphysics.ql_dt,
+                    physics_state.microphysics.qr_dt,
+                    physics_state.microphysics.qi_dt,
+                    physics_state.microphysics.qs_dt,
+                    physics_state.microphysics.qg_dt,
+                    physics_state.microphysics.qa_dt,
+                    physics_state.microphysics.pt_dt,
+                    physics_state.microphysics.udt,
+                    physics_state.microphysics.vdt,
+                    physics_state.physics_updated_specific_humidity,
+                    physics_state.physics_updated_qliquid,
+                    physics_state.physics_updated_qrain,
+                    physics_state.physics_updated_qice,
+                    physics_state.physics_updated_qsnow,
+                    physics_state.physics_updated_qgraupel,
+                    physics_state.physics_updated_cloud_fraction,
+                    physics_state.physics_updated_pt,
+                    physics_state.physics_updated_ua,
+                    physics_state.physics_updated_va,
+                    timestep,
+                )
+            elif self.scheme == "SHiELD":
+                self._microphysics(physics_state.microphysics, timestep=timestep)
+            else:
+                raise NotImplementedError(f"{self.scheme} scheme not implemented")

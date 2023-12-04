@@ -1,8 +1,8 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.microphysics_state import MicrophysicsState
-from pace.physics.stencils.microphysics_v3.microphysics_v3 import Microphysics
+from pace.physics.stencils.SHiELD_microphysics.microphysics_state import MicrophysicsState
+from pace.physics.stencils.SHiELD_microphysics.microphysics_v3 import Microphysics
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py
 
 

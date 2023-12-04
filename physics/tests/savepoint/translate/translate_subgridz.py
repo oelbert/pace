@@ -1,7 +1,7 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.subgrid_z_proc import (
+from pace.physics.stencils.SHiELD_microphysics.subgrid_z_proc import (
     VerticalSubgridProcesses,
 )
 from pace.stencils.testing.translate_physics import TranslatePhysicsFortranData2Py

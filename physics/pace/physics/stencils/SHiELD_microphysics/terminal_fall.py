@@ -9,7 +9,7 @@ from gt4py.cartesian.gtscript import (
     interval,
 )
 
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 

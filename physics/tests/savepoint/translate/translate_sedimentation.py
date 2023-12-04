@@ -1,7 +1,7 @@
 import pace.dsl
 import pace.util
 from pace.physics._config import PhysicsConfig
-from pace.physics.stencils.microphysics_v3.sedimentation import (
+from pace.physics.stencils.SHiELD_microphysics.sedimentation import (
     Sedimentation,
     calc_terminal_velocity_ice,
     calc_terminal_velocity_rsg,
