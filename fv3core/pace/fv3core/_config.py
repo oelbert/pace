@@ -272,6 +272,7 @@ class DynamicalCoreConfig:
     nf_omega: int = NamelistDefaults.nf_omega
     fv_sg_adj: int = NamelistDefaults.fv_sg_adj
     n_sponge: int = NamelistDefaults.n_sponge
+    p_ref: float = NamelistDefaults.p_ref  # Reference surface pressure
     namelist_override: Optional[str] = None
 
     def __post_init__(self):
@@ -381,6 +382,7 @@ class DynamicalCoreConfig:
             nf_omega=namelist.nf_omega,
             fv_sg_adj=namelist.fv_sg_adj,
             n_sponge=namelist.n_sponge,
+            p_ref=namelist.p_ref,
         )
 
     @property

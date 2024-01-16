@@ -61,7 +61,7 @@ class NamelistDefaults:
     use_old_omega = True
     use_logp = False
     rf_fast = False
-    p_ref = 1e5  # Surface pressure used to construct a horizontally-uniform reference
+    p_ref = 1.0e5  # Surface pressure used to construct a horizontally-uniform reference
     adiabatic = False
     nf_omega = 1
     fv_sg_adj = -1
@@ -455,6 +455,7 @@ class Namelist:
     adiabatic: bool = NamelistDefaults.adiabatic
     nf_omega: int = NamelistDefaults.nf_omega
     fv_sg_adj: int = NamelistDefaults.fv_sg_adj
+    p_ref: float = NamelistDefaults.p_ref
     n_sponge: int = NamelistDefaults.n_sponge
 
     @classmethod
