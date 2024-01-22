@@ -1,5 +1,6 @@
 dycore_only: true
 disable_step_physics: true
+output_initial_state: true
 stencil_config:
   compilation_config:
     backend: numpy
@@ -12,14 +13,12 @@ initialization:
   config:
     case: tropicalcyclone
 performance_config:
-  performance_mode: true
   experiment_name: c20_tropical
 grid_config:
   config:
     stretch_factor: 3.0
     lon_target: 172.5
     lat_target: 17.5
-    ks: 0
   type: generated
 nx_tile: 20
 nz: 79
@@ -40,7 +39,6 @@ diagnostics_config:
     - delz
     - qvapor
     - ps
-  output_initial_state: true
 dycore_config:
   a_imp: 1.0
   beta: 0.
