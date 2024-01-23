@@ -23,7 +23,7 @@ run: ## Run container
 	docker run -i -t --rm $(RUN_OPTIONS) -p=$(PORT):$(PORT) --name="$(APP_NAME)" $(IMAGE_NAME) $(CMD)
 
 dev: ## Run container and mount local directory for development
-	RUN_OPTIONS="-v $(CWD)/notebooks:/notebooks" $(MAKE) run
+	RUN_OPTIONS="-v $(CWD)/notebooks:/notebooks -v $(CWD)/../:/pace" $(MAKE) run
 
 enter:
 	CMD="/bin/bash" $(MAKE) run
