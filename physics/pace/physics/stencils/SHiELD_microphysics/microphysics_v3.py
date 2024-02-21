@@ -10,18 +10,20 @@ from gt4py.cartesian.gtscript import (
 )
 
 import pace.fv3core.stencils.basic_operations as basic
-import pace.physics.stencils.microphysics_v3.physical_functions as physfun
+import pace.physics.stencils.SHiELD_microphysics.physical_functions as physfun
 import pace.util
 import pace.util.constants as constants
 
 # from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import Float, FloatField, FloatFieldIJ
-from pace.physics.stencils.microphysics_v3.cloud_fraction import CloudFraction
-from pace.physics.stencils.microphysics_v3.microphysics_state import MicrophysicsState
-from pace.physics.stencils.microphysics_v3.mp_fast import FastMicrophysics
-from pace.physics.stencils.microphysics_v3.mp_full import FullMicrophysics
-from pace.physics.stencils.microphysics_v3.neg_adj import AdjustNegativeTracers
+from pace.physics.stencils.SHiELD_microphysics.cloud_fraction import CloudFraction
+from pace.physics.stencils.SHiELD_microphysics.microphysics_state import (
+    MicrophysicsState,
+)
+from pace.physics.stencils.SHiELD_microphysics.mp_fast import FastMicrophysics
+from pace.physics.stencils.SHiELD_microphysics.mp_full import FullMicrophysics
+from pace.physics.stencils.SHiELD_microphysics.neg_adj import AdjustNegativeTracers
 from pace.util import X_DIM, Y_DIM, Z_DIM, Timer
 from pace.util.grid import GridData
 
