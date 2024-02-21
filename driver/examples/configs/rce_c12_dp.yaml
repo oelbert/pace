@@ -12,6 +12,7 @@ grid_config:
     dx_const: 3000.0
     dy_const: 3000.0
     deglat: 0.0
+    eta_file: '/pace/input_data/eta79.nc'
 initialization:
   type: analytic
   config:

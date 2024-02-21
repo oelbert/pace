@@ -16,7 +16,14 @@ from pace.dsl.dace.orchestration import orchestrate
 from pace.dsl.stencil import GridIndexing, StencilFactory
 from pace.dsl.typing import Float, FloatField, FloatFieldI, FloatFieldIJ
 from pace.fv3core.stencils.basic_operations import copy_defn
-from pace.util import X_DIM, X_INTERFACE_DIM, Y_DIM, Y_INTERFACE_DIM, Z_DIM
+from pace.util import (
+    X_DIM,
+    X_INTERFACE_DIM,
+    Y_DIM,
+    Y_INTERFACE_DIM,
+    Z_DIM,
+    Z_INTERFACE_DIM,
+)
 from pace.util.grid import GridData
 
 
@@ -681,9 +688,18 @@ class AGrid2BGridFourthOrder:
             )
 
         else:  # grid type >= 3:
-            self._doubly_periodic_a2b_ord4 = stencil_factory.from_dims_halo(
+            grid_indexing = stencil_factory.grid_indexing
+            orig = grid_indexing.origin_compute(add=(-1, -1, 0))
+            if z_dim == Z_DIM:
+                domain_k = grid_indexing.domain_compute(add=(2, 2, 0))
+            elif z_dim == Z_INTERFACE_DIM:
+                domain_k = grid_indexing.domain_compute(add=(2, 2, 1))
+            else:
+                raise ValueError(f"z dim {z_dim} not recognized")
+            self._doubly_periodic_a2b_ord4 = stencil_factory.from_origin_domain(
                 doubly_periodic_a2b_ord4_stencil,
-                compute_dims=[X_INTERFACE_DIM, Y_INTERFACE_DIM, z_dim],
+                origin=orig,
+                domain=domain_k,
             )
             if self.replace:
                 self._copy_stencil = stencil_factory.from_dims_halo(
