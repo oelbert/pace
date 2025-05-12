@@ -8,7 +8,7 @@ set -e -x
 module load gcc/8
 module load openmpi/gcc/4.1.6
 module load boost/1.76.0
-module load anaconda3/2024.
+module load anaconda3/2024.10
 
 # export CC=`which gcc`
 # export CXX=`which g++`
