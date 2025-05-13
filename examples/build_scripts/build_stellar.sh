@@ -38,5 +38,5 @@ pip install ipyparallel
 pip install .[test]
 
 #install cupy for the GPUs
-pip install "nvidia-cuda-runtime-cu12==12.5.*"
-pip install cupy-cuda12
+#pip install "nvidia-cuda-runtime-cu12==12.5.*"?
+pip install cupy-cuda12x
