@@ -28,3 +28,6 @@ pip install --upgrade pip setuptools wheel
 
 # install the Pace dependencies, GT4Py, and Pace
 pip install -r requirements_dev.txt
+
+# If you want to run notebooks:
+pip install ipyparallel
