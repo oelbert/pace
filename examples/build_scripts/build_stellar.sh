@@ -9,6 +9,9 @@ module load gcc/8
 module load openmpi/gcc/4.1.6
 module load boost/1.76.0
 module load anaconda3/2024.10
+module load 
+
+cudatoolkit/12.5
 
 # export CC=`which gcc`
 # export CXX=`which g++`
@@ -26,8 +29,14 @@ conda create -y --name pace python=3.11.7
 conda activate my_name
 pip install --upgrade pip setuptools wheel
 
-# install the Pace dependencies, GT4Py, and Pace
-pip install -r requirements_dev.txt
-
 # If you want to run notebooks:
+conda install ipykernel
+pip install jupyter
 pip install ipyparallel
+
+# install the Pace dependencies, GT4Py, and Pace
+pip install .[test]
+
+#install cupy for the GPUs
+pip install "nvidia-cuda-runtime-cu12==12.5.*"
+pip install cupy-cuda12
