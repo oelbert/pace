@@ -9,7 +9,7 @@ Pace is an implementation of the FV3GFS / SHiELD atmospheric model developed by 
 
 🚧 **WARNING** This repo is under active development - supported features and procedures can change rapidly and without notice. 🚧
 
-The repository model code is split between [pyFV3](https://github.com/NOAA-GFDL/pyFV3) for the dynamical core and [pySHiELD](https://github.com/NOAA-GFDL/pySHiELD) for the physics parametrization. A full depencies looks like the following:
+The repository model code is split between [pyFV3](https://github.com/NOAA-GFDL/pyFV3) for the dynamical core and [pySHiELD](https://github.com/NOAA-GFDL/pySHiELD) for the physics parametrization. A full dependencies looks like the following:
 
 ```mermaid
 flowchart TD
@@ -53,21 +53,33 @@ git clone --recursive https://github.com/NOAA-GFDL/pace.git
 
 or if you have already cloned the repository:
 
-```
+```shell
 git submodule update --init --recursive
 ```
 
 We recommend creating a python `venv` or `conda` environment specifically for Pace.
 
 ```shell
-python3 -m venv venv_name
-source venv_name/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-Inside of your pace `venv` or conda environment pip install the Python requirements, GT4Py, and Pace:
+Inside of your pace `venv` or `conda` environment, install pace and its dependencies. For developers, we recommend an editable install with the `[dev]` extra:
 
 ```shell
-pip3 install -r requirements_dev.txt -c constraints.txt
+pip install -e .[dev]
+```
+
+For running tests, we recommend to install pace with the `[test]` extra (avoid pulling other dev dependencies):
+
+```shell
+pip install .[test]
+```
+
+For just running pace, you don't need any extra:
+
+```shell
+pip install .
 ```
 
 Shell scripts to install Pace on specific machines such as Gaea can be found in `examples/build_scripts/`.
@@ -80,9 +92,9 @@ Before starting any run, including unit tests, the user must ensure that the pro
 
 ```shell
 mkdir tests/main/input
-python3 examples/generate_eta_files.py
-mv *eta*.nc tests/main/input
+python examples/generate_eta_files.py tests/main/input
 ```
+
 These commands will generate the files necessary and place them in the `tests/main/input` directory. Once the files are generated the `baroclinic_c12.yaml` configuration can be used to generate a run:
 
 ```shell
@@ -92,7 +104,7 @@ mpirun -n 6 python3 -m pace.run examples/configs/baroclinic_c12.yaml
 mpirun -n 6 --oversubscribe python3 -m pace.run examples/configs/baroclinic_c12.yaml
 ```
 
-After the run completes, you will see an output direcotry `output.zarr`. An example to visualize the output is provided in `examples/plot_output.py`. See the [driver example](examples/README.md) section for more details.
+After the run completes, you will see an output directory `output.zarr`. An example to visualize the output is provided in `examples/plot_output.py`. See the [driver example](examples/README.md) section for more details.
 
 ### Environment variable configuration
 
@@ -142,6 +154,7 @@ This repository was first developed at [AI2](https://github.com/ai2cm/pace) and 
 [license-url]: https://github.com/NOAA-GFDL/pace/blob/main/LICENSE.md
 
 ## Running pace in containers
+
 Docker images exist in the Github Container Registry associated with the NOAA-GFDL organization.
 These images are publicly accessible and can be used to run a Docker container to work with pace.
 The following are directions on how to setup the pace conda environment interactively in a container.
@@ -152,10 +165,13 @@ with any other container management tools:
 ```shell
 docker pull ghcr.io/noaa-gfdl/pace_mpich:3.8
 ```
+
 for MPICH installation of MPI; and
+
 ```shell
 docker pull ghcr.io/noaa-gfdl/pace_openmpi:3.8
 ```
+
 for OpenMPI installation of MPI.
 
 If permission issues arise during the pull, a Github personal token
@@ -163,6 +179,7 @@ may be required.  The steps to create a personal token is found
 [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 
 Once the token has been generated, the image can be pulled for example with with:
+
 ```shell
 docker login --username GITHUB_USERNAME --password TOKEN
 docker pull ghcr.io/noaa-gfdl/pace_mpich:3.8
@@ -171,6 +188,7 @@ docker pull ghcr.io/noaa-gfdl/pace_mpich:3.8
 Any container management tools compatible with Docker images can be used
 to run the container interactively from the pulled image.
 With Docker, the following command runs the container interactively.
+
 ```shell
 docker run -it pace_mpich:3.8
 ```
