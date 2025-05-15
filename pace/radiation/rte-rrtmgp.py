@@ -1,13 +1,29 @@
-class RadiationWrapper:
-    def __init__(self):
+import pyrte_rrtmgp as rad
+import dataclasses
+import xarray as xr
+
+from ndsl import Float
+from pySHiELD import PhysicsState
+
+
+@dataclasses.dataclass
+class RadiationConfig:
+    dt_atmos: Float
+    fhswr: Float
+    fhlwr: Float
+    aerosol_file: str
+
+class RadiationDriver:
+    def __init__(self, config: RadiationConfig):
         pass
-    def __call__(self, *args, **kwds):
+
+    def _accumulate_radiation_inputs(state: PhysicsState):
+        """
+        For RTE-RRTMGP we need profiles of temperature, pressure, and the species used
+        for the spectral calculations (humidity, C02, etc.).
+        Here we extract that info from the model state.
+        """
         pass
-    def _call_radiation(self,):
-        pass
-    def _prep_data_for_radiation(self,):
-        pass
-    def _allocate_inputs(self,):
-        pass
-    def _put_outputs_in_pace(self,):
+
+    def step_radiation(self, state: PhysicsState):
         pass
