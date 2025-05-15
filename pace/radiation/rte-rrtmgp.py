@@ -1,5 +1,6 @@
-import pyrte_rrtmgp as rad
 import dataclasses
+
+import pyrte_rrtmgp as rad
 import xarray as xr
 
 from ndsl import Float
@@ -12,6 +13,7 @@ class RadiationConfig:
     fhswr: Float
     fhlwr: Float
     aerosol_file: str
+
 
 class RadiationDriver:
     def __init__(self, config: RadiationConfig):
