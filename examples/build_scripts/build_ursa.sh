@@ -26,4 +26,7 @@ pip install --upgrade pip setuptools wheel
 pip install cupy-cuda12x
 
 # Install pace
+cd pace
 pip install .[test]
+
+#If this fails, be sure that /usr/include/ is in your PATH
