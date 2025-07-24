@@ -37,10 +37,9 @@ from pace.grid import GeneratedGridConfig, GridInitializerSelector
 from pace.initialization import InitializerSelector
 from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
-from pyfv3 import DynamicalCore, DynamicalCoreConfig
-from pyfv3.initialization.analytic_init import AnalyticCase
-from pyshield import Physics, PhysicsConfig
-from pyshield.update import update_atmos_state
+from pyFV3 import DynamicalCore, DynamicalCoreConfig
+from pySHiELD import Physics, PhysicsConfig
+from pySHiELD.update import update_atmos_state
 
 
 try:
@@ -116,7 +115,6 @@ class DriverConfig:
         default_factory=DynamicalCoreConfig
     )
     physics_config: PhysicsConfig = dataclasses.field(default_factory=PhysicsConfig)
-
     days: int = 0
     hours: int = 0
     minutes: int = 0
@@ -267,6 +265,9 @@ class DriverConfig:
         kwargs["comm_config"] = CreatesCommSelector.from_dict(
             kwargs.get("comm_config", {})
         )
+        kwargs["initialization"] = InitializerSelector.from_dict(
+            kwargs["initialization"]
+        )
         if "grid_config" in kwargs:
             kwargs["grid_config"] = GridInitializerSelector.from_dict(
                 kwargs["grid_config"]
@@ -277,17 +278,6 @@ class DriverConfig:
                 kwargs["dycore_config"].grid_type = grid_type
                 if grid_type > 3:
                     kwargs["dycore_config"].ntiles = 1
-
-        analytic_hooks = {}
-        if kwargs["initialization"]["type"] == "analytic":
-            kwargs["initialization"]["config"]["dycore_config"] = kwargs[
-                "dycore_config"
-            ]
-            analytic_hooks[AnalyticCase] = AnalyticCase
-        kwargs["initialization"] = InitializerSelector.from_dict(
-            kwargs["initialization"],
-            hooks=analytic_hooks,
-        )
 
         if (
             isinstance(kwargs["stencil_config"], dict)
@@ -331,9 +321,6 @@ class DriverConfig:
             config_dict["dycore_config"].pop(field, None)
             config_dict["physics_config"].pop(field, None)
         config_dict["initialization"]["type"] = "restart"
-        # Remove existing initialization config and repopulate
-        config_dict["initialization"].pop("config")
-        config_dict["initialization"]["config"] = {}
         config_dict["initialization"]["config"]["start_time"] = time
         config_dict["initialization"]["config"]["path"] = restart_path
         # convert physics package enum to str
@@ -663,7 +650,13 @@ class Driver:
                         timestep=dt,
                     )
                     if not self.config.dycore_only:
-                        self.physics(self.state.physics_state, timestep=dt)
+                        self.physics(
+                            self.state.physics_state,
+                            self.state.radiation_state,
+                            self.state.surface_state,
+                            self.time,
+                            timestep=dt,
+                        )
                     self.end_of_step_update(
                         dycore_state=self.state.dycore_state,
                         phy_state=self.state.physics_state,

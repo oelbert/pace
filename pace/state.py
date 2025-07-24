@@ -12,7 +12,7 @@ from ndsl.filesystem import get_fs
 from ndsl.grid import DampingCoefficients, DriverGridData, GridData
 from ndsl.typing import Communicator
 from pyfv3 import DycoreState
-from pyshield import PHYSICS_PACKAGES, PhysicsState
+from pyshield import PHYSICS_PACKAGES, PhysicsState, RadiationState, SurfaceState
 
 
 @dataclasses.dataclass()
@@ -63,6 +63,8 @@ class TendencyState:
 class DriverState:
     dycore_state: DycoreState
     physics_state: PhysicsState
+    surface_state: SurfaceState
+    radiation_state: RadiationState
     tendency_state: TendencyState
     grid_data: GridData
     damping_coefficients: DampingCoefficients
@@ -119,6 +121,12 @@ class DriverState:
         )
         self.physics_state.xr_dataset.to_netcdf(
             f"{restart_path}/restart_physics_state_{current_rank}.nc"
+        )
+        self.radiation_state.xr_dataset.to_netcdf(
+            f"{restart_path}/restart_radiation_state_{current_rank}.nc"
+        )
+        self.surface_state.xr_dataset.to_netcdf(
+            f"{restart_path}/restart_surface_state_{current_rank}.nc"
         )
         # we can also convert the state to Fortran's restart format using
         # code similar to this commented code. We don't need this feature right
