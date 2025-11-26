@@ -89,15 +89,6 @@ Shell scripts to install Pace on specific machines such as Gaea can be found in 
 
 Located in the directory `examples/configs/` there are several example configurations to exhibit the current functionality of Pace. We suggest a new user start with the `baroclinic_c12.yaml` configuration.
 
-Before starting any run, including unit tests, the user must ensure that the proper input files are available. For the `baroclinic_c12.yaml` configuration a script to generate these files and place them in the location referenced in the configuration file is available in the `examples/` directory; `generate_eta_files.py`. To generate the files use the following commands from the top level of the clone of Pace:
-
-```shell
-mkdir tests/main/input
-python examples/generate_eta_files.py tests/main/input
-```
-
-These commands will generate the files necessary and place them in the `tests/main/input` directory. Once the files are generated the `baroclinic_c12.yaml` configuration can be used to generate a run:
-
 ```shell
 mpirun -n 6 python3 -m pace.run examples/configs/baroclinic_c12.yaml
 
@@ -109,12 +100,12 @@ After the run completes, you will see an output directory `output.zarr`. An exam
 
 ### Environment variable configuration
 
-- `PACE_CONSTANTS`: Pace is bundled with various constants.
+- `NDSL_CONSTANTS`: Pace is bundled with various constants.
   - `GFDL` NOAA's FV3 dynamical core constants (original port)
   - `GFS` Constant as defined in NOAA GFS
   - `GEOS`  Constant as defined in GEOS v13
-- `PACE_FLOAT_PRECISION`: default precision of the field & scalars in the numerics. Default to 64.
-- `PACE_LOGLEVEL`: logging level to display (DEBUG, INFO, WARNING, ERROR, CRITICAL). Default to INFO.
+- `NDSL_LITERAL_PRECISION`: default precision of the field & scalars in the numerics. Default to 64.
+- `NDSL_LOGLEVEL`: logging level to display (DEBUG, INFO, WARNING, ERROR, CRITICAL). Default to INFO.
 
 ## Quickstart - Docker
 

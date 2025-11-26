@@ -63,7 +63,6 @@ def test_restart_save_to_disk():
             ny_tile=12,
             nz=79,
             n_halo=3,
-            extra_dim_lengths={},
             layout=(1, 1),
             tile_partitioner=partitioner.tile,
             tile_rank=communicator.tile.rank,
@@ -120,8 +119,7 @@ def test_restart_save_to_disk():
         )
         for var in driver_state.physics_state.__dict__.keys():
             if isinstance(
-                driver_state.physics_state.__dict__[var],
-                np.ndarray,
+                driver_state.physics_state.__dict__[var], (np.ndarray, Quantity)
             ):
                 np.testing.assert_allclose(
                     driver_state.physics_state.__dict__[var].data,
