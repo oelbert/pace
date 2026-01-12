@@ -86,6 +86,15 @@ endif
 endif
 endif
 
+build_explicit:
+	PROGRESS_NO_TRUNC=1 docker build \
+		--progress plain \
+		--no-cache \
+		$(BUILD_FLAGS) \
+		-f $(CWD)/Dockerfile \
+		-t $(PACE_IMAGE) \
+		.
+
 _force_build:
 	DOCKER_BUILDKIT=1 docker build \
 		$(BUILD_FLAGS) \
@@ -104,9 +113,9 @@ dev:
 	DEV=y $(MAKE) enter
 
 notebook:
+	$(VOLUMES) += -v $(ROOT_DIR):/examples/notebooks
 	CMD="jupyter notebook --ip 0.0.0.0 --no-browser --allow-root --notebook-dir=/pace/examples/notebooks" \
-	DEV=y \
-	$(MAKE) enter
+	DEV=y $(MAKE) enter
 
 test_util:
 	if [ $(shell $(CHECK_CHANGED_SCRIPT) util) != false ]; then \
@@ -162,4 +171,4 @@ servedocs: docs ## compile the docs watching for changes
 lint:
 	pre-commit run --all-files
 
-.PHONY: docs doctest servedocs build
+.PHONY: docs doctest servedocs build build_explicit

@@ -3,6 +3,7 @@ import functools
 import warnings
 from datetime import datetime, timedelta
 from math import floor
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import dace
@@ -40,6 +41,13 @@ from pace.state import DriverState
 from pyfv3 import DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
 from pyshield import Physics, PhysicsConfig
+from pyshield.configs import (
+    GFDLCloudMPConfig,
+    PBLConfig,
+    RTE_RRTMGPConfig,
+    ShallowConvectionConfig,
+    SurfaceConfig,
+)
 from pyshield.update import update_atmos_state
 
 
@@ -116,6 +124,15 @@ class DriverConfig:
         default_factory=DynamicalCoreConfig
     )
     physics_config: PhysicsConfig = dataclasses.field(default_factory=PhysicsConfig)
+
+    # TODO: find a good way to only create scheme configs if they're present in the active schemes list
+
+    # TODO: This won't work with from_dict afaict
+    # rad_config: RTE_RRTMGPConfig = dataclasses.field(default_factory=RTE_RRTMGPConfig)
+    # mp_config: GFDLCloudMPConfig = dataclasses.field(default_factory=GFDLCloudMPConfig)
+    # pbl_config: PBLConfig = dataclasses.field(default_factory=PBLConfig)
+    # sc_config: ShallowConvectionConfig = dataclasses.field(default_factory=ShallowConvectionConfig)
+    # sfc_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     days: int = 0
     hours: int = 0
@@ -512,11 +529,88 @@ class Driver:
 
             ndsl_log.info("setting up physics object started")
             if not config.dycore_only and not config.disable_step_physics:
+                # TODO: this is a hack that needs to have an actual solution
+                rad_config = RTE_RRTMGPConfig(
+                    deltsw=3600.0,
+                    delt_rad=3600.0,
+                    date=config.start_time,
+                    fhswr=1.0,
+                    fhlwr=1.0,
+                    isolar=10,
+                    icmphys=4,
+                    ico2flg=0,
+                    ioznflg=1,
+                    ictmflg=-1,
+                    ialbflg=-1,
+                    iemsflg=0,
+                    ldisable_radiation_quasi_sea_ice=False,
+                    solar_constant_file=Path("global_solarconstant_noaa_an.txt"),
+                    input_dir=Path("nil"),
+                    aerosol_file=Path("nil"),
+                    sollat=0.0,
+                    nstp=6,
+                    ivflip=1,
+                    lcnorm=False,
+                    lcrick=False,
+                    gfs_cloud_overlap=False,
+                )
+                mp_config = GFDLCloudMPConfig(
+                    dt_full=config.dt_atmos,
+                    hydrostatic=False,
+                    npx=config.nx_tile + 1,
+                    npy=config.nx_tile + 1,
+                    npz=config.nz + 1,
+                    layout=config.layout,
+                    nwat=6,
+                    do_sedi_uv=True,
+                    do_sedi_w=True,
+                    do_sedi_heat=False,
+                    rad_snow=True,
+                    rad_graupel=True,
+                    rad_rain=True,
+                    const_vi=False,
+                    const_vs=False,
+                    const_vg=False,
+                    const_vr=False,
+                    vi_fac=1.0,
+                    vs_fac=1.0,
+                    vg_fac=1.0,
+                    vr_fac=1.0,
+                    vi_max=1.0,
+                    vs_max=2.0,
+                    vg_max=12.0,
+                    vr_max=12.0,
+                    qi_lim=1.0,
+                    prog_ccn=False,
+                    do_qa=True,
+                    tau_l2v=225.0,
+                    tau_v2l=150.0,
+                    rthresh=10.0e-6,
+                )
+                pbl_config = PBLConfig(
+                    dt_atmos=config.dt_atmos,
+                    hydrostatic=False,
+                    ntiw=3,
+                    ntcw=1,
+                    ntke=7,
+                )
+                sc_config = ShallowConvectionConfig(
+                    dt_atmos=config.dt_atmos,
+                )
+                sfc_config = SurfaceConfig(
+                    dt_atmos=config.dt_atmos,
+                )
+
                 self.physics = Physics(
                     stencil_factory=self.stencil_factory,
                     quantity_factory=self.quantity_factory,
                     grid_data=self.state.grid_data,
                     namelist=self.config.physics_config,
+                    rad_config=rad_config,
+                    sfc_config=sfc_config,
+                    pbl_config=pbl_config,
+                    sc_config=sc_config,
+                    gfdl_cld_mp_config=mp_config,
                 )
             else:
                 # Make sure those are set to None to raise any issues
@@ -656,7 +750,13 @@ class Driver:
                         timestep=dt,
                     )
                     if not self.config.dycore_only:
-                        self.physics(self.state.physics_state, timestep=dt)
+                        self.physics(
+                            self.state.physics_state,
+                            timestep=dt,
+                            radiation_state=self.state.radiation_state,
+                            surface_state=self.state.sfc_state,
+                            date=self._time_run,
+                        )
                     self.end_of_step_update(
                         dycore_state=self.state.dycore_state,
                         phy_state=self.state.physics_state,

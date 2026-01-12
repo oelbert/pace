@@ -2,6 +2,7 @@ import dataclasses
 from pathlib import Path
 from typing import Self
 
+import numpy as np
 import xarray as xr
 
 import ndsl.dsl.gt4py_utils as gt_utils
@@ -11,7 +12,7 @@ from ndsl.dsl.typing import Float
 from ndsl.grid import DampingCoefficients, DriverGridData, GridData
 from ndsl.typing import Communicator
 from pyfv3 import DycoreState
-from pyshield import PHYSICS_PACKAGES, PhysicsState
+from pyshield import PHYSICS_PACKAGES, PhysicsState, RTE_RRTMGPState, SurfaceState
 
 
 @dataclasses.dataclass()
@@ -66,6 +67,8 @@ class DriverState:
     grid_data: GridData
     damping_coefficients: DampingCoefficients
     driver_grid_data: DriverGridData
+    radiation_state: RTE_RRTMGPState
+    sfc_state: SurfaceState
 
     # TODO: the driver_config argument here isn't type hinted from
     # import due to a circular dependency. This can be fixed by refactoring
@@ -115,6 +118,9 @@ class DriverState:
         )
         self.physics_state.xr_dataset.to_netcdf(
             f"{restart_path}/restart_physics_state_{current_rank}.nc"
+        )
+        self.sfc_state.xr_dataset.to_netcdf(
+            f"{restart_path}/restart_surface_state_{current_rank}.nc"
         )
         # we can also convert the state to Fortran's restart format using
         # code similar to this commented code. We don't need this feature right
@@ -186,13 +192,23 @@ def _restart_driver_state(
         dycore_state = DycoreState.from_fortran_restart(
             quantity_factory=quantity_factory, communicator=communicator, path=path
         )
+        sfc_state = SurfaceState.from_fortran_restart(
+            quantity_factory=quantity_factory, communicator=communicator, path=path
+        )
     else:
         dycore_state = DycoreState.init_zeros(quantity_factory=quantity_factory)
+        sfc_state = SurfaceState.init_zeros(quantity_factory=quantity_factory)
         _overwrite_state_from_restart(
             path,
             rank,
             dycore_state,
             "restart_dycore_state",
+        )
+        _overwrite_state_from_restart(
+            path,
+            rank,
+            sfc_state,
+            "restart_surface_state",
         )
 
     physics_state = PhysicsState.init_zeros(
@@ -204,10 +220,16 @@ def _restart_driver_state(
         quantity_factory=quantity_factory,
     )
 
+    radiation_state = RTE_RRTMGPState.init_zeros(
+        quantity_factory=quantity_factory, np_like=np
+    )
+
     return DriverState(
         dycore_state=dycore_state,
         physics_state=physics_state,
         tendency_state=tendency_state,
+        radiation_state=radiation_state,
+        sfc_state=sfc_state,
         grid_data=grid_data,
         damping_coefficients=damping_coefficients,
         driver_grid_data=driver_grid_data,

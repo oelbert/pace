@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Callable, ClassVar, List, Type, TypeVar
 
 import f90nml
+import numpy as np
 
 import pyfv3.initialization.analytic_init as analytic_init
 from ndsl import (
@@ -25,7 +26,7 @@ from pace.state import DriverState, TendencyState, _restart_driver_state
 from pyfv3 import DycoreState, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
 from pyfv3.testing import TranslateFVDynamics
-from pyshield import PHYSICS_PACKAGES, PhysicsState
+from pyshield import PHYSICS_PACKAGES, PhysicsState, RTE_RRTMGPState, SurfaceState
 
 
 class Initializer(abc.ABC):
@@ -130,6 +131,13 @@ class AnalyticInit(Initializer):
         physics_state = PhysicsState.init_zeros(
             quantity_factory=quantity_factory, schemes=schemes
         )
+        surface_state = SurfaceState.init_zeros(
+            quantity_factory=quantity_factory,
+        )
+        rad_state = RTE_RRTMGPState.init_zeros(
+            quantity_factory=quantity_factory,
+            np_like=np,
+        )
         tendency_state = TendencyState.init_zeros(
             quantity_factory=quantity_factory,
         )
@@ -140,6 +148,8 @@ class AnalyticInit(Initializer):
             grid_data=grid_data,
             damping_coefficients=damping_coefficients,
             driver_grid_data=driver_grid_data,
+            radiation_state=rad_state,
+            sfc_state=surface_state,
         )
 
 
@@ -295,6 +305,12 @@ class SerialboxInit(Initializer):
             quantity_factory=quantity_factory,
             schemes=schemes,
         )
+        surface_state = SurfaceState.init_zeros(
+            quantity_factory=quantity_factory,
+        )
+        rad_state = RTE_RRTMGPState.init_zeros(
+            quantity_factory=quantity_factory,
+        )
         tendency_state = TendencyState.init_zeros(quantity_factory=quantity_factory)
 
         return DriverState(
@@ -304,6 +320,8 @@ class SerialboxInit(Initializer):
             grid_data=grid_data,
             damping_coefficients=damping_coefficients,
             driver_grid_data=driver_grid_data,
+            radiation_state=rad_state,
+            sfc_state=surface_state,
         )
 
     def _initialize_dycore_state(
