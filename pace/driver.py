@@ -611,6 +611,7 @@ class Driver:
                     pbl_config=pbl_config,
                     sc_config=sc_config,
                     gfdl_cld_mp_config=mp_config,
+                    comm=global_comm,
                 )
             else:
                 # Make sure those are set to None to raise any issues

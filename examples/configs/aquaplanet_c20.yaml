@@ -1,6 +1,6 @@
 stencil_config:
   compilation_config:
-    backend: numpy
+    backend: dace:cpu
     rebuild: true
     validate_args: true
     format_source: false
