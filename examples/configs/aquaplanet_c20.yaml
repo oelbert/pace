@@ -100,3 +100,9 @@ physics_config:
   nwat: 6
   do_qa: true
   sst_profile: 1
+  schemes:
+    - SAMF_SHALCONV
+    - GFDL_cloud_microphysics
+    - SATM_EDMF
+    - SFC_layer
+    - RTE_RRTMGP
