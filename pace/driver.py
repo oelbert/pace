@@ -611,6 +611,7 @@ class Driver:
                     pbl_config=pbl_config,
                     sc_config=sc_config,
                     gfdl_cld_mp_config=mp_config,
+                    comm=global_comm,
                 )
             else:
                 # Make sure those are set to None to raise any issues
@@ -737,6 +738,7 @@ class Driver:
         to a callback, like end_of_step_actions).
         """
         for step in dace.nounroll(range(steps_count)):
+            ndsl_log.debug(f"starting step {step}")
             with timer.clock("mainloop"):
                 self.dycore.step_dynamics(
                     state=self.state.dycore_state,
@@ -750,6 +752,7 @@ class Driver:
                         timestep=dt,
                     )
                     if not self.config.dycore_only:
+                        ndsl_log.debug(f"starting physics step {step}")
                         self.physics(
                             self.state.physics_state,
                             timestep=dt,
