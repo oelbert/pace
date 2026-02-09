@@ -8,22 +8,27 @@ stencil_config:
 initialization:
   type: analytic
   config:
-    case: aquaplanet
+    case: baroclinic_instability
 grid_config:
   type: generated
   config:
     eta_file: 'eta79.nc'
+comm_config:
+  type: null_comm
+  config:
+    rank: 0
+    total_ranks: 6
 performance_config:
   collect_performance: false
-  experiment_name: c20_aquaplanet
+  experiment_name: c12_bc
 nx_tile: 12
 nz: 79
 dt_atmos: 225
-days: 1
+minutes: 30
 layout:
   - 1
   - 1
-output_frequency: 48
+output_frequency: 1
 diagnostics_config:
   path: output.zarr
   names:
@@ -94,7 +99,6 @@ dycore_config:
   tau_v2l: 90.
   fv_sg_adj: 0
   n_sponge: 48
-
 physics_config:
   hydrostatic: false
   nwat: 6

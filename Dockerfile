@@ -41,6 +41,8 @@ RUN python -m ensurepip --upgrade && \
     black==22.3.0 \
     /fv3net/external/vcm
 
+RUN python -m pip install pybind11==2.13.6
+
 ENV PYTHONPATH=/fv3net/external/fv3viz:/pace/external/gt4py/src
 
 ENV OMPI_ALLOW_RUN_AS_ROOT=1
