@@ -531,8 +531,8 @@ class Driver:
             if not config.dycore_only and not config.disable_step_physics:
                 # TODO: this is a hack that needs to have an actual solution
                 rad_config = RTE_RRTMGPConfig(
-                    deltsw=3600.0,
-                    delt_rad=3600.0,
+                    deltsw=config.dt_atmos,
+                    delt_rad=config.dt_atmos,
                     date=config.start_time,
                     fhswr=1.0,
                     fhlwr=1.0,
