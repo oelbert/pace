@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ndsl import NullComm, TileCommunicator, TilePartitioner
+from ndsl import LocalComm, TileCommunicator, TilePartitioner
 from ndsl.constants import PI
 from ndsl.grid import MetricTerms
 
@@ -24,7 +24,7 @@ def test_cartesian_grid_generation(
     deglat: float,
     backend: str,
 ):
-    mpi_comm = NullComm(rank=0, total_ranks=1)
+    mpi_comm = LocalComm(rank=0, total_ranks=1, buffer_dict={})
     partitioner = TilePartitioner((1, 1))
     communicator = TileCommunicator(mpi_comm, partitioner)
     grid_generator = MetricTerms.from_tile_sizing(

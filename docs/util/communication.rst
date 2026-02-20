@@ -129,20 +129,20 @@ Under normal circumstances when running a parallel model you will want to use a 
         1
 
 However this documentation is unit tested, and when it's unit tested it's run on only one rank.
-For this reason, many of our tests use the :py:class:`pace.util.NullComm` object, which is a fake communicator that pretends to be an MPI communicator but does not actually perform any communication:
+For this reason, many of our tests use the :py:class:`pace.util.LocalComm` object, which is a fake communicator that pretends to be an MPI communicator but does not actually perform any communication:
 
 .. doctest::
 
-    >>> comm = pace.util.NullComm(rank=0, total_ranks=6)
+    >>> comm = pace.util.LocalComm(rank=0, total_ranks=6, buffer_dict={})
     >>> comm
-    NullComm(rank=0, total_ranks=6)
+    LocalComm(rank=0, total_ranks=6)
     >>> comm.Get_rank()
     0
     >>> comm.Get_size()
     6
 
 This is very useful for testing code that relies on multi-rank communication without actually running a parallel model, at the expense of not being able to rely on or test the numerical values being output.
-Keep this in mind below, where we will avoid showing output values after halo updates because the NullComm cannot actually update them.
+Keep this in mind below, where we will avoid showing output values after halo updates because the LocalComm cannot actually update them.
 
 .. note::
     It is possible to update :py:class:`pace.util.LocalComm` so that it could show a true halo update on one rank, but this is not currently implemented.
@@ -158,7 +158,7 @@ We'll start with the single-tile case.
 
 .. doctest::
 
-    >>> comm = pace.util.NullComm(rank=0, total_ranks=9)
+    >>> comm = pace.util.LocalComm(rank=0, total_ranks=6, buffer_dict={})
     >>> partitioner = pace.util.TilePartitioner(layout=(3, 3))
     >>> tile_communicator = pace.util.TileCommunicator(comm, partitioner)
 
@@ -185,7 +185,7 @@ It is used identically to the TileCommunicator, which is by design so that the s
 
 .. doctest::
 
-    >>> comm = pace.util.NullComm(rank=0, total_ranks=54)
+    >>> comm = pace.util.LocalComm(rank=0, total_ranks=6, buffer_dict={})
     >>> partitioner = pace.util.CubedSpherePartitioner(
     ...     pace.util.TilePartitioner(layout=(3, 3))
     ... )

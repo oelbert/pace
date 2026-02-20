@@ -10,7 +10,7 @@ from mpi4py import MPI
 from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
-    NullComm,
+    LocalComm,
     Quantity,
     TilePartitioner,
 )
@@ -56,7 +56,7 @@ def test_restart():
         with open("RESTART/restart.yaml", "r") as f:
             restart_config = DriverConfig.from_dict(yaml.safe_load(f))
 
-        mpi_comm = NullComm(rank=0, total_ranks=6, fill_value=0.0)
+        mpi_comm = LocalComm(rank=0, total_ranks=6, buffer_dict={})
         partitioner = CubedSpherePartitioner(TilePartitioner((1, 1)))
         communicator = CubedSphereCommunicator(mpi_comm, partitioner)
         (

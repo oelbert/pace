@@ -19,9 +19,9 @@ performance_config:
 nx_tile: 20
 nz: 79
 dt_atmos: 225
-# days: 1
-# minutes: 30
-seconds: 450
+# days: 5
+minutes: 30
+# seconds: 225
 layout:
   - 1
   - 1
@@ -105,6 +105,6 @@ physics_config:
   schemes:
     - RTE_RRTMGP
     - SFC_layer
-    - SATM_EDMF
     - SAMF_SHALCONV
+    - SATM_EDMF
     - GFDL_cloud_microphysics

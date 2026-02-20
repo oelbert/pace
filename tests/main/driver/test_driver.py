@@ -4,14 +4,14 @@ from typing import Literal, Tuple
 
 import pytest
 
-from ndsl import NullComm, StencilConfig
+from ndsl import LocalComm, StencilConfig
 from ndsl.performance.report import (
     TimeReport,
     gather_hit_counts,
     gather_timing_data,
     get_sypd,
 )
-from pace import CreatesCommSelector, DriverConfig, NullCommConfig
+from pace import CreatesCommSelector, DriverConfig, LocalCommConfig
 
 
 def get_driver_config(
@@ -46,7 +46,7 @@ def get_driver_config(
         performance_config=unittest.mock.MagicMock(),
         grid_config=unittest.mock.MagicMock(),
         comm_config=CreatesCommSelector(
-            config=NullCommConfig(rank=0, total_ranks=6), type="null"
+            config=LocalCommConfig(rank=0, total_ranks=6), type="null"
         ),
         diagnostics_config=unittest.mock.MagicMock(
             output_frequency=frequency, output_initial_state=output_initial_state
@@ -104,10 +104,10 @@ test_data = [
 def test_timing_info(
     times_per_step, hits_per_step, dt_atmos, expected_hits, expected_SYPD
 ):
-    comm = NullComm(
+    comm = LocalComm(
         rank=0,
         total_ranks=6,
-        fill_value=0.0,
+        buffer_dict={},
     )
     timing_info = gather_timing_data(times_per_step, comm)
     timing_info = gather_hit_counts(hits_per_step, timing_info)

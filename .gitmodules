@@ -5,9 +5,9 @@
 	branch = develop
 [submodule "pyFV3"]
 	path = pyFV3
-	url = https://github.com/oelbert/PyFV3.git
+	url = git@github.com:oelbert/PyFV3.git
 	branch = feature/pace_integration
 [submodule "pySHiELD"]
 	path = pySHiELD
-	url = https://github.com/oelbert/PySHiELD.git
+	url = git@github.com:oelbert/PySHiELD.git
 	branch = feature/pace_integration

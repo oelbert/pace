@@ -100,10 +100,11 @@ physics_config:
   hydrostatic: false
   nwat: 6
   do_qa: true
+  prescribe_sst: true
   sst_profile: 1
   schemes:
-    - SAMF_SHALCONV
-    - GFDL_cloud_microphysics
-    - SATM_EDMF
-    - SFC_layer
     - RTE_RRTMGP
+    - SFC_layer
+    - SAMF_SHALCONV
+    - SATM_EDMF
+    - GFDL_cloud_microphysics

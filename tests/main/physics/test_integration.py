@@ -11,7 +11,7 @@ from ndsl import (
     DaceConfig,
     DaCeOrchestration,
     GridIndexing,
-    NullComm,
+    LocalComm,
     QuantityFactory,
     StencilConfig,
     StencilFactory,
@@ -35,7 +35,7 @@ def setup_physics():
     physics_config = PhysicsConfig(
         dt_atmos=225, hydrostatic=False, npx=13, npy=13, npz=79, nwat=6, do_qa=True
     )
-    mpi_comm = NullComm(rank=0, total_ranks=6 * layout[0] * layout[1], fill_value=0.0)
+    mpi_comm = LocalComm(rank=0, total_ranks=6 * layout[0] * layout[1], buffer_dict={})
     partitioner = CubedSpherePartitioner(TilePartitioner(layout))
     communicator = CubedSphereCommunicator(mpi_comm, partitioner)
     sizer = SubtileGridSizer.from_tile_params(
@@ -46,6 +46,7 @@ def setup_physics():
         layout=layout,
         tile_partitioner=partitioner.tile,
         tile_rank=communicator.tile.rank,
+        backend=backend,
     )
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator

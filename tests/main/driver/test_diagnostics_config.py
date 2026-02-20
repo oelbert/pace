@@ -49,6 +49,7 @@ def test_zselect_raises_error_if_not_3d(tmpdir):
                 nz=79,
                 n_halo=3,
                 layout=(1, 1),
+                backend="numpy",
             ),
             backend="numpy",
         )
@@ -70,6 +71,7 @@ def test_zselect_raises_error_if_3rd_dim_not_z(tmpdir):
                 nz=79,
                 n_halo=3,
                 layout=(1, 1),
+                backend="numpy",
             ),
             backend="numpy",
         )

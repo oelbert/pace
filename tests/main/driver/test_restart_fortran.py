@@ -5,7 +5,6 @@ from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
     LocalComm,
-    NullComm,
     QuantityFactory,
     SubtileGridSizer,
     TilePartitioner,
@@ -21,9 +20,7 @@ def test_state_from_fortran_restart():
     # need a local communicator to mock "scatter" for the restart data,
     # but need null communicator to handle grid initialization
     local_comm = LocalComm(rank=0, total_ranks=6, buffer_dict={})
-    null_comm = NullComm(rank=0, total_ranks=6)
     local_communicator = CubedSphereCommunicator(local_comm, partitioner)
-    null_communicator = CubedSphereCommunicator(null_comm, partitioner)
 
     sizer = SubtileGridSizer.from_tile_params(
         nx_tile=12,
@@ -33,6 +30,7 @@ def test_state_from_fortran_restart():
         layout=layout,
         tile_partitioner=partitioner.tile,
         tile_rank=0,
+        backend="numpy",
     )
 
     quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend="numpy")
@@ -44,7 +42,7 @@ def test_state_from_fortran_restart():
         grid_data,
     ) = GeneratedGridConfig(
         restart_path=restart_dir, eta_file=restart_dir / "fv_core.res.nc"
-    ).get_grid(quantity_factory, null_communicator)
+    ).get_grid(quantity_factory, local_communicator)
 
     restart_config = FortranRestartInit(path=restart_dir)
     driver_state = restart_config.get_driver_state(

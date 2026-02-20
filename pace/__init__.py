@@ -3,8 +3,8 @@ from ndsl.performance import PerformanceConfig
 from .comm import (
     CreatesComm,
     CreatesCommSelector,
+    LocalCommConfig,
     MPICommConfig,
-    NullCommConfig,
     ReaderCommConfig,
     WriterCommConfig,
 )
@@ -28,7 +28,7 @@ __all__ = [
     "CreatesComm",
     "CreatesCommSelector",
     "MPICommConfig",
-    "NullCommConfig",
+    "LocalCommConfig",
     "ReaderCommConfig",
     "WriterCommConfig",
     "Diagnostics",

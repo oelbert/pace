@@ -10,7 +10,7 @@ import yaml
 from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
-    NullComm,
+    LocalComm,
     Quantity,
     QuantityFactory,
     SubtileGridSizer,
@@ -30,15 +30,15 @@ from tests.paths import EXAMPLE_CONFIGS_DIR
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class NullCommConfig(CreatesComm):
+class LocalCommConfig(CreatesComm):
     def __init__(self, layout):
         self.layout = layout
 
     def get_comm(self):
-        return NullComm(
+        return LocalComm(
             rank=0,
             total_ranks=6 * self.layout[0] * self.layout[1],
-            fill_value=0.0,
+            buffer_dict={},
         )
 
     def cleanup(self, comm):
@@ -55,7 +55,7 @@ def test_restart_save_to_disk():
         with open(EXAMPLE_CONFIGS_DIR / "baroclinic_c12_write_restart.yaml", "r") as f:
             driver_config = DriverConfig.from_dict(yaml.safe_load(f))
         backend = "numpy"
-        mpi_comm = NullComm(rank=0, total_ranks=6, fill_value=0.0)
+        mpi_comm = LocalComm(rank=0, total_ranks=6, buffer_dict={})
         partitioner = CubedSpherePartitioner(TilePartitioner((1, 1)))
         communicator = CubedSphereCommunicator(mpi_comm, partitioner)
         sizer = SubtileGridSizer.from_tile_params(
@@ -66,6 +66,7 @@ def test_restart_save_to_disk():
             layout=(1, 1),
             tile_partitioner=partitioner.tile,
             tile_rank=communicator.tile.rank,
+            backend=backend,
         )
         quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
 

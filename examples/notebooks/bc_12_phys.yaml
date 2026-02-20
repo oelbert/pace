@@ -14,7 +14,7 @@ grid_config:
   config:
     eta_file: 'eta79.nc'
 comm_config:
-  type: null_comm
+  type: local_comm
   config:
     rank: 0
     total_ranks: 6
@@ -24,7 +24,8 @@ performance_config:
 nx_tile: 12
 nz: 79
 dt_atmos: 225
-minutes: 15
+seconds: 225
+# minutes: 15
 layout:
   - 1
   - 1
@@ -103,10 +104,7 @@ physics_config:
   hydrostatic: false
   nwat: 6
   do_qa: true
+  prescribe_sst: true
   sst_profile: 1
   schemes:
-    - SAMF_SHALCONV
-    - GFDL_cloud_microphysics
-    - SATM_EDMF
     - SFC_layer
-    - RTE_RRTMGP

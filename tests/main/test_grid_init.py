@@ -6,7 +6,7 @@ import pytest
 from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
-    NullComm,
+    LocalComm,
     Quantity,
     QuantityFactory,
     SubtileGridSizer,
@@ -17,7 +17,9 @@ from ndsl.grid import MetricTerms
 
 def get_cube_comm(layout, rank: int):
     return CubedSphereCommunicator(
-        comm=NullComm(rank=rank, total_ranks=6 * layout[0] * layout[1]),
+        comm=LocalComm(
+            rank=rank, total_ranks=6 * layout[0] * layout[1], buffer_dict={}
+        ),
         partitioner=CubedSpherePartitioner(TilePartitioner(layout=layout)),
     )
 
@@ -27,11 +29,7 @@ def get_quantity_factory(layout, nx_tile, ny_tile, nz):
     ny = ny_tile // layout[1]
     return QuantityFactory.from_backend(
         sizer=SubtileGridSizer.from_tile_params(
-            nx_tile=nx,
-            ny_tile=ny,
-            nz=nz,
-            n_halo=3,
-            layout=(1, 1),
+            nx_tile=nx, ny_tile=ny, nz=nz, n_halo=3, layout=(1, 1), backend="numpy"
         ),
         backend="numpy",
     )

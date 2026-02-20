@@ -14,7 +14,7 @@ from ndsl import (
     CubedSpherePartitioner,
     DaceConfig,
     GridIndexing,
-    NullComm,
+    LocalComm,
     QuantityFactory,
     StencilConfig,
     StencilFactory,
@@ -83,8 +83,8 @@ def setup_dycore(
 
     backend = "numpy"
     config = setup_dycore_config()
-    mpi_comm = NullComm(
-        rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
+    mpi_comm = LocalComm(
+        rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], buffer_dict={}
     )
     partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
 
@@ -108,6 +108,7 @@ def setup_dycore(
         layout=config.layout,
         tile_partitioner=partitioner.tile,
         tile_rank=communicator.tile.rank,
+        backend=backend,
     )
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator

@@ -3,7 +3,7 @@ import dataclasses
 import os
 from typing import Any, ClassVar, List
 
-from ndsl import MPIComm, NullComm
+from ndsl import LocalComm, MPIComm
 from ndsl.comm import CachingCommReader, CachingCommWriter, Comm
 from pace.registry import Registry
 
@@ -86,11 +86,11 @@ class MPICommConfig(CreatesComm):
         pass
 
 
-@CreatesCommSelector.register("null_comm")
+@CreatesCommSelector.register("local_comm")
 @dataclasses.dataclass
-class NullCommConfig(CreatesComm):
+class LocalCommConfig(CreatesComm):
     """
-    Configuration for a NullComm object which does not perform halo updates,
+    Configuration for a LocalComm object which does not perform halo updates,
     instead filling the halos with a constant value.
 
     Generally used to test whether the code crashes while running in serial when
@@ -107,9 +107,7 @@ class NullCommConfig(CreatesComm):
     fill_value: float = 0.0
 
     def get_comm(self):
-        return NullComm(
-            rank=self.rank, total_ranks=self.total_ranks, fill_value=self.fill_value
-        )
+        return LocalComm(rank=self.rank, total_ranks=self.total_ranks, buffer_dict={})
 
     def cleanup(self, comm):
         pass
