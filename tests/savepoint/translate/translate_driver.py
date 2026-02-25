@@ -34,9 +34,10 @@ class TranslateDriver(TranslateFVDynamics):
             layout=self.namelist.layout,
             tile_partitioner=communicator.partitioner.tile,
             tile_rank=communicator.tile.rank,
+            backend=self.stencil_config.backend,
         )
 
-        quantity_factory = QuantityFactory.from_backend(
+        quantity_factory = QuantityFactory(
             sizer, backend=self.stencil_config.compilation_config.backend
         )
         physics_state = PhysicsState.init_zeros(

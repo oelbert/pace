@@ -176,8 +176,9 @@ class DriverConfig:
                 layout=self.layout,
                 tile_partitioner=communicator.partitioner.tile,
                 tile_rank=communicator.tile.rank,
+                backend=self.stencil_config.backend,
             )
-            quantity_factory = QuantityFactory.from_backend(
+            quantity_factory = QuantityFactory(
                 sizer, backend=self.stencil_config.compilation_config.backend
             )
 
@@ -205,9 +206,10 @@ class DriverConfig:
                 layout=self.layout,
                 tile_partitioner=communicator.partitioner.tile,
                 tile_rank=communicator.tile.rank,
+                backend=self.stencil_config.backend,
             )
             if quantity_factory is None:
-                quantity_factory = QuantityFactory.from_backend(
+                quantity_factory = QuantityFactory(
                     sizer, backend=self.stencil_config.compilation_config.backend
                 )
             if stencil_factory is None:
@@ -755,12 +757,13 @@ def _setup_factories(
         layout=config.layout,
         tile_partitioner=communicator.partitioner.tile,
         tile_rank=communicator.tile.rank,
+        backend=config.stencil_config.backend,
     )
 
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(
+    quantity_factory = QuantityFactory(
         sizer, backend=config.stencil_config.compilation_config.backend
     )
     stencil_factory = StencilFactory(

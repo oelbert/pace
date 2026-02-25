@@ -11,7 +11,6 @@ from ndsl import (
     DaceConfig,
     DaCeOrchestration,
     GridIndexing,
-    NullComm,
     QuantityFactory,
     StencilConfig,
     StencilFactory,
@@ -20,6 +19,7 @@ from ndsl import (
 )
 from ndsl.grid import GridData, MetricTerms
 from ndsl.stencils.testing import assert_same_temporaries, copy_temporaries
+from pace import NullComm
 from pyshield import PHYSICS_PACKAGES, Physics, PhysicsConfig, PhysicsState
 
 
@@ -46,11 +46,12 @@ def setup_physics():
         layout=layout,
         tile_partitioner=partitioner.tile,
         tile_rank=communicator.tile.rank,
+        backend=backend,
     )
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+    quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
     dace_config = DaceConfig(
         communicator=communicator,
         backend=backend,
