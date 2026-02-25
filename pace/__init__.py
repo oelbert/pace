@@ -5,6 +5,8 @@ from .comm import (
     CreatesCommSelector,
     LocalCommConfig,
     MPICommConfig,
+    NullComm,
+    NullCommConfig,
     ReaderCommConfig,
     WriterCommConfig,
 )
@@ -25,10 +27,12 @@ from .state import DriverState, TendencyState
 __version__ = "0.2.0"
 
 __all__ = [
+    "NullComm",
     "CreatesComm",
     "CreatesCommSelector",
     "MPICommConfig",
     "LocalCommConfig",
+    "NullCommConfig",
     "ReaderCommConfig",
     "WriterCommConfig",
     "Diagnostics",

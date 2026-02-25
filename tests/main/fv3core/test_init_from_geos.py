@@ -2,7 +2,7 @@ import f90nml
 import numpy as np
 import pytest  # noqa
 
-from ndsl import LocalComm
+from pace import NullComm
 from pyfv3 import DynamicalCore
 from pyfv3.wrappers import GeosDycoreWrapper
 
@@ -82,7 +82,7 @@ def test_geos_wrapper():
 
     namelist = f90nml.namelist.Namelist(namelist_dict)
 
-    comm = LocalComm(rank=0, total_ranks=6, buffer_dict={})
+    comm = NullComm(rank=0, total_ranks=6)
     backend = "numpy"
 
     wrapper = GeosDycoreWrapper(

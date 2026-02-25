@@ -10,7 +10,6 @@ import yaml
 from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
-    LocalComm,
     Quantity,
     QuantityFactory,
     SubtileGridSizer,
@@ -18,9 +17,9 @@ from ndsl import (
 )
 from pace import (
     AnalyticInit,
-    CreatesComm,
     DriverConfig,
     GeneratedGridConfig,
+    NullComm,
     RestartConfig,
 )
 from pyshield import PHYSICS_PACKAGES
@@ -28,21 +27,6 @@ from tests.paths import EXAMPLE_CONFIGS_DIR
 
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-class LocalCommConfig(CreatesComm):
-    def __init__(self, layout):
-        self.layout = layout
-
-    def get_comm(self):
-        return LocalComm(
-            rank=0,
-            total_ranks=6 * self.layout[0] * self.layout[1],
-            buffer_dict={},
-        )
-
-    def cleanup(self, comm):
-        pass
 
 
 def test_default_save_restart():
@@ -55,7 +39,7 @@ def test_restart_save_to_disk():
         with open(EXAMPLE_CONFIGS_DIR / "baroclinic_c12_write_restart.yaml", "r") as f:
             driver_config = DriverConfig.from_dict(yaml.safe_load(f))
         backend = "numpy"
-        mpi_comm = LocalComm(rank=0, total_ranks=6, buffer_dict={})
+        mpi_comm = NullComm(rank=0, total_ranks=6)
         partitioner = CubedSpherePartitioner(TilePartitioner((1, 1)))
         communicator = CubedSphereCommunicator(mpi_comm, partitioner)
         sizer = SubtileGridSizer.from_tile_params(
@@ -68,7 +52,7 @@ def test_restart_save_to_disk():
             tile_rank=communicator.tile.rank,
             backend=backend,
         )
-        quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+        quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
 
         eta_file = Path(driver_config.grid_config.config.eta_file)
         (

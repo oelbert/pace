@@ -21,6 +21,8 @@ ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NDSL=2025.10.00
 
 COPY . /pace
 
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NDSL=2025.10.00
+
 RUN cd /pace && \
     python -m pip install -e .[dev]
 
@@ -38,7 +40,7 @@ RUN python -m ensurepip --upgrade && \
     cartopy==0.23.0 \
     jupyterlab_code_formatter==1.5.2 \
     isort==5.10.1 \
-    black==22.3.0 \
+    black>=22.3.0 \
     /fv3net/external/vcm
 
 RUN python -m pip install pybind11==2.13.6

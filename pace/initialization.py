@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Callable, ClassVar, List, Type, TypeVar
 
 import f90nml
-import numpy as np
+import numpy as np  # TODO: this will be xumpy in the future
 
 import pyfv3.initialization.analytic_init as analytic_init
 from ndsl import (
@@ -296,9 +296,9 @@ class SerialboxInit(Initializer):
         grid_data: GridData,
         schemes: List[PHYSICS_PACKAGES],
     ) -> DriverState:
-        backend = quantity_factory.zeros(dims=[X_DIM, Y_DIM], units="unknown").backend
-
-        dycore_state = self._initialize_dycore_state(communicator, backend)
+        dycore_state = self._initialize_dycore_state(
+            communicator, quantity_factory.backend
+        )
         physics_state = PhysicsState.init_zeros(
             quantity_factory=quantity_factory,
             schemes=schemes,
@@ -308,6 +308,7 @@ class SerialboxInit(Initializer):
         )
         rad_state = RTE_RRTMGPState.init_zeros(
             quantity_factory=quantity_factory,
+            np_like=np,
         )
         tendency_state = TendencyState.init_zeros(quantity_factory=quantity_factory)
 
@@ -372,6 +373,8 @@ class PredefinedStateInit(Initializer):
     damping_coefficients: DampingCoefficients
     driver_grid_data: DriverGridData
     start_time: datetime = datetime(2016, 8, 1)
+    radiation_state: RTE_RRTMGPState = None
+    sfc_state: SurfaceState = None
 
     def get_driver_state(
         self,
@@ -381,6 +384,8 @@ class PredefinedStateInit(Initializer):
         driver_grid_data: DriverGridData,
         grid_data: GridData,
         schemes: List[PHYSICS_PACKAGES],
+        radiation_state: RTE_RRTMGPState = None,
+        sfc_state: SurfaceState = None,
     ) -> DriverState:
         return DriverState(
             dycore_state=self.dycore_state,
@@ -389,6 +394,8 @@ class PredefinedStateInit(Initializer):
             grid_data=self.grid_data,
             damping_coefficients=self.damping_coefficients,
             driver_grid_data=self.driver_grid_data,
+            radiation_state=self.radiation_state,
+            sfc_state=self.sfc_state,
         )
 
 

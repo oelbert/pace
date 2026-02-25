@@ -14,7 +14,6 @@ from ndsl import (
     CubedSpherePartitioner,
     DaceConfig,
     GridIndexing,
-    LocalComm,
     QuantityFactory,
     StencilConfig,
     StencilFactory,
@@ -24,6 +23,7 @@ from ndsl import (
 )
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
 from ndsl.performance.timer import NullTimer
+from pace import NullComm
 from pyfv3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 
 
@@ -83,8 +83,9 @@ def setup_dycore(
 
     backend = "numpy"
     config = setup_dycore_config()
-    mpi_comm = LocalComm(
-        rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], buffer_dict={}
+    mpi_comm = NullComm(
+        rank=rank,
+        total_ranks=6 * config.layout[0] * config.layout[1],
     )
     partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
 
@@ -113,7 +114,7 @@ def setup_dycore(
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+    quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
     eta_file = "NDSL/tests/data/eta/eta79.nc"
     metric_terms = MetricTerms(
         quantity_factory=quantity_factory,

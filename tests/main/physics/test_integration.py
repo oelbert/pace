@@ -11,7 +11,6 @@ from ndsl import (
     DaceConfig,
     DaCeOrchestration,
     GridIndexing,
-    LocalComm,
     QuantityFactory,
     StencilConfig,
     StencilFactory,
@@ -20,6 +19,7 @@ from ndsl import (
 )
 from ndsl.grid import GridData, MetricTerms
 from ndsl.stencils.testing import assert_same_temporaries, copy_temporaries
+from pace import NullComm
 from pyshield import PHYSICS_PACKAGES, Physics, PhysicsConfig, PhysicsState
 
 
@@ -35,7 +35,7 @@ def setup_physics():
     physics_config = PhysicsConfig(
         dt_atmos=225, hydrostatic=False, npx=13, npy=13, npz=79, nwat=6, do_qa=True
     )
-    mpi_comm = LocalComm(rank=0, total_ranks=6 * layout[0] * layout[1], buffer_dict={})
+    mpi_comm = NullComm(rank=0, total_ranks=6 * layout[0] * layout[1])
     partitioner = CubedSpherePartitioner(TilePartitioner(layout))
     communicator = CubedSphereCommunicator(mpi_comm, partitioner)
     sizer = SubtileGridSizer.from_tile_params(
@@ -51,7 +51,7 @@ def setup_physics():
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+    quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
     dace_config = DaceConfig(
         communicator=communicator,
         backend=backend,

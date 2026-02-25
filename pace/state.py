@@ -93,9 +93,9 @@ class DriverState:
             layout=driver_config.layout,
             tile_partitioner=communicator.partitioner.tile,
             tile_rank=communicator.tile.rank,
-            backend=driver_config.stencil_config.compilation_config.backend,
+            backend=driver_config.stencil_config.backend,
         )
-        quantity_factory = QuantityFactory.from_backend(
+        quantity_factory = QuantityFactory(
             sizer, backend=driver_config.stencil_config.compilation_config.backend
         )
 
@@ -156,7 +156,7 @@ class DriverState:
 def _overwrite_state_from_restart(
     path: str,
     rank: int,
-    state: DycoreState,
+    state: DycoreState | SurfaceState | PhysicsState,
     restart_file_prefix: str,
 ):
     """

@@ -11,7 +11,6 @@ from ndsl import (
     CubedSpherePartitioner,
     DaceConfig,
     GridIndexing,
-    LocalComm,
     Quantity,
     QuantityFactory,
     StencilConfig,
@@ -22,6 +21,7 @@ from ndsl import (
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
 from ndsl.performance.timer import NullTimer, Timer
 from ndsl.stencils.testing import assert_same_temporaries, copy_temporaries
+from pace import NullComm
 from pyfv3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
 
@@ -72,9 +72,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         z_tracer=True,
         do_qa=True,
     )
-    mpi_comm = LocalComm(
-        rank=0, total_ranks=6 * config.layout[0] * config.layout[1], buffer_dict={}
-    )
+    mpi_comm = NullComm(rank=0, total_ranks=6 * config.layout[0] * config.layout[1])
     partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
     communicator = CubedSphereCommunicator(mpi_comm, partitioner)
     dace_config = DaceConfig(communicator=communicator, backend=backend)
@@ -97,7 +95,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+    quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
     eta_file = Path("NDSL/tests/data/eta/eta79.nc")
     metric_terms = MetricTerms(
         quantity_factory=quantity_factory,

@@ -3,6 +3,7 @@ import unittest.mock
 import pytest
 
 from ndsl import QuantityFactory, SubtileGridSizer
+from ndsl.constants import X_DIM, Y_DIM, Z_DIM
 from pace import DiagnosticsConfig
 from pace.diagnostics import MonitorDiagnostics, NullDiagnostics, ZSelect
 from pyfv3 import DycoreState
@@ -42,16 +43,17 @@ def test_zselect_raises_error_if_not_3d(tmpdir):
             z_select=[ZSelect(level=0, names=["phis"])],
         )
         result = config.diagnostics_factory(unittest.mock.MagicMock())
-        quantity_factory = QuantityFactory.from_backend(
+        backend = "numpy"
+        quantity_factory = QuantityFactory(
             sizer=SubtileGridSizer.from_tile_params(
                 nx_tile=12,
                 ny_tile=12,
                 nz=79,
                 n_halo=3,
                 layout=(1, 1),
-                backend="numpy",
+                backend=backend,
             ),
-            backend="numpy",
+            backend=backend,
         )
         state = DycoreState.init_zeros(quantity_factory)
         result.z_select[0].select_data(state)
@@ -64,18 +66,19 @@ def test_zselect_raises_error_if_3rd_dim_not_z(tmpdir):
             z_select=[ZSelect(level=0, names=["foo"])],
         )
         result = config.diagnostics_factory(unittest.mock.MagicMock())
-        quantity_factory = QuantityFactory.from_backend(
+        backend = "numpy"
+        quantity_factory = QuantityFactory(
             sizer=SubtileGridSizer.from_tile_params(
                 nx_tile=12,
                 ny_tile=12,
                 nz=79,
                 n_halo=3,
                 layout=(1, 1),
-                backend="numpy",
+                backend=backend,
             ),
-            backend="numpy",
+            backend=backend,
         )
         state = DycoreState.init_zeros(quantity_factory)
-        foo = quantity_factory.zeros(dims=["z", "x", "y"], units="-")
+        foo = quantity_factory.zeros(dims=[Z_DIM, X_DIM, Y_DIM], units="-")
         state.foo = foo
         result.z_select[0].select_data(state)
