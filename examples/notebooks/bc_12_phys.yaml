@@ -14,7 +14,7 @@ grid_config:
   config:
     eta_file: 'eta79.nc'
 comm_config:
-  type: local_comm
+  type: null_comm
   config:
     rank: 0
     total_ranks: 6
@@ -107,4 +107,8 @@ physics_config:
   prescribe_sst: true
   sst_profile: 1
   schemes:
+    - RTE_RRTMGP
     - SFC_layer
+    - SAMF_SHALCONV
+    - SATM_EDMF
+    - GFDL_cloud_microphysics

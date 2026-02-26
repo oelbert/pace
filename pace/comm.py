@@ -243,7 +243,7 @@ class LocalCommConfig(CreatesComm):
 
     rank: int
     total_ranks: int
-    buffer_dict: dict = {}
+    buffer_dict: dict
 
     def get_comm(self):
         return LocalComm(
