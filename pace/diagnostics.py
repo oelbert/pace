@@ -180,7 +180,13 @@ class MonitorDiagnostics(Diagnostics):
             try:
                 quantity = getattr(state.dycore_state, name)
             except AttributeError:
-                quantity = getattr(state.physics_state, name)
+                try:
+                    quantity = getattr(state.physics_state, name)
+                except AttributeError:
+                    try:
+                        quantity = getattr(state.sfc_state, name)
+                    except AttributeError:
+                        quantity = getattr(state.radiation_state, name)
             monitor_state[name] = quantity
         derived_state = self._get_derived_state(state)
         level_select_state = self._get_z_select_state(state.dycore_state)

@@ -204,4 +204,11 @@ servedocs: docs ## compile the docs watching for changes
 lint:
 	pre-commit run --all-files
 
-.PHONY: docs doctest servedocs build build_explicit
+clean:
+	docker image rm $(PACE_IMAGE)
+
+cleanall:
+	docker image rm $(PACE_IMAGE)
+	find . -type d -name '.gt_cache*' -prune -exec rm -rf {} +
+
+.PHONY: docs doctest servedocs build build_explicit lint clean cleanall notebook

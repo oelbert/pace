@@ -41,6 +41,7 @@ RUN python -m ensurepip --upgrade && \
     jupyterlab_code_formatter==1.5.2 \
     isort==5.10.1 \
     black>=22.3.0 \
+    memory_profiler \
     /fv3net/external/vcm
 
 RUN python -m pip install pybind11==2.13.6

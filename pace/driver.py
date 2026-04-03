@@ -276,6 +276,8 @@ class DriverConfig:
         kwargs["physics_config"].npx = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npy = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npz = kwargs["nz"]
+        # TODO: Somehow the above doesn't set nsswr and nsslr correctly in
+        # the physics_config post_init
         kwargs["comm_config"] = CreatesCommSelector.from_dict(
             kwargs.get("comm_config", {})
         )
@@ -742,10 +744,11 @@ class Driver:
         for step in dace.nounroll(range(steps_count)):
             ndsl_log.debug(f"starting step {step}")
             with timer.clock("mainloop"):
-                self.dycore.step_dynamics(
-                    state=self.state.dycore_state,
-                    timer=timer,
-                )
+                # breakpoint()
+                # self.dycore.step_dynamics(
+                #     state=self.state.dycore_state,
+                #     timer=timer,
+                # )
                 if not self.config.disable_step_physics:
                     self.dycore_to_physics(
                         dycore_state=self.state.dycore_state,
@@ -755,12 +758,13 @@ class Driver:
                     )
                     if not self.config.dycore_only:
                         ndsl_log.debug(f"starting physics step {step}")
+                        # breakpoint()
                         self.physics(
                             self.state.physics_state,
                             timestep=dt,
                             radiation_state=self.state.radiation_state,
                             surface_state=self.state.sfc_state,
-                            date=self._time_run,
+                            date=self.time,
                         )
                     self.end_of_step_update(
                         dycore_state=self.state.dycore_state,
@@ -772,6 +776,50 @@ class Driver:
                     )
             self._end_of_step_actions(step)
 
+    def _critical_path_step_one(
+        self,
+        step: int,
+        timer: Timer,
+        dt: Float,
+    ):
+        """Start of code path where performance is critical.
+
+        This function must remain orchestrateable by DaCe (e.g.
+        all code not parsable due to python complexity needs to be moved
+        to a callback, like end_of_step_actions).
+        """
+        ndsl_log.debug("starting step")
+        with timer.clock("mainloop"):
+            self.dycore.step_dynamics(
+                state=self.state.dycore_state,
+                timer=timer,
+            )
+            if not self.config.disable_step_physics:
+                self.dycore_to_physics(
+                    dycore_state=self.state.dycore_state,
+                    physics_state=self.state.physics_state,
+                    tendency_state=self.state.tendency_state,
+                    timestep=dt,
+                )
+                if not self.config.dycore_only:
+                    ndsl_log.debug("starting physics step")
+                    self.physics(
+                        self.state.physics_state,
+                        timestep=dt,
+                        radiation_state=self.state.radiation_state,
+                        surface_state=self.state.sfc_state,
+                        date=self.time,
+                    )
+                self.end_of_step_update(
+                    dycore_state=self.state.dycore_state,
+                    phy_state=self.state.physics_state,
+                    u_dt=self.state.tendency_state.u_dt,
+                    v_dt=self.state.tendency_state.v_dt,
+                    pt_dt=self.state.tendency_state.pt_dt,
+                    dt=dt,
+                )
+        self._end_of_step_actions(step=step)
+
     def step_all(self):
         ndsl_log.info("integrating driver forward in time")
         with self.performance_collector.total_timer.clock("total"):
@@ -780,6 +828,23 @@ class Driver:
             PerformanceCollector.start_cuda_profiler()
             self._critical_path_step_all(
                 steps_count=self.config.n_timesteps(),
+                timer=self.performance_collector.timestep_timer,
+                dt=Float(self.config.timestep.total_seconds()),
+            )
+            PerformanceCollector.stop_cuda_profiler()
+            self.profiler.dump_stats(
+                f"{self.config.performance_config.experiment_name}_\
+                {self.comm.Get_rank()}.prof"
+            )
+
+    def step_one(self, step=0):
+        ndsl_log.info("integrating driver forward in time")
+        with self.performance_collector.total_timer.clock("total"):
+            self.profiler.enable()
+            PerformanceCollector.mark_cuda_profiler("Begin integration")
+            PerformanceCollector.start_cuda_profiler()
+            self._critical_path_step_one(
+                step,
                 timer=self.performance_collector.timestep_timer,
                 dt=Float(self.config.timestep.total_seconds()),
             )
