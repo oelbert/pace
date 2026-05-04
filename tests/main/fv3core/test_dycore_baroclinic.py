@@ -21,10 +21,12 @@ from ndsl import (
     TileCommunicator,
     TilePartitioner,
 )
+from ndsl.config import Backend
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
 from ndsl.performance.timer import NullTimer
 from pace import NullComm
 from pyfv3 import DycoreState, DynamicalCore, DynamicalCoreConfig
+from pyfv3.tracers import default_ai2_tracers
 
 
 def setup_dycore_config() -> DynamicalCoreConfig:
@@ -81,7 +83,7 @@ def setup_dycore(
 ) -> DycoreState:
     """Sets up Dycore state for analytic initialization"""
 
-    backend = "numpy"
+    backend = Backend("st:numpy:cpu:IJK")
     config = setup_dycore_config()
     mpi_comm = NullComm(
         rank=rank,
@@ -139,6 +141,7 @@ def setup_dycore(
         grid_indexing=grid_indexing,
     )
 
+    default_ai2_tracers(quantity_factory)
     dycore = DynamicalCore(
         comm=communicator,
         grid_data=grid_data,

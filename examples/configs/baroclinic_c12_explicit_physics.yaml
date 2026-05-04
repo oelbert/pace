@@ -1,7 +1,7 @@
 stencil_config:
   compilation_config:
-    backend: numpy
-    rebuild: true
+    backend: st:numpy:cpu:IJK
+    rebuild: false
     validate_args: true
     format_source: false
     device_sync: false

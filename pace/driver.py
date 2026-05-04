@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime, timedelta
 from math import floor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import dace
 import dacite
@@ -40,6 +40,7 @@ from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
 from pyfv3 import DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
+from pyfv3.tracers import default_ai2_tracers
 from pyshield import Physics, PhysicsConfig
 from pyshield.configs import (
     GFDLCloudMPConfig,
@@ -103,9 +104,9 @@ class DriverConfig:
     initialization: InitializerSelector
     nx_tile: int
     nz: int
-    layout: Tuple[int, int]
+    layout: tuple[int, int]
     dt_atmos: float
-    grid_type: Optional[int] = 0
+    grid_type: int | None = 0
     grid_config: GridInitializerSelector = dataclasses.field(
         default_factory=lambda: GridInitializerSelector(
             type="generated", config=GeneratedGridConfig()
@@ -146,14 +147,14 @@ class DriverConfig:
     pair_debug: bool = False
     output_initial_state: bool = False
     output_frequency: int = 1
-    safety_check_frequency: Optional[int] = None
+    safety_check_frequency: int | None = None
 
     @functools.cached_property
     def timestep(self) -> timedelta:
         return timedelta(seconds=self.dt_atmos)
 
     @property
-    def start_time(self) -> datetime:
+    def start_time(self) -> datetime | timedelta:
         return self.initialization.start_time
 
     @functools.cached_property
@@ -167,7 +168,8 @@ class DriverConfig:
         if self.total_time < self.timestep:
             warnings.warn(
                 f"No simulation possible: you asked for {self.total_time} "
-                f"simulation time but the timestep is {self.timestep}"
+                f"simulation time but the timestep is {self.timestep}",
+                stacklevel=2,
             )
         return floor(self.total_time.total_seconds() / self.timestep.total_seconds())
 
@@ -182,8 +184,8 @@ class DriverConfig:
     def get_grid(
         self,
         communicator: Communicator,
-        quantity_factory: Optional[QuantityFactory] = None,
-    ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
+        quantity_factory: QuantityFactory | None = None,
+    ) -> tuple[DampingCoefficients, DriverGridData, GridData]:
         if quantity_factory is None:
             sizer = SubtileGridSizer.from_tile_params(
                 nx_tile=self.nx_tile,
@@ -210,8 +212,8 @@ class DriverConfig:
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        quantity_factory: Optional[QuantityFactory] = None,
-        stencil_factory: Optional[StencilFactory] = None,
+        quantity_factory: QuantityFactory | None = None,
+        stencil_factory: StencilFactory | None = None,
     ) -> DriverState:
         """Load the initial state of the driver."""
         if quantity_factory is None or stencil_factory is None:
@@ -247,7 +249,7 @@ class DriverConfig:
         )
 
     @classmethod
-    def from_dict(cls, kwargs: Dict[str, Any]) -> "DriverConfig":
+    def from_dict(cls, kwargs: dict[str, Any]) -> "DriverConfig":
         if isinstance(kwargs["dycore_config"], dict):
             for derived_name in ("dt_atmos", "layout", "npx", "npy", "npz", "ntiles"):
                 if derived_name in kwargs["dycore_config"]:
@@ -311,13 +313,6 @@ class DriverConfig:
 
         if (
             isinstance(kwargs["stencil_config"], dict)
-            and "dace_config" in kwargs["stencil_config"].keys()
-        ):
-            kwargs["stencil_config"]["dace_config"] = DaceConfig.from_dict(
-                data=kwargs["stencil_config"]["dace_config"]
-            )
-        if (
-            isinstance(kwargs["stencil_config"], dict)
             and "compilation_config" in kwargs["stencil_config"].keys()
         ):
             kwargs["stencil_config"]["compilation_config"] = (
@@ -332,14 +327,10 @@ class DriverConfig:
 
     def write_for_restart(
         self,
-        time: Union[datetime, timedelta],
+        time: datetime | timedelta,
         restart_path: str,
     ):
         config_dict = dataclasses.asdict(self)
-        if self.stencil_config.dace_config:
-            config_dict["stencil_config"][
-                "dace_config"
-            ] = self.stencil_config.dace_config.as_dict()
         config_dict["stencil_config"][
             "compilation_config"
         ] = self.stencil_config.compilation_config.as_dict()
@@ -362,6 +353,10 @@ class DriverConfig:
         # restart config doesn't have 'case'
         if "case" in config_dict["initialization"]["config"].keys():
             del config_dict["initialization"]["config"]["case"]
+        # remove dace config - it will be init from other piece of the config
+        # during Driver.__init__
+        config_dict["stencil_config"].pop("dace_config", None)
+
         with open(f"{restart_path}/restart.yaml", "w") as file:
             yaml.safe_dump(config_dict, file)
 
@@ -369,7 +364,7 @@ class DriverConfig:
 @dataclasses.dataclass()
 class RestartConfig:
     save_restart: bool = False
-    intermediate_restart: List[int] = dataclasses.field(default_factory=list)
+    intermediate_restart: list[int] = dataclasses.field(default_factory=list)
     save_intermediate_restart: bool = False
 
     def __post_init__(self):
@@ -399,7 +394,7 @@ class RestartConfig:
         *,
         step: int,
         comm: Comm,
-        time: Union[datetime, timedelta],
+        time: datetime | timedelta,
         driver_config: DriverConfig,
         restart_path: str,
     ):
@@ -467,7 +462,7 @@ class Driver:
                     )
                     exit(0)
 
-                setattr(self, "step_all", exit_function)
+                self.step_all = exit_function  # type: ignore[method-assign]
             elif self.config.stencil_config.compilation_config.run_mode == RunMode.Run:
 
                 def exit_instead_of_build(self):
@@ -482,7 +477,7 @@ class Driver:
 
                 from gt4py.stencil_builder import StencilBuilder
 
-                setattr(StencilBuilder, "build", exit_instead_of_build)
+                StencilBuilder.build = exit_instead_of_build  # type: ignore["method-assign"]
 
             self.config.stencil_config.dace_config = DaceConfig(
                 communicator=communicator,
@@ -524,6 +519,7 @@ class Driver:
 
             self._start_time = self.config.initialization.start_time
             ndsl_log.info("setting up dycore object started")
+            default_ai2_tracers(self.quantity_factory)
             self.dycore = DynamicalCore(
                 comm=communicator,
                 grid_data=self.state.grid_data,
@@ -694,6 +690,11 @@ class Driver:
             communicator=communicator,
         )
         self.config.stencil_config.compilation_config = compilation_config
+        self.config.stencil_config.dace_config = DaceConfig(
+            communicator=communicator,
+            backend=self.config.stencil_config.backend,
+            orchestration=None,
+        )
 
     @dace_inhibitor
     def _callback_diagnostics(self):
@@ -907,7 +908,7 @@ def _setup_factories(
     config: DriverConfig,
     communicator: Communicator,
     stencil_compare_comm,
-) -> Tuple[QuantityFactory, StencilFactory]:
+) -> tuple[QuantityFactory, StencilFactory]:
     """
     Args:
         config: configuration of driver

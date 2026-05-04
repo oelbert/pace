@@ -2,7 +2,6 @@ import unittest.mock
 from dataclasses import fields
 from datetime import timedelta
 from pathlib import Path
-from typing import Tuple
 
 import pyfv3.initialization.analytic_init as ai
 from ndsl import (
@@ -18,16 +17,18 @@ from ndsl import (
     SubtileGridSizer,
     TilePartitioner,
 )
+from ndsl.config import Backend
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
 from ndsl.performance.timer import NullTimer, Timer
 from ndsl.stencils.testing import assert_same_temporaries, copy_temporaries
 from pace import NullComm
 from pyfv3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
+from pyfv3.tracers import default_ai2_tracers
 
 
-def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
-    backend = "numpy"
+def setup_dycore() -> tuple[DynamicalCore, DycoreState, Timer]:
+    backend = Backend("st:numpy:cpu:IJK")
     config = DynamicalCoreConfig(
         layout=(1, 1),
         npx=13,
@@ -121,6 +122,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         grid_indexing=grid_indexing,
     )
 
+    default_ai2_tracers(quantity_factory)
     dycore = DynamicalCore(
         comm=communicator,
         grid_data=grid_data,
