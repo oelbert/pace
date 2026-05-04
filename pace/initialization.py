@@ -3,7 +3,7 @@ import dataclasses
 import os
 import pathlib
 from datetime import datetime
-from typing import Callable, ClassVar, List, Type, TypeVar
+from typing import Callable, ClassVar, TypeVar
 
 import f90nml
 
@@ -15,7 +15,7 @@ from ndsl import (
     StencilConfig,
     StencilFactory,
 )
-from ndsl.constants import X_DIM, Y_DIM
+from ndsl.config import Backend
 from ndsl.grid import DampingCoefficients, DriverGridData, GridData
 from ndsl.stencils.testing import TranslateGrid, grid
 from ndsl.typing import Communicator
@@ -41,11 +41,11 @@ class Initializer(abc.ABC):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState: ...
 
 
-IT = TypeVar("IT", bound=Type[Initializer])
+IT = TypeVar("IT", bound=type[Initializer])
 
 
 @dataclasses.dataclass
@@ -78,7 +78,7 @@ class InitializerSelector(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         return self.config.get_driver_state(
             quantity_factory=quantity_factory,
@@ -90,7 +90,9 @@ class InitializerSelector(Initializer):
         )
 
     @classmethod
-    def from_dict(cls, config: dict, hooks={}):
+    def from_dict(cls, config: dict, hooks: dict | None = None):
+        if not hooks:
+            hooks = {}
         instance = cls.registry.from_dict(config, hooks=hooks)
         return cls(config=instance, type=config["type"])
 
@@ -115,7 +117,7 @@ class AnalyticInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         dycore_state = analytic_init.init_analytic_state(
             analytic_init_case=self.case,
@@ -160,7 +162,7 @@ class RestartInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         state = _restart_driver_state(
             self.path,
@@ -211,7 +213,7 @@ class FortranRestartInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         state = _restart_driver_state(
             self.path,
@@ -259,7 +261,7 @@ class SerialboxInit(Initializer):
     def _get_serialized_grid(
         self,
         communicator: Communicator,
-        backend: str,
+        backend: Backend,
     ) -> grid.Grid:  # type: ignore
         ser = self._serializer(communicator)
         grid = TranslateGrid.new_from_serialized_data(
@@ -284,7 +286,7 @@ class SerialboxInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         dycore_state = self._initialize_dycore_state(
             communicator, quantity_factory.backend
@@ -307,7 +309,7 @@ class SerialboxInit(Initializer):
     def _initialize_dycore_state(
         self,
         communicator: Communicator,
-        backend: str,
+        backend: Backend,
     ) -> DycoreState:
         grid = self._get_serialized_grid(communicator=communicator, backend=backend)
 
@@ -362,7 +364,7 @@ class PredefinedStateInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         return DriverState(
             dycore_state=self.dycore_state,
