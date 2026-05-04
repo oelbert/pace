@@ -260,6 +260,8 @@ class DriverConfig:
             )
 
         if isinstance(kwargs["physics_config"], dict):
+            phys_config_dict = kwargs.get("physics_config", {})
+            phys_config_dict["dt_atmos"] = kwargs["dt_atmos"]
             kwargs["physics_config"] = PhysicsConfig.from_dict(
                 kwargs.get("physics_config", {})
             )
@@ -272,7 +274,7 @@ class DriverConfig:
         kwargs["dycore_config"].npz = kwargs["nz"]
         kwargs["dycore_config"].ntiles = 6
         kwargs["physics_config"].layout = kwargs["layout"]
-        kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
+        # kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].npx = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npy = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npz = kwargs["nz"]
@@ -293,6 +295,10 @@ class DriverConfig:
                     kwargs["dycore_config"].ntiles = 1
 
         analytic_hooks = {}
+        if "start_time" in kwargs["initialization"].keys():
+            kwargs["initialization"] = datetime.fromisoformat(
+                kwargs["initialization"]["start_time"]
+            )
         if kwargs["initialization"]["type"] == "analytic":
             kwargs["initialization"]["config"]["dycore_config"] = kwargs[
                 "dycore_config"
@@ -744,11 +750,10 @@ class Driver:
         for step in dace.nounroll(range(steps_count)):
             ndsl_log.debug(f"starting step {step}")
             with timer.clock("mainloop"):
-                # breakpoint()
-                # self.dycore.step_dynamics(
-                #     state=self.state.dycore_state,
-                #     timer=timer,
-                # )
+                self.dycore.step_dynamics(
+                    state=self.state.dycore_state,
+                    timer=timer,
+                )
                 if not self.config.disable_step_physics:
                     self.dycore_to_physics(
                         dycore_state=self.state.dycore_state,
@@ -758,7 +763,6 @@ class Driver:
                     )
                     if not self.config.dycore_only:
                         ndsl_log.debug(f"starting physics step {step}")
-                        # breakpoint()
                         self.physics(
                             self.state.physics_state,
                             timestep=dt,

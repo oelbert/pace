@@ -104,7 +104,7 @@ class AnalyticInit(Initializer):
     """
 
     case: AnalyticCase = AnalyticCase.baroclinic_instability
-    start_time: datetime = datetime(2000, 1, 1)
+    start_time: datetime = datetime(2000, 3, 20)
     dycore_config: DynamicalCoreConfig = dataclasses.field(
         default_factory=DynamicalCoreConfig
     )
