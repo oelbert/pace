@@ -100,6 +100,7 @@ class DriverConfig:
             defaults to every timestep
     """
 
+    # TODO: path to input data should be a config setting
     stencil_config: StencilConfig
     initialization: InitializerSelector
     nx_tile: int
@@ -125,6 +126,7 @@ class DriverConfig:
         default_factory=DynamicalCoreConfig
     )
     physics_config: PhysicsConfig = dataclasses.field(default_factory=PhysicsConfig)
+    surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     # TODO: find a good way to only create scheme configs if they're present in the active schemes list
 
@@ -133,7 +135,7 @@ class DriverConfig:
     # mp_config: GFDLCloudMPConfig = dataclasses.field(default_factory=GFDLCloudMPConfig)
     # pbl_config: PBLConfig = dataclasses.field(default_factory=PBLConfig)
     # sc_config: ShallowConvectionConfig = dataclasses.field(default_factory=ShallowConvectionConfig)
-    # sfc_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
+    # surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     days: int = 0
     hours: int = 0
@@ -268,6 +270,13 @@ class DriverConfig:
                 kwargs.get("physics_config", {})
             )
 
+        if isinstance(kwargs["surface_config"], dict):
+            kwargs["surface_config"] = SurfaceConfig.from_dict(
+                kwargs.get("surface_config", {})
+            )
+        else:
+            kwargs["surface_config"] = SurfaceConfig()
+
         kwargs["layout"] = tuple(kwargs["layout"])
         kwargs["dycore_config"].layout = kwargs["layout"]
         kwargs["dycore_config"].dt_atmos = kwargs["dt_atmos"]
@@ -275,11 +284,15 @@ class DriverConfig:
         kwargs["dycore_config"].npy = kwargs["nx_tile"] + 1
         kwargs["dycore_config"].npz = kwargs["nz"]
         kwargs["dycore_config"].ntiles = 6
+        kwargs["surface_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].layout = kwargs["layout"]
         # kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].npx = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npy = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npz = kwargs["nz"]
+        kwargs["physics_config"].sst_profile = kwargs["surface_config"].sst_profile
+        kwargs["physics_config"].max_sst = kwargs["surface_config"].max_sst
+        kwargs["physics_config"].min_sst = kwargs["surface_config"].min_sst
         # TODO: Somehow the above doesn't set nsswr and nsslr correctly in
         # the physics_config post_init
         kwargs["comm_config"] = CreatesCommSelector.from_dict(
@@ -302,6 +315,9 @@ class DriverConfig:
                 kwargs["initialization"]["start_time"]
             )
         if kwargs["initialization"]["type"] == "analytic":
+            kwargs["initialization"]["config"]["surface_config"] = kwargs[
+                "surface_config"
+            ]
             kwargs["initialization"]["config"]["dycore_config"] = kwargs[
                 "dycore_config"
             ]
@@ -603,7 +619,7 @@ class Driver:
                 sc_config = ShallowConvectionConfig(
                     dt_atmos=config.dt_atmos,
                 )
-                sfc_config = SurfaceConfig(
+                surface_config = SurfaceConfig(
                     dt_atmos=config.dt_atmos,
                 )
 
@@ -613,7 +629,7 @@ class Driver:
                     grid_data=self.state.grid_data,
                     namelist=self.config.physics_config,
                     rad_config=rad_config,
-                    sfc_config=sfc_config,
+                    surface_config=surface_config,
                     pbl_config=pbl_config,
                     sc_config=sc_config,
                     gfdl_cld_mp_config=mp_config,
@@ -762,6 +778,7 @@ class Driver:
                         tendency_state=self.state.tendency_state,
                         timestep=dt,
                     )
+                    breakpoint()
                     if not self.config.dycore_only:
                         ndsl_log.debug(f"starting physics step {step}")
                         self.physics(

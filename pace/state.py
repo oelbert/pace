@@ -221,9 +221,7 @@ def _restart_driver_state(
         quantity_factory=quantity_factory,
     )
 
-    radiation_state = RTE_RRTMGPState.init_zeros(
-        quantity_factory=quantity_factory, np_like=np
-    )
+    radiation_state = RTE_RRTMGPState.init_zeros(quantity_factory=quantity_factory)
 
     return DriverState(
         dycore_state=dycore_state,

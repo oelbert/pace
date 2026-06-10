@@ -9,6 +9,7 @@ import f90nml
 import numpy as np  # TODO: this will be xumpy in the future
 
 import pyfv3.initialization.analytic_init as analytic_init
+import pyshield.stencils.surface.analytic_init as analytic_sfc_init
 from ndsl import (
     CompilationConfig,
     DaceConfig,
@@ -27,6 +28,7 @@ from pyfv3 import DycoreState, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
 from pyfv3.testing import TranslateFVDynamics
 from pyshield import PHYSICS_PACKAGES, PhysicsState, RTE_RRTMGPState, SurfaceState
+from pyshield.stencils.surface import SurfaceConfig
 
 
 class Initializer(abc.ABC):
@@ -110,6 +112,7 @@ class AnalyticInit(Initializer):
     dycore_config: DynamicalCoreConfig = dataclasses.field(
         default_factory=DynamicalCoreConfig
     )
+    surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     def get_driver_state(
         self,
@@ -133,12 +136,18 @@ class AnalyticInit(Initializer):
         physics_state = PhysicsState.init_zeros(
             quantity_factory=quantity_factory, schemes=schemes
         )
-        surface_state = SurfaceState.init_zeros(
+        surface_state = analytic_sfc_init.init_analytic_state(
+            analytic_init_case=self.case,
+            grid_data=grid_data,
             quantity_factory=quantity_factory,
+            sst_profile=self.surface_config.sst_profile,
+            tsea_max=self.surface_config.max_sst,
+            tsea_min=self.surface_config.min_sst,
+            comm=communicator,
         )
+
         rad_state = RTE_RRTMGPState.init_zeros(
             quantity_factory=quantity_factory,
-            np_like=np,
         )
         tendency_state = TendencyState.init_zeros(
             quantity_factory=quantity_factory,
@@ -310,7 +319,6 @@ class SerialboxInit(Initializer):
         )
         rad_state = RTE_RRTMGPState.init_zeros(
             quantity_factory=quantity_factory,
-            np_like=np,
         )
         tendency_state = TendencyState.init_zeros(quantity_factory=quantity_factory)
 

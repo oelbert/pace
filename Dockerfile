@@ -27,7 +27,7 @@ RUN cd /pace && \
     python -m pip install -e .[dev]
 
 RUN cd / && \
-    git clone https://github.com/ai2cm/fv3net
+    git clone https://github.com/oelbert/fv3viz
 
 ENV CFLAGS="-I/usr/include -DACCEPT_USE_OF_DEPRECATED_PROJ_API_H=1"
 
@@ -42,11 +42,11 @@ RUN python -m ensurepip --upgrade && \
     isort==5.10.1 \
     black>=22.3.0 \
     memory_profiler \
-    /fv3net/external/vcm
+    /fv3viz
 
 RUN python -m pip install pybind11==2.13.6
 
-ENV PYTHONPATH=/fv3net/external/fv3viz:/pace/external/gt4py/src
+ENV PYTHONPATH=/fv3viz:/pace/external/gt4py/src
 
 ENV OMPI_ALLOW_RUN_AS_ROOT=1
 ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1

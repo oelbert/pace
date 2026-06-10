@@ -1,6 +1,6 @@
 stencil_config:
   compilation_config:
-    backend: numpy
+    backend: st:python:cpu:IJK
     rebuild: true
     validate_args: true
     format_source: false
@@ -10,11 +10,11 @@ initialization:
   config:
     case: aquaplanet
 #  start_time:
-comm_config:
-  type: null_comm
-  config:
-    rank: 0
-    total_ranks: 6
+# comm_config:
+#   type: null_comm
+#   config:
+#     rank: 0
+#     total_ranks: 6
 grid_config:
   type: generated
   config:
@@ -24,15 +24,15 @@ performance_config:
   experiment_name: c48_aquaplanet
 nx_tile: 24
 nz: 79
-dt_atmos: 225
-days: 1
+dt_atmos: 450
+days: 5
 # hours: 12
 # minutes: 30
 # seconds: 225
 layout:
   - 1
   - 1
-output_frequency: 1
+output_frequency: 32
 diagnostics_config:
   path: output_aq_rm.zarr
   names:
@@ -87,7 +87,7 @@ dycore_config:
   kord_tm: -9
   kord_tr: 9
   kord_wz: 9
-  n_split: 1
+  n_split: 2
   nord: 3
   nwat: 6
   p_fac: 0.05
@@ -115,7 +115,6 @@ physics_config:
   nwat: 6
   do_qa: true
   prescribe_sst: true
-  sst_profile: 1
   schemes:
     - RTE_RRTMGP
     - SFC_layer
@@ -123,3 +122,5 @@ physics_config:
     - SATM_EDMF
 #     - GFDL_cloud_microphysics
     - GFS_microphysics
+surface_config:
+  sst_profile: 1
