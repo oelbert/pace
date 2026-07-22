@@ -40,8 +40,9 @@ from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
 from pyfv3 import DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
+from pyfv3.stencils.fv_phys import GrayRadiationConfig
 from pyfv3.tracers import default_ai2_tracers
-from pyshield import Physics, PhysicsConfig
+from pyshield import PHYSICS_PACKAGES, Physics, PhysicsConfig
 from pyshield.configs import (
     GFDLCloudMPConfig,
     PBLConfig,
@@ -286,7 +287,7 @@ class DriverConfig:
         kwargs["dycore_config"].ntiles = 6
         kwargs["surface_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].layout = kwargs["layout"]
-        # kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
+        kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].npx = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npy = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npz = kwargs["nz"]
@@ -551,89 +552,106 @@ class Driver:
 
             ndsl_log.info("setting up physics object started")
             if not config.dycore_only and not config.disable_step_physics:
-                # TODO: this is a hack that needs to have an actual solution
-                rad_config = RTE_RRTMGPConfig(
-                    deltsw=config.dt_atmos,
-                    delt_rad=config.dt_atmos,
-                    date=config.start_time,
-                    fhswr=1.0,
-                    fhlwr=1.0,
-                    isolar=10,
-                    icmphys=4,
-                    ico2flg=0,
-                    ioznflg=1,
-                    ictmflg=-1,
-                    ialbflg=-1,
-                    iemsflg=0,
-                    ldisable_radiation_quasi_sea_ice=False,
-                    solar_constant_file=Path("global_solarconstant_noaa_an.txt"),
-                    input_dir=Path("nil"),
-                    aerosol_file=Path("nil"),
-                    sollat=0.0,
-                    nstp=6,
-                    ivflip=1,
-                    lcnorm=False,
-                    lcrick=False,
-                    gfs_cloud_overlap=False,
-                )
-                mp_config = GFDLCloudMPConfig(
-                    dt_full=config.dt_atmos,
-                    hydrostatic=False,
-                    npx=config.nx_tile + 1,
-                    npy=config.nx_tile + 1,
-                    npz=config.nz + 1,
-                    layout=config.layout,
-                    nwat=6,
-                    do_sedi_uv=True,
-                    do_sedi_w=True,
-                    do_sedi_heat=False,
-                    rad_snow=True,
-                    rad_graupel=True,
-                    rad_rain=True,
-                    const_vi=False,
-                    const_vs=False,
-                    const_vg=False,
-                    const_vr=False,
-                    vi_fac=1.0,
-                    vs_fac=1.0,
-                    vg_fac=1.0,
-                    vr_fac=1.0,
-                    vi_max=1.0,
-                    vs_max=2.0,
-                    vg_max=12.0,
-                    vr_max=12.0,
-                    qi_lim=1.0,
-                    prog_ccn=False,
-                    do_qa=True,
-                    tau_l2v=225.0,
-                    tau_v2l=150.0,
-                    rthresh=10.0e-6,
-                )
-                pbl_config = PBLConfig(
-                    dt_atmos=config.dt_atmos,
-                    hydrostatic=False,
-                    ntiw=3,
-                    ntcw=1,
-                    ntke=7,
-                )
-                sc_config = ShallowConvectionConfig(
-                    dt_atmos=config.dt_atmos,
-                )
-                surface_config = SurfaceConfig(
-                    dt_atmos=config.dt_atmos,
-                )
+                # TODO: this is a hack that needs to have an actual solution, maybe a loop over schemes?
+                scheme_configs = {}
+
+                # TODO: read these from config instead of initing here
+                if PHYSICS_PACKAGES.RTE_RRTMGP in self.config.physics_config.schemes:
+                    rad_config = RTE_RRTMGPConfig(
+                        deltsw=config.dt_atmos,
+                        delt_rad=config.dt_atmos,
+                        date=config.start_time,
+                        fhswr=1.0,
+                        fhlwr=1.0,
+                        isolar=10,
+                        icmphys=4,
+                        ico2flg=0,
+                        ioznflg=1,
+                        ictmflg=-1,
+                        ialbflg=-1,
+                        iemsflg=0,
+                        ldisable_radiation_quasi_sea_ice=False,
+                        solar_constant_file=Path("global_solarconstant_noaa_an.txt"),
+                        input_dir=Path("nil"),
+                        aerosol_file=Path("nil"),
+                        sollat=0.0,
+                        nstp=6,
+                        ivflip=1,
+                        lcnorm=False,
+                        lcrick=False,
+                        gfs_cloud_overlap=False,
+                    )
+                    scheme_configs["rad_config"] = rad_config
+                elif PHYSICS_PACKAGES.FV_GRAY_RAD in self.config.physics_config.schemes:
+                    gray_rad_config = GrayRadiationConfig(
+                        dt_atmos=config.dt_atmos, sw_abs=0.0
+                    )
+                    scheme_configs["gray_rad_config"] = gray_rad_config
+                if (
+                    PHYSICS_PACKAGES.GFDL_cloud_microphysics
+                    in self.config.physics_config.schemes
+                ):
+                    mp_config = GFDLCloudMPConfig(
+                        dt_full=config.dt_atmos,
+                        hydrostatic=False,
+                        npx=config.nx_tile + 1,
+                        npy=config.nx_tile + 1,
+                        npz=config.nz + 1,
+                        layout=config.layout,
+                        nwat=6,
+                        do_sedi_uv=True,
+                        do_sedi_w=True,
+                        do_sedi_heat=False,
+                        rad_snow=True,
+                        rad_graupel=True,
+                        rad_rain=True,
+                        const_vi=False,
+                        const_vs=False,
+                        const_vg=False,
+                        const_vr=False,
+                        vi_fac=1.0,
+                        vs_fac=1.0,
+                        vg_fac=1.0,
+                        vr_fac=1.0,
+                        vi_max=1.0,
+                        vs_max=2.0,
+                        vg_max=12.0,
+                        vr_max=12.0,
+                        qi_lim=1.0,
+                        prog_ccn=False,
+                        do_qa=True,
+                        tau_l2v=225.0,
+                        tau_v2l=150.0,
+                        rthresh=10.0e-6,
+                    )
+                    scheme_configs["gfdl_cld_mp_config"] = mp_config
+                if PHYSICS_PACKAGES.SATM_EDMF in self.config.physics_config.schemes:
+                    pbl_config = PBLConfig(
+                        dt_atmos=config.dt_atmos,
+                        hydrostatic=False,
+                        ntiw=3,
+                        ntcw=1,
+                        ntke=7,
+                    )
+                    scheme_configs["pbl_config"] = pbl_config
+                if PHYSICS_PACKAGES.SAMF_SHALCONV in self.config.physics_config.schemes:
+                    sc_config = ShallowConvectionConfig(
+                        dt_atmos=config.dt_atmos,
+                    )
+                    scheme_configs["sc_config"] = sc_config
+                if PHYSICS_PACKAGES.SFC_layer in self.config.physics_config.schemes:
+                    surface_config = SurfaceConfig(
+                        dt_atmos=config.dt_atmos,
+                    )
+                    scheme_configs["surface_config"] = surface_config
 
                 self.physics = Physics(
                     stencil_factory=self.stencil_factory,
                     quantity_factory=self.quantity_factory,
                     grid_data=self.state.grid_data,
                     namelist=self.config.physics_config,
-                    rad_config=rad_config,
-                    surface_config=surface_config,
-                    pbl_config=pbl_config,
-                    sc_config=sc_config,
-                    gfdl_cld_mp_config=mp_config,
                     comm=global_comm,
+                    **scheme_configs,
                 )
             else:
                 # Make sure those are set to None to raise any issues
@@ -778,7 +796,6 @@ class Driver:
                         tendency_state=self.state.tendency_state,
                         timestep=dt,
                     )
-                    breakpoint()
                     if not self.config.dycore_only:
                         ndsl_log.debug(f"starting physics step {step}")
                         self.physics(
