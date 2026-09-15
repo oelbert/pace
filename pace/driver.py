@@ -39,7 +39,7 @@ from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
 from pyfv3 import DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
-from pyshield import Physics, PhysicsConfig
+from pyshield import Physics, PhysicsConfig, PHYSICS_PACKAGES
 from pyshield.update import update_atmos_state
 
 
@@ -161,6 +161,10 @@ class DriverConfig:
     @functools.cached_property
     def apply_tendencies(self) -> bool:
         return self.do_dry_convective_adjustment or not self.dycore_only
+    
+    @functools.cached_property
+    def physics_schemes(self) -> list[PHYSICS_PACKAGES]:
+        return self.physics_config.schemes
 
     def get_grid(
         self,
@@ -348,6 +352,8 @@ class RestartConfig:
     def __post_init__(self):
         if len(self.intermediate_restart) > 0:
             self.save_intermediate_restart = True
+            if not isinstance(self.intermediate_restart, list):
+                self.intermediate_restart = list(self.intermediate_restart)
 
     def write_final_if_enabled(
         self,
