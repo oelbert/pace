@@ -3,7 +3,8 @@ import functools
 import warnings
 from datetime import datetime, timedelta
 from math import floor
-from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Any
 
 import dace
 import dacite
@@ -39,7 +40,16 @@ from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
 from pyfv3 import DynamicalCore, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
-from pyshield import Physics, PhysicsConfig, PHYSICS_PACKAGES
+from pyfv3.stencils.fv_phys import GrayRadiationConfig
+from pyfv3.tracers import default_ai2_tracers
+from pyshield import PHYSICS_PACKAGES, Physics, PhysicsConfig
+from pyshield.configs import (
+    GFDLCloudMPConfig,
+    PBLConfig,
+    RTE_RRTMGPConfig,
+    ShallowConvectionConfig,
+    SurfaceConfig,
+)
 from pyshield.update import update_atmos_state
 
 
@@ -91,13 +101,14 @@ class DriverConfig:
             defaults to every timestep
     """
 
+    # TODO: path to input data should be a config setting
     stencil_config: StencilConfig
     initialization: InitializerSelector
     nx_tile: int
     nz: int
-    layout: Tuple[int, int]
+    layout: tuple[int, int]
     dt_atmos: float
-    grid_type: Optional[int] = 0
+    grid_type: int | None = 0
     grid_config: GridInitializerSelector = dataclasses.field(
         default_factory=lambda: GridInitializerSelector(
             type="generated", config=GeneratedGridConfig()
@@ -116,6 +127,16 @@ class DriverConfig:
         default_factory=DynamicalCoreConfig
     )
     physics_config: PhysicsConfig = dataclasses.field(default_factory=PhysicsConfig)
+    surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
+
+    # TODO: find a good way to only create scheme configs if they're present in the active schemes list
+
+    # TODO: This won't work with from_dict afaict
+    # rad_config: RTE_RRTMGPConfig = dataclasses.field(default_factory=RTE_RRTMGPConfig)
+    # mp_config: GFDLCloudMPConfig = dataclasses.field(default_factory=GFDLCloudMPConfig)
+    # pbl_config: PBLConfig = dataclasses.field(default_factory=PBLConfig)
+    # sc_config: ShallowConvectionConfig = dataclasses.field(default_factory=ShallowConvectionConfig)
+    # surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     days: int = 0
     hours: int = 0
@@ -129,14 +150,14 @@ class DriverConfig:
     pair_debug: bool = False
     output_initial_state: bool = False
     output_frequency: int = 1
-    safety_check_frequency: Optional[int] = None
+    safety_check_frequency: int | None = None
 
     @functools.cached_property
     def timestep(self) -> timedelta:
         return timedelta(seconds=self.dt_atmos)
 
     @property
-    def start_time(self) -> Union[datetime, timedelta]:
+    def start_time(self) -> datetime | timedelta:
         return self.initialization.start_time
 
     @functools.cached_property
@@ -150,7 +171,8 @@ class DriverConfig:
         if self.total_time < self.timestep:
             warnings.warn(
                 f"No simulation possible: you asked for {self.total_time} "
-                f"simulation time but the timestep is {self.timestep}"
+                f"simulation time but the timestep is {self.timestep}",
+                stacklevel=2,
             )
         return floor(self.total_time.total_seconds() / self.timestep.total_seconds())
 
@@ -169,8 +191,8 @@ class DriverConfig:
     def get_grid(
         self,
         communicator: Communicator,
-        quantity_factory: Optional[QuantityFactory] = None,
-    ) -> Tuple[DampingCoefficients, DriverGridData, GridData]:
+        quantity_factory: QuantityFactory | None = None,
+    ) -> tuple[DampingCoefficients, DriverGridData, GridData]:
         if quantity_factory is None:
             sizer = SubtileGridSizer.from_tile_params(
                 nx_tile=self.nx_tile,
@@ -180,8 +202,9 @@ class DriverConfig:
                 layout=self.layout,
                 tile_partitioner=communicator.partitioner.tile,
                 tile_rank=communicator.tile.rank,
+                backend=self.stencil_config.backend,
             )
-            quantity_factory = QuantityFactory.from_backend(
+            quantity_factory = QuantityFactory(
                 sizer, backend=self.stencil_config.compilation_config.backend
             )
 
@@ -196,8 +219,8 @@ class DriverConfig:
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        quantity_factory: Optional[QuantityFactory] = None,
-        stencil_factory: Optional[StencilFactory] = None,
+        quantity_factory: QuantityFactory | None = None,
+        stencil_factory: StencilFactory | None = None,
     ) -> DriverState:
         """Load the initial state of the driver."""
         if quantity_factory is None or stencil_factory is None:
@@ -209,9 +232,10 @@ class DriverConfig:
                 layout=self.layout,
                 tile_partitioner=communicator.partitioner.tile,
                 tile_rank=communicator.tile.rank,
+                backend=self.stencil_config.backend,
             )
             if quantity_factory is None:
-                quantity_factory = QuantityFactory.from_backend(
+                quantity_factory = QuantityFactory(
                     sizer, backend=self.stencil_config.compilation_config.backend
                 )
             if stencil_factory is None:
@@ -232,7 +256,7 @@ class DriverConfig:
         )
 
     @classmethod
-    def from_dict(cls, kwargs: Dict[str, Any]) -> "DriverConfig":
+    def from_dict(cls, kwargs: dict[str, Any]) -> "DriverConfig":
         if isinstance(kwargs["dycore_config"], dict):
             for derived_name in ("dt_atmos", "layout", "npx", "npy", "npz", "ntiles"):
                 if derived_name in kwargs["dycore_config"]:
@@ -245,9 +269,18 @@ class DriverConfig:
             )
 
         if isinstance(kwargs["physics_config"], dict):
+            phys_config_dict = kwargs.get("physics_config", {})
+            phys_config_dict["dt_atmos"] = kwargs["dt_atmos"]
             kwargs["physics_config"] = PhysicsConfig.from_dict(
                 kwargs.get("physics_config", {})
             )
+
+        if isinstance(kwargs["surface_config"], dict):
+            kwargs["surface_config"] = SurfaceConfig.from_dict(
+                kwargs.get("surface_config", {})
+            )
+        else:
+            kwargs["surface_config"] = SurfaceConfig()
 
         kwargs["layout"] = tuple(kwargs["layout"])
         kwargs["dycore_config"].layout = kwargs["layout"]
@@ -256,11 +289,17 @@ class DriverConfig:
         kwargs["dycore_config"].npy = kwargs["nx_tile"] + 1
         kwargs["dycore_config"].npz = kwargs["nz"]
         kwargs["dycore_config"].ntiles = 6
+        kwargs["surface_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].layout = kwargs["layout"]
         kwargs["physics_config"].dt_atmos = kwargs["dt_atmos"]
         kwargs["physics_config"].npx = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npy = kwargs["nx_tile"] + 1
         kwargs["physics_config"].npz = kwargs["nz"]
+        kwargs["physics_config"].sst_profile = kwargs["surface_config"].sst_profile
+        kwargs["physics_config"].max_sst = kwargs["surface_config"].max_sst
+        kwargs["physics_config"].min_sst = kwargs["surface_config"].min_sst
+        # TODO: Somehow the above doesn't set nsswr and nsslr correctly in
+        # the physics_config post_init
         kwargs["comm_config"] = CreatesCommSelector.from_dict(
             kwargs.get("comm_config", {})
         )
@@ -276,7 +315,14 @@ class DriverConfig:
                     kwargs["dycore_config"].ntiles = 1
 
         analytic_hooks = {}
+        if "start_time" in kwargs["initialization"].keys():
+            kwargs["initialization"] = datetime.fromisoformat(
+                kwargs["initialization"]["start_time"]
+            )
         if kwargs["initialization"]["type"] == "analytic":
+            kwargs["initialization"]["config"]["surface_config"] = kwargs[
+                "surface_config"
+            ]
             kwargs["initialization"]["config"]["dycore_config"] = kwargs[
                 "dycore_config"
             ]
@@ -286,13 +332,6 @@ class DriverConfig:
             hooks=analytic_hooks,
         )
 
-        if (
-            isinstance(kwargs["stencil_config"], dict)
-            and "dace_config" in kwargs["stencil_config"].keys()
-        ):
-            kwargs["stencil_config"]["dace_config"] = DaceConfig.from_dict(
-                data=kwargs["stencil_config"]["dace_config"]
-            )
         if (
             isinstance(kwargs["stencil_config"], dict)
             and "compilation_config" in kwargs["stencil_config"].keys()
@@ -309,14 +348,10 @@ class DriverConfig:
 
     def write_for_restart(
         self,
-        time: Union[datetime, timedelta],
+        time: datetime | timedelta,
         restart_path: str,
     ):
         config_dict = dataclasses.asdict(self)
-        if self.stencil_config.dace_config:
-            config_dict["stencil_config"][
-                "dace_config"
-            ] = self.stencil_config.dace_config.as_dict()
         config_dict["stencil_config"][
             "compilation_config"
         ] = self.stencil_config.compilation_config.as_dict()
@@ -339,6 +374,10 @@ class DriverConfig:
         # restart config doesn't have 'case'
         if "case" in config_dict["initialization"]["config"].keys():
             del config_dict["initialization"]["config"]["case"]
+        # remove dace config - it will be init from other piece of the config
+        # during Driver.__init__
+        config_dict["stencil_config"].pop("dace_config", None)
+
         with open(f"{restart_path}/restart.yaml", "w") as file:
             yaml.safe_dump(config_dict, file)
 
@@ -346,7 +385,7 @@ class DriverConfig:
 @dataclasses.dataclass()
 class RestartConfig:
     save_restart: bool = False
-    intermediate_restart: List[int] = dataclasses.field(default_factory=list)
+    intermediate_restart: list[int] = dataclasses.field(default_factory=list)
     save_intermediate_restart: bool = False
 
     def __post_init__(self):
@@ -378,7 +417,7 @@ class RestartConfig:
         *,
         step: int,
         comm: Comm,
-        time: Union[datetime, timedelta],
+        time: datetime | timedelta,
         driver_config: DriverConfig,
         restart_path: str,
     ):
@@ -446,7 +485,7 @@ class Driver:
                     )
                     exit(0)
 
-                setattr(self, "step_all", exit_function)
+                self.step_all = exit_function  # type: ignore[method-assign]
             elif self.config.stencil_config.compilation_config.run_mode == RunMode.Run:
 
                 def exit_instead_of_build(self):
@@ -461,7 +500,7 @@ class Driver:
 
                 from gt4py.stencil_builder import StencilBuilder
 
-                setattr(StencilBuilder, "build", exit_instead_of_build)
+                StencilBuilder.build = exit_instead_of_build  # type: ignore["method-assign"]
 
             self.config.stencil_config.dace_config = DaceConfig(
                 communicator=communicator,
@@ -503,6 +542,7 @@ class Driver:
 
             self._start_time = self.config.initialization.start_time
             ndsl_log.info("setting up dycore object started")
+            default_ai2_tracers(self.quantity_factory)
             self.dycore = DynamicalCore(
                 comm=communicator,
                 grid_data=self.state.grid_data,
@@ -518,11 +558,106 @@ class Driver:
 
             ndsl_log.info("setting up physics object started")
             if not config.dycore_only and not config.disable_step_physics:
+                # TODO: this is a hack that needs to have an actual solution, maybe a loop over schemes?
+                scheme_configs = {}
+
+                # TODO: read these from config instead of initing here
+                if PHYSICS_PACKAGES.RTE_RRTMGP in self.config.physics_config.schemes:
+                    rad_config = RTE_RRTMGPConfig(
+                        deltsw=config.dt_atmos,
+                        delt_rad=config.dt_atmos,
+                        date=config.start_time,
+                        fhswr=1.0,
+                        fhlwr=1.0,
+                        isolar=10,
+                        icmphys=4,
+                        ico2flg=0,
+                        ioznflg=1,
+                        ictmflg=-1,
+                        ialbflg=-1,
+                        iemsflg=0,
+                        ldisable_radiation_quasi_sea_ice=False,
+                        solar_constant_file=Path("global_solarconstant_noaa_an.txt"),
+                        input_dir=Path("nil"),
+                        aerosol_file=Path("nil"),
+                        sollat=0.0,
+                        nstp=6,
+                        ivflip=1,
+                        lcnorm=False,
+                        lcrick=False,
+                        gfs_cloud_overlap=False,
+                    )
+                    scheme_configs["rad_config"] = rad_config
+                elif PHYSICS_PACKAGES.FV_GRAY_RAD in self.config.physics_config.schemes:
+                    gray_rad_config = GrayRadiationConfig(
+                        dt_atmos=config.dt_atmos, sw_abs=0.0
+                    )
+                    scheme_configs["gray_rad_config"] = gray_rad_config
+                if (
+                    PHYSICS_PACKAGES.GFDL_cloud_microphysics
+                    in self.config.physics_config.schemes
+                ):
+                    mp_config = GFDLCloudMPConfig(
+                        dt_full=config.dt_atmos,
+                        hydrostatic=False,
+                        npx=config.nx_tile + 1,
+                        npy=config.nx_tile + 1,
+                        npz=config.nz + 1,
+                        layout=config.layout,
+                        nwat=6,
+                        do_sedi_uv=True,
+                        do_sedi_w=True,
+                        do_sedi_heat=False,
+                        rad_snow=True,
+                        rad_graupel=True,
+                        rad_rain=True,
+                        const_vi=False,
+                        const_vs=False,
+                        const_vg=False,
+                        const_vr=False,
+                        vi_fac=1.0,
+                        vs_fac=1.0,
+                        vg_fac=1.0,
+                        vr_fac=1.0,
+                        vi_max=1.0,
+                        vs_max=2.0,
+                        vg_max=12.0,
+                        vr_max=12.0,
+                        qi_lim=1.0,
+                        prog_ccn=False,
+                        do_qa=True,
+                        tau_l2v=225.0,
+                        tau_v2l=150.0,
+                        rthresh=10.0e-6,
+                    )
+                    scheme_configs["gfdl_cld_mp_config"] = mp_config
+                if PHYSICS_PACKAGES.SATM_EDMF in self.config.physics_config.schemes:
+                    pbl_config = PBLConfig(
+                        dt_atmos=config.dt_atmos,
+                        hydrostatic=False,
+                        ntiw=3,
+                        ntcw=1,
+                        ntke=7,
+                    )
+                    scheme_configs["pbl_config"] = pbl_config
+                if PHYSICS_PACKAGES.SAMF_SHALCONV in self.config.physics_config.schemes:
+                    sc_config = ShallowConvectionConfig(
+                        dt_atmos=config.dt_atmos,
+                    )
+                    scheme_configs["sc_config"] = sc_config
+                if PHYSICS_PACKAGES.SFC_layer in self.config.physics_config.schemes:
+                    surface_config = SurfaceConfig(
+                        dt_atmos=config.dt_atmos,
+                    )
+                    scheme_configs["surface_config"] = surface_config
+
                 self.physics = Physics(
                     stencil_factory=self.stencil_factory,
                     quantity_factory=self.quantity_factory,
                     grid_data=self.state.grid_data,
                     namelist=self.config.physics_config,
+                    comm=global_comm,
+                    **scheme_configs,
                 )
             else:
                 # Make sure those are set to None to raise any issues
@@ -595,6 +730,11 @@ class Driver:
             communicator=communicator,
         )
         self.config.stencil_config.compilation_config = compilation_config
+        self.config.stencil_config.dace_config = DaceConfig(
+            communicator=communicator,
+            backend=self.config.stencil_config.backend,
+            orchestration=None,
+        )
 
     @dace_inhibitor
     def _callback_diagnostics(self):
@@ -649,6 +789,7 @@ class Driver:
         to a callback, like end_of_step_actions).
         """
         for step in dace.nounroll(range(steps_count)):
+            ndsl_log.debug(f"starting step {step}")
             with timer.clock("mainloop"):
                 self.dycore.step_dynamics(
                     state=self.state.dycore_state,
@@ -662,7 +803,14 @@ class Driver:
                         timestep=dt,
                     )
                     if not self.config.dycore_only:
-                        self.physics(self.state.physics_state, timestep=dt)
+                        ndsl_log.debug(f"starting physics step {step}")
+                        self.physics(
+                            self.state.physics_state,
+                            timestep=dt,
+                            radiation_state=self.state.radiation_state,
+                            surface_state=self.state.sfc_state,
+                            date=self.time,
+                        )
                     self.end_of_step_update(
                         dycore_state=self.state.dycore_state,
                         phy_state=self.state.physics_state,
@@ -673,6 +821,50 @@ class Driver:
                     )
             self._end_of_step_actions(step)
 
+    def _critical_path_step_one(
+        self,
+        step: int,
+        timer: Timer,
+        dt: Float,
+    ):
+        """Start of code path where performance is critical.
+
+        This function must remain orchestrateable by DaCe (e.g.
+        all code not parsable due to python complexity needs to be moved
+        to a callback, like end_of_step_actions).
+        """
+        ndsl_log.debug("starting step")
+        with timer.clock("mainloop"):
+            self.dycore.step_dynamics(
+                state=self.state.dycore_state,
+                timer=timer,
+            )
+            if not self.config.disable_step_physics:
+                self.dycore_to_physics(
+                    dycore_state=self.state.dycore_state,
+                    physics_state=self.state.physics_state,
+                    tendency_state=self.state.tendency_state,
+                    timestep=dt,
+                )
+                if not self.config.dycore_only:
+                    ndsl_log.debug("starting physics step")
+                    self.physics(
+                        self.state.physics_state,
+                        timestep=dt,
+                        radiation_state=self.state.radiation_state,
+                        surface_state=self.state.sfc_state,
+                        date=self.time,
+                    )
+                self.end_of_step_update(
+                    dycore_state=self.state.dycore_state,
+                    phy_state=self.state.physics_state,
+                    u_dt=self.state.tendency_state.u_dt,
+                    v_dt=self.state.tendency_state.v_dt,
+                    pt_dt=self.state.tendency_state.pt_dt,
+                    dt=dt,
+                )
+        self._end_of_step_actions(step=step)
+
     def step_all(self):
         ndsl_log.info("integrating driver forward in time")
         with self.performance_collector.total_timer.clock("total"):
@@ -681,6 +873,23 @@ class Driver:
             PerformanceCollector.start_cuda_profiler()
             self._critical_path_step_all(
                 steps_count=self.config.n_timesteps(),
+                timer=self.performance_collector.timestep_timer,
+                dt=Float(self.config.timestep.total_seconds()),
+            )
+            PerformanceCollector.stop_cuda_profiler()
+            self.profiler.dump_stats(
+                f"{self.config.performance_config.experiment_name}_\
+                {self.comm.Get_rank()}.prof"
+            )
+
+    def step_one(self, step=0):
+        ndsl_log.info("integrating driver forward in time")
+        with self.performance_collector.total_timer.clock("total"):
+            self.profiler.enable()
+            PerformanceCollector.mark_cuda_profiler("Begin integration")
+            PerformanceCollector.start_cuda_profiler()
+            self._critical_path_step_one(
+                step,
                 timer=self.performance_collector.timestep_timer,
                 dt=Float(self.config.timestep.total_seconds()),
             )
@@ -739,7 +948,7 @@ def _setup_factories(
     config: DriverConfig,
     communicator: Communicator,
     stencil_compare_comm,
-) -> Tuple[QuantityFactory, StencilFactory]:
+) -> tuple[QuantityFactory, StencilFactory]:
     """
     Args:
         config: configuration of driver
@@ -761,12 +970,13 @@ def _setup_factories(
         layout=config.layout,
         tile_partitioner=communicator.partitioner.tile,
         tile_rank=communicator.tile.rank,
+        backend=config.stencil_config.backend,
     )
 
     grid_indexing = GridIndexing.from_sizer_and_communicator(
         sizer=sizer, comm=communicator
     )
-    quantity_factory = QuantityFactory.from_backend(
+    quantity_factory = QuantityFactory(
         sizer, backend=config.stencil_config.compilation_config.backend
     )
     stencil_factory = StencilFactory(

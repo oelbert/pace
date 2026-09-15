@@ -10,11 +10,10 @@ from mpi4py import MPI
 from ndsl import (
     CubedSphereCommunicator,
     CubedSpherePartitioner,
-    NullComm,
     Quantity,
     TilePartitioner,
 )
-from pace import DriverConfig, DriverState
+from pace import DriverConfig, DriverState, NullComm
 from pyshield import PHYSICS_PACKAGES
 
 
@@ -56,7 +55,7 @@ def test_restart():
         with open("RESTART/restart.yaml", "r") as f:
             restart_config = DriverConfig.from_dict(yaml.safe_load(f))
 
-        mpi_comm = NullComm(rank=0, total_ranks=6, fill_value=0.0)
+        mpi_comm = NullComm(rank=0, total_ranks=6)
         partitioner = CubedSpherePartitioner(TilePartitioner((1, 1)))
         communicator = CubedSphereCommunicator(mpi_comm, partitioner)
         (
@@ -83,7 +82,7 @@ def test_restart():
         for var in driver_state.dycore_state.__dict__.keys():
             if isinstance(driver_state.dycore_state.__dict__[var], Quantity):
                 np.testing.assert_allclose(
-                    driver_state.dycore_state.__dict__[var].data,
+                    driver_state.dycore_state.__dict__[var][:],
                     restart_dycore[var].values,
                 )
 

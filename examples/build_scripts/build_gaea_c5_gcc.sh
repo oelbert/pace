@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Example bash script to install Pace to run bare-metal on Gaea's c4 cluster
+# Example bash script to install Pace to run bare-metal on Gaea's c5 cluster
 
 set -e -x
 
@@ -25,10 +25,10 @@ git clone --recursive https://github.com/NOAA-GFDL/pace
 cd pace
 
 # create a conda environment for pace
-conda create -y --name my_name python=3.11.7
+conda create -y --name my_name python=3.12
 
 # enter the environment
 conda activate my_name
 
 # install Pace dependencies and its dependencies
-pip3 install .[test]
+pip3 install -e .[dev]

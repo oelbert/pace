@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm@sha256:7cd3fa11d619688317226bc93dc59bc8966e9aec6bc2a6abb847e8ab7d656706
+FROM python:3.12-slim-bookworm@sha256:28cf028e5a544e92dbe11450debd93dd5eb70eaf3179a9e878cfaee426556b3b
 
 RUN apt-get update && apt-get install -y make \
     software-properties-common \
@@ -15,30 +15,38 @@ RUN apt-get update && apt-get install -y make \
     python3-pip \
     git
 
-RUN pip3 install --upgrade pip setuptools wheel
+RUN python -m pip install --upgrade pip setuptools wheel
+
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NDSL=2025.10.00
 
 COPY . /pace
 
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NDSL=2025.10.00
+
 RUN cd /pace && \
-    pip3 install .[test]
+    python -m pip install -e .[dev]
 
 RUN cd / && \
-    git clone https://github.com/ai2cm/fv3net
+    git clone https://github.com/oelbert/fv3viz
 
 ENV CFLAGS="-I/usr/include -DACCEPT_USE_OF_DEPRECATED_PROJ_API_H=1"
 
-RUN python3 -m pip install \
+
+RUN python -m ensurepip --upgrade && \
+    python -m pip install \
     matplotlib==3.10.0 \
     ipyparallel==8.4.1 \
     jupyterlab==3.4.4 \
-    shapely==1.8.5 \
     cartopy==0.23.0 \
     jupyterlab_code_formatter==1.5.2 \
     isort==5.10.1 \
-    black==22.3.0 \
-    /fv3net/external/vcm
+    black>=22.3.0 \
+    memory_profiler \
+    /fv3viz
 
-ENV PYTHONPATH=/fv3net/external/fv3viz:/pace/external/gt4py/src
+RUN python -m pip install pybind11==2.13.6
+
+ENV PYTHONPATH=/fv3viz:/pace/external/gt4py/src
 
 ENV OMPI_ALLOW_RUN_AS_ROOT=1
 ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1

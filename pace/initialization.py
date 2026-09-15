@@ -3,11 +3,13 @@ import dataclasses
 import os
 import pathlib
 from datetime import datetime
-from typing import Callable, ClassVar, List, Type, TypeVar
+from typing import Callable, ClassVar, TypeVar
 
 import f90nml
+import numpy as np  # TODO: this will be xumpy in the future
 
 import pyfv3.initialization.analytic_init as analytic_init
+import pyshield.stencils.surface.analytic_init as analytic_sfc_init
 from ndsl import (
     CompilationConfig,
     DaceConfig,
@@ -15,7 +17,7 @@ from ndsl import (
     StencilConfig,
     StencilFactory,
 )
-from ndsl.constants import X_DIM, Y_DIM
+from ndsl.config import Backend
 from ndsl.grid import DampingCoefficients, DriverGridData, GridData
 from ndsl.stencils.testing import TranslateGrid, grid
 from ndsl.typing import Communicator
@@ -25,7 +27,8 @@ from pace.state import DriverState, TendencyState, _restart_driver_state
 from pyfv3 import DycoreState, DynamicalCoreConfig
 from pyfv3.initialization.analytic_init import AnalyticCase
 from pyfv3.testing import TranslateFVDynamics
-from pyshield import PHYSICS_PACKAGES, PhysicsState
+from pyshield import PHYSICS_PACKAGES, PhysicsState, RTE_RRTMGPState, SurfaceState
+from pyshield.stencils.surface import SurfaceConfig
 
 
 class Initializer(abc.ABC):
@@ -41,11 +44,11 @@ class Initializer(abc.ABC):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState: ...
 
 
-IT = TypeVar("IT", bound=Type[Initializer])
+IT = TypeVar("IT", bound=type[Initializer])
 
 
 @dataclasses.dataclass
@@ -78,7 +81,7 @@ class InitializerSelector(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         return self.config.get_driver_state(
             quantity_factory=quantity_factory,
@@ -90,7 +93,9 @@ class InitializerSelector(Initializer):
         )
 
     @classmethod
-    def from_dict(cls, config: dict, hooks={}):
+    def from_dict(cls, config: dict, hooks: dict | None = None):
+        if not hooks:
+            hooks = {}
         instance = cls.registry.from_dict(config, hooks=hooks)
         return cls(config=instance, type=config["type"])
 
@@ -103,10 +108,11 @@ class AnalyticInit(Initializer):
     """
 
     case: AnalyticCase = AnalyticCase.baroclinic_instability
-    start_time: datetime = datetime(2000, 1, 1)
+    start_time: datetime = datetime(2000, 3, 20)
     dycore_config: DynamicalCoreConfig = dataclasses.field(
         default_factory=DynamicalCoreConfig
     )
+    surface_config: SurfaceConfig = dataclasses.field(default_factory=SurfaceConfig)
 
     def get_driver_state(
         self,
@@ -115,7 +121,7 @@ class AnalyticInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         dycore_state = analytic_init.init_analytic_state(
             analytic_init_case=self.case,
@@ -130,6 +136,19 @@ class AnalyticInit(Initializer):
         physics_state = PhysicsState.init_zeros(
             quantity_factory=quantity_factory, schemes=schemes
         )
+        surface_state = analytic_sfc_init.init_analytic_state(
+            analytic_init_case=self.case,
+            grid_data=grid_data,
+            quantity_factory=quantity_factory,
+            sst_profile=self.surface_config.sst_profile,
+            tsea_max=self.surface_config.max_sst,
+            tsea_min=self.surface_config.min_sst,
+            comm=communicator,
+        )
+
+        rad_state = RTE_RRTMGPState.init_zeros(
+            quantity_factory=quantity_factory,
+        )
         tendency_state = TendencyState.init_zeros(
             quantity_factory=quantity_factory,
         )
@@ -140,6 +159,8 @@ class AnalyticInit(Initializer):
             grid_data=grid_data,
             damping_coefficients=damping_coefficients,
             driver_grid_data=driver_grid_data,
+            radiation_state=rad_state,
+            sfc_state=surface_state,
         )
 
 
@@ -160,7 +181,7 @@ class RestartInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         state = _restart_driver_state(
             self.path,
@@ -211,7 +232,7 @@ class FortranRestartInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         state = _restart_driver_state(
             self.path,
@@ -259,7 +280,7 @@ class SerialboxInit(Initializer):
     def _get_serialized_grid(
         self,
         communicator: Communicator,
-        backend: str,
+        backend: Backend,
     ) -> grid.Grid:  # type: ignore
         ser = self._serializer(communicator)
         grid = TranslateGrid.new_from_serialized_data(
@@ -284,16 +305,20 @@ class SerialboxInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
-        backend = quantity_factory.zeros(
-            dims=[X_DIM, Y_DIM], units="unknown"
-        ).gt4py_backend
-
-        dycore_state = self._initialize_dycore_state(communicator, backend)
+        dycore_state = self._initialize_dycore_state(
+            communicator, quantity_factory.backend
+        )
         physics_state = PhysicsState.init_zeros(
             quantity_factory=quantity_factory,
             schemes=schemes,
+        )
+        surface_state = SurfaceState.init_zeros(
+            quantity_factory=quantity_factory,
+        )
+        rad_state = RTE_RRTMGPState.init_zeros(
+            quantity_factory=quantity_factory,
         )
         tendency_state = TendencyState.init_zeros(quantity_factory=quantity_factory)
 
@@ -304,12 +329,14 @@ class SerialboxInit(Initializer):
             grid_data=grid_data,
             damping_coefficients=damping_coefficients,
             driver_grid_data=driver_grid_data,
+            radiation_state=rad_state,
+            sfc_state=surface_state,
         )
 
     def _initialize_dycore_state(
         self,
         communicator: Communicator,
-        backend: str,
+        backend: Backend,
     ) -> DycoreState:
         grid = self._get_serialized_grid(communicator=communicator, backend=backend)
 
@@ -356,6 +383,8 @@ class PredefinedStateInit(Initializer):
     damping_coefficients: DampingCoefficients
     driver_grid_data: DriverGridData
     start_time: datetime = datetime(2016, 8, 1)
+    radiation_state: RTE_RRTMGPState = None
+    sfc_state: SurfaceState = None
 
     def get_driver_state(
         self,
@@ -364,7 +393,7 @@ class PredefinedStateInit(Initializer):
         damping_coefficients: DampingCoefficients,
         driver_grid_data: DriverGridData,
         grid_data: GridData,
-        schemes: List[PHYSICS_PACKAGES],
+        schemes: list[PHYSICS_PACKAGES],
     ) -> DriverState:
         return DriverState(
             dycore_state=self.dycore_state,
@@ -373,6 +402,8 @@ class PredefinedStateInit(Initializer):
             grid_data=self.grid_data,
             damping_coefficients=self.damping_coefficients,
             driver_grid_data=self.driver_grid_data,
+            radiation_state=self.radiation_state,
+            sfc_state=self.sfc_state,
         )
 
 

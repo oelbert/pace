@@ -19,12 +19,13 @@ You can initialize a zero-filled PhysicsState and MicrophysicsState from other P
         ...  QuantityFactory,
         ...  SubtileGridSizer,
         ...  TilePartitioner,
-        ...  NullComm,
+        ...  LocalComm,
         ... )
     >>> from pace.physics import PhysicsState
     >>> layout = (1, 1)
+    >>> backend = "numpy"
     >>> partitioner = CubedSpherePartitioner(TilePartitioner(layout))
-    >>> communicator = CubedSphereCommunicator(NullComm(rank=0, total_ranks=6), partitioner)
+    >>> communicator = CubedSphereCommunicator(LocalComm(rank=0, total_ranks=6, buffer_dict={}), partitioner)
     >>> sizer = SubtileGridSizer.from_tile_params(
     ...    nx_tile=12,
     ...    ny_tile=12,
@@ -33,9 +34,10 @@ You can initialize a zero-filled PhysicsState and MicrophysicsState from other P
     ...    layout=layout,
     ...    tile_partitioner=partitioner.tile,
     ...    tile_rank=communicator.tile.rank,
+    ...    backend=backend
     ... )
 
-    >>> quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend="numpy")
+    >>> quantity_factory = QuantityFactory(sizer=sizer, backend=backend)
     >>> physics_state = PhysicsState.init_zeros(
     ...  quantity_factory=quantity_factory, schemes=["GFS_microphysics"]
     ... )
